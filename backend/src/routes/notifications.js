@@ -181,4 +181,175 @@ router.delete('/:id', (req, res) => {
   }
 });
 
+/**
+ * Default notification preferences for new users (Feature #175)
+ * Email notifications are ON by default as per sensible defaults
+ */
+function getDefaultNotificationPreferences() {
+  return {
+    notifications: {
+      email_new_course: true,
+      email_enrollment_confirmed: true,
+      email_feedback_received: true,
+      email_webinar_reminder: true,
+      email_weekly_progress: true,
+      email_forum_replies: true
+    }
+  };
+}
+
+/**
+ * GET /api/notifications/preferences
+ * Get notification preferences for the current user (Feature #175)
+ */
+router.get('/preferences', (req, res) => {
+  try {
+    if (!req.session?.isAuthenticated || !req.session?.user) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    const userId = req.session.user.id;
+    const user = queryOne('SELECT preferences FROM users WHERE id = ?', [userId]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Parse existing preferences or use defaults
+    let preferences = {};
+    try {
+      preferences = user.preferences ? JSON.parse(user.preferences) : {};
+    } catch (e) {
+      preferences = {};
+    }
+
+    // If no notification preferences exist, return defaults
+    if (!preferences.notifications) {
+      preferences = getDefaultNotificationPreferences();
+    }
+
+    console.log('[Notifications] Getting preferences for user', userId, ':', preferences);
+    res.json({ success: true, preferences: preferences.notifications });
+  } catch (error) {
+    console.error('Error fetching notification preferences:', error);
+    res.status(500).json({ error: 'Error al obtener preferencias de notificacion' });
+  }
+});
+
+/**
+ * PUT /api/notifications/preferences
+ * Update notification preferences for the current user (Feature #175)
+ */
+router.put('/preferences', (req, res) => {
+  try {
+    if (!req.session?.isAuthenticated || !req.session?.user) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    const userId = req.session.user.id;
+    const newNotificationPrefs = req.body;
+
+    const validKeys = [
+      'email_new_course',
+      'email_enrollment_confirmed',
+      'email_feedback_received',
+      'email_webinar_reminder',
+      'email_weekly_progress',
+      'email_forum_replies'
+    ];
+
+    const user = queryOne('SELECT preferences FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    let existingPrefs = {};
+    try {
+      existingPrefs = user.preferences ? JSON.parse(user.preferences) : {};
+    } catch (e) {
+      existingPrefs = {};
+    }
+
+    const defaults = getDefaultNotificationPreferences().notifications;
+    const updatedNotifications = { ...defaults };
+
+    for (const key of validKeys) {
+      if (typeof newNotificationPrefs[key] === 'boolean') {
+        updatedNotifications[key] = newNotificationPrefs[key];
+      }
+    }
+
+    existingPrefs.notifications = updatedNotifications;
+    const preferencesJson = JSON.stringify(existingPrefs);
+
+    run('UPDATE users SET preferences = ?, updated_at = datetime("now") WHERE id = ?',
+      [preferencesJson, userId]);
+
+    console.log('[Notifications] Updated preferences for user', userId, ':', updatedNotifications);
+    res.json({
+      success: true,
+      message: 'Preferencias actualizadas',
+      preferences: updatedNotifications
+    });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({ error: 'Error al actualizar preferencias de notificacion' });
+  }
+});
+
+/**
+ * POST /api/notifications/init-defaults
+ * Initialize default notification preferences for a user (Feature #175)
+ */
+router.post('/init-defaults', (req, res) => {
+  try {
+    if (!req.session?.isAuthenticated || !req.session?.user) {
+      return res.status(401).json({ error: 'No autenticado' });
+    }
+
+    const userId = req.session.user.id;
+    const user = queryOne('SELECT preferences FROM users WHERE id = ?', [userId]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    let existingPrefs = {};
+    try {
+      existingPrefs = user.preferences ? JSON.parse(user.preferences) : {};
+    } catch (e) {
+      existingPrefs = {};
+    }
+
+    if (!existingPrefs.notifications) {
+      existingPrefs.notifications = getDefaultNotificationPreferences().notifications;
+      const preferencesJson = JSON.stringify(existingPrefs);
+
+      run('UPDATE users SET preferences = ?, updated_at = datetime("now") WHERE id = ?',
+        [preferencesJson, userId]);
+
+      console.log('[Notifications] Initialized default preferences for user', userId);
+      res.json({
+        success: true,
+        message: 'Preferencias por defecto inicializadas',
+        preferences: existingPrefs.notifications,
+        initialized: true
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Preferencias ya existen',
+        preferences: existingPrefs.notifications,
+        initialized: false
+      });
+    }
+  } catch (error) {
+    console.error('Error initializing notification preferences:', error);
+    res.status(500).json({ error: 'Error al inicializar preferencias' });
+  }
+});
+
+// Export for use by other modules
+export { getDefaultNotificationPreferences };
+
 export default router;

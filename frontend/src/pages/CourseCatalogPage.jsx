@@ -1,109 +1,15 @@
+/**
+ * Course Catalog Page (Feature #174: Pagination resets on context change)
+ * Displays courses with filtering and pagination
+ */
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useSearchParams } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './store/AuthContext';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import LoginPage from './pages/LoginPage';
-import AuthCallback from './pages/AuthCallback';
-import HomePage from './pages/HomePage';
-import LessonPage from './pages/LessonPage';
-import NotebookPage from './pages/NotebookPage';
-import DashboardPage from './pages/DashboardPage';
-import CourseCreatorPage from './pages/CourseCreatorPage';
-import AdminCoursesPage from './pages/AdminCoursesPage';
-import CourseDetailPage from './pages/CourseDetailPage';
-import QuizPage from './pages/QuizPage';
-import CodeChallengePage from './pages/CodeChallengePage';
-import SubmissionsReviewPage from './pages/SubmissionsReviewPage';
-import InstructorFeedbackPage from './pages/InstructorFeedbackPage';
-import SubmissionFeedbackPage from './pages/SubmissionFeedbackPage';
-import ForumPage from './pages/ForumPage';
-import ThreadDetailPage from './pages/ThreadDetailPage';
-import WebinarsPage from './pages/WebinarsPage';
-import WebinarSchedulePage from './pages/WebinarSchedulePage';
-import CertificatesPage from './pages/CertificatesPage';
-import CertificateVerifyPage from './pages/CertificateVerifyPage';
-import UpgradePage from './pages/UpgradePage';
-import UpgradeSuccessPage from './pages/UpgradeSuccessPage';
-import UpgradeErrorPage from './pages/UpgradeErrorPage';
-import CareerPathsPage from './pages/CareerPathsPage';
-import ServerErrorPage from './pages/ServerErrorPage';
-import ErrorTestPage from './pages/ErrorTestPage';
-import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
-import FileUploadTestPage from './pages/FileUploadTestPage';
-import VideoTestPage from './pages/VideoTestPage';
-import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
-import ProfilePage from './pages/ProfilePage';
-import CourseCatalogPage from './pages/CourseCatalogPage';
-
-// Placeholder pages - to be implemented
-function Home() {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Plataforma de Aprendizaje
-        </h1>
-        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
-          Aprende haciendo con cursos interactivos y ejecucion de codigo en vivo
-        </p>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <FeatureCard
-            title="Codigo en Vivo"
-            description="Ejecuta Python, SQL y R directamente en el navegador"
-            icon="code"
-          />
-          <FeatureCard
-            title="IA Pedagogica"
-            description="Asistencia basada en Taxonomia de Bloom y Modelo 4C"
-            icon="brain"
-          />
-          <FeatureCard
-            title="Proyectos Reales"
-            description="Aprende construyendo proyectos del mundo real"
-            icon="project"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FeatureCard({ title, description, icon }) {
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center mb-4">
-        <span className="text-2xl">{icon === 'code' ? '\uD83D\uDCBB' : icon === 'brain' ? '\uD83E\uDDE0' : '\uD83D\uDE80'}</span>
-      </div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-gray-600 dark:text-gray-300">{description}</p>
-    </div>
-  );
-}
-
-function NotFound() {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">Pagina no encontrada</p>
-        <a
-          href="/"
-          className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          Volver al inicio
-        </a>
-      </div>
-    </div>
-  );
-}
+import { useSearchParams } from 'react-router-dom';
+import Pagination from '../components/Pagination';
 
 // API URL - use environment variable or default to port 3001
 const CATALOG_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-// Course Catalog Page
-function CourseCatalog() {
+export default function CourseCatalogPage() {
   // Use URL search params for filter persistence (Feature #142)
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -116,9 +22,13 @@ function CourseCatalog() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [apiResponseData, setApiResponseData] = useState(null); // Store raw API response for verification
-  const [availableLevels, setAvailableLevels] = useState([]); // Dynamic levels from database
-  const [availableCategories, setAvailableCategories] = useState([]); // Dynamic categories from database (Feature #120)
+  const [availableLevels, setAvailableLevels] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+
+  // Pagination state (Feature #174: Pagination resets on context change)
+  const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page')) || 1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1, hasNext: false, hasPrev: false });
+  const ITEMS_PER_PAGE = 6;
 
   // Update URL when filters change (Feature #142)
   const updateURLParams = useCallback((updates) => {
@@ -135,20 +45,37 @@ function CourseCatalog() {
     }, { replace: true });
   }, [setSearchParams]);
 
-  // Wrapper functions to update both state and URL
+  // Feature #174: Reset pagination to page 1 when filters change
+  const resetPaginationOnFilterChange = useCallback(() => {
+    setCurrentPage(1);
+    updateURLParams({ page: '' }); // Remove page param when resetting
+  }, [updateURLParams]);
+
+  // Wrapper functions to update both state and URL (Feature #174: also reset pagination)
   const handleCategoryChange = useCallback((value) => {
     setCategoryFilter(value);
     updateURLParams({ category: value });
-  }, [updateURLParams]);
+    resetPaginationOnFilterChange(); // Feature #174
+  }, [updateURLParams, resetPaginationOnFilterChange]);
 
   const handleLevelChange = useCallback((value) => {
     setLevelFilter(value);
     updateURLParams({ level: value });
-  }, [updateURLParams]);
+    resetPaginationOnFilterChange(); // Feature #174
+  }, [updateURLParams, resetPaginationOnFilterChange]);
 
   const handlePriceChange = useCallback((value) => {
     setPriceFilter(value);
     updateURLParams({ price: value });
+    resetPaginationOnFilterChange(); // Feature #174
+  }, [updateURLParams, resetPaginationOnFilterChange]);
+
+  // Handle page change
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+    updateURLParams({ page: page.toString() });
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [updateURLParams]);
 
   // Fetch available categories from database (Feature #120)
@@ -163,7 +90,6 @@ function CourseCatalog() {
         }
       } catch (err) {
         console.error('Error fetching categories:', err);
-        // Fallback to default categories if API fails
         setAvailableCategories(['Programacion', 'Data Science', 'IA / ML', 'Web3', 'Bases de Datos']);
       }
     };
@@ -182,26 +108,27 @@ function CourseCatalog() {
         }
       } catch (err) {
         console.error('Error fetching levels:', err);
-        // Fallback to default levels if API fails
         setAvailableLevels(['Principiante', 'Intermedio', 'Avanzado']);
       }
     };
     fetchLevels();
   }, []);
 
-  // Fetch courses from API with search and filters
+  // Fetch courses from API with search, filters, and pagination
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Build query string with search and filters
+        // Build query string with search, filters, and pagination
         const params = new URLSearchParams();
         if (searchQuery) params.append('search', searchQuery);
         if (categoryFilter) params.append('category', categoryFilter);
         if (levelFilter) params.append('level', levelFilter);
         if (priceFilter) params.append('premium', priceFilter === 'premium' ? 'true' : priceFilter === 'free' ? 'false' : '');
+        params.append('page', currentPage.toString());
+        params.append('limit', ITEMS_PER_PAGE.toString());
 
         const queryString = params.toString();
         const url = `${CATALOG_API_URL}/courses${queryString ? `?${queryString}` : ''}`;
@@ -214,12 +141,28 @@ function CourseCatalog() {
         }
         const data = await response.json();
 
-        // Store raw API response for verification (Feature #119)
-        setApiResponseData(data);
         console.log('[Search] API Response:', data);
 
-        // Map API response to component format WITHOUT client-side filtering
-        // The API already handles search/filtering - we just display results
+        // Update pagination info from API response
+        if (data.pagination) {
+          setPagination(data.pagination);
+        } else {
+          // Client-side pagination fallback for API that doesn't support pagination yet
+          const allCourses = data.courses || [];
+          const total = allCourses.length;
+          const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+          setPagination({
+            total,
+            totalPages,
+            hasNext: currentPage < totalPages,
+            hasPrev: currentPage > 1
+          });
+          // Apply client-side pagination
+          const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+          data.courses = allCourses.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+        }
+
+        // Map API response to component format
         const mappedCourses = (data.courses || []).map(course => ({
           id: course.id,
           slug: course.slug,
@@ -243,7 +186,7 @@ function CourseCatalog() {
       }
     };
     fetchCourses();
-  }, [searchQuery, categoryFilter, levelFilter, priceFilter]);
+  }, [searchQuery, categoryFilter, levelFilter, priceFilter, currentPage]);
 
   const getLevelColor = (level) => {
     switch (level) {
@@ -258,38 +201,35 @@ function CourseCatalog() {
     }
   };
 
-  // Handle search form submission (Feature #142 - persist to URL)
+  // Handle search form submission (Feature #142 + Feature #174: reset pagination)
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setSearchQuery(searchInput);
     updateURLParams({ search: searchInput });
+    resetPaginationOnFilterChange(); // Feature #174: reset to page 1
   };
 
-  // Handle clearing search (Feature #142)
+  // Handle clearing search (Feature #142 + Feature #174: reset pagination)
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
     updateURLParams({ search: '' });
+    resetPaginationOnFilterChange(); // Feature #174
   };
 
-  // Handle resetting all filters (Feature #171)
+  // Handle resetting all filters (Feature #171 + Feature #174: reset pagination)
   const handleResetFilters = useCallback(() => {
-    // Clear all filter states
     setCategoryFilter('');
     setLevelFilter('');
     setPriceFilter('');
     setSearchInput('');
     setSearchQuery('');
-    // Clear all URL parameters
+    setCurrentPage(1); // Feature #174
     setSearchParams({}, { replace: true });
   }, [setSearchParams]);
 
   // Check if any filters are applied (Feature #171)
   const hasActiveFilters = categoryFilter || levelFilter || priceFilter || searchQuery;
-
-  // No client-side filtering - API returns pre-filtered results
-  // This ensures UI displays exactly what the API returns (Feature #119)
-  const filteredCourses = courses;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -346,7 +286,7 @@ function CourseCatalog() {
           {searchQuery && (
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400" data-testid="search-results-info">
               Resultados para: <span className="font-medium">"{searchQuery}"</span>
-              {!loading && ` - ${filteredCourses.length} curso(s) encontrado(s)`}
+              {!loading && ` - ${pagination.total} curso(s) encontrado(s)`}
             </p>
           )}
         </form>
@@ -401,6 +341,13 @@ function CourseCatalog() {
           )}
         </div>
 
+        {/* Current page indicator (Feature #174) */}
+        {pagination.totalPages > 1 && (
+          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400" data-testid="current-page-indicator">
+            Página {currentPage} de {pagination.totalPages}
+          </div>
+        )}
+
         {/* Loading State */}
         {loading && (
           <div className="flex justify-center items-center py-16">
@@ -423,7 +370,7 @@ function CourseCatalog() {
         )}
 
         {/* Empty State */}
-        {!loading && !error && filteredCourses.length === 0 && (
+        {!loading && !error && courses.length === 0 && (
           <div className="text-center py-16">
             <span className="text-6xl mb-4 block">📚</span>
             <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay cursos disponibles</h3>
@@ -432,148 +379,82 @@ function CourseCatalog() {
         )}
 
         {/* Course Grid */}
-        {!loading && !error && filteredCourses.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCourses.map((course) => (
-            <a
-              key={course.id}
-              href={`/course/${course.slug}`}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
-            >
-              {/* Thumbnail placeholder */}
-              <div className="h-40 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
-                <span className="text-6xl opacity-50">
-                  {course.category === 'Programacion' ? '\uD83D\uDCBB' :
-                   course.category === 'Data Science' ? '\uD83D\uDCCA' :
-                   course.category === 'IA / ML' ? '\uD83E\uDD16' :
-                   course.category === 'Web3' ? '\uD83D\uDD17' :
-                   course.category === 'Bases de Datos' ? '\uD83D\uDDC3\uFE0F' : '\uD83D\uDCDA'}
-                </span>
-              </div>
-
-              <div className="p-5">
-                {/* Tags row */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
-                    {course.level}
-                  </span>
-                  {course.isPremium && (
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
-                      Premium
+        {!loading && !error && courses.length > 0 && (
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => (
+                <a
+                  key={course.id}
+                  href={`/course/${course.slug}`}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
+                >
+                  {/* Thumbnail placeholder */}
+                  <div className="h-40 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                    <span className="text-6xl opacity-50">
+                      {course.category === 'Programacion' ? '💻' :
+                       course.category === 'Data Science' ? '📊' :
+                       course.category === 'IA / ML' ? '🤖' :
+                       course.category === 'Web3' ? '🔗' :
+                       course.category === 'Bases de Datos' ? '🗃️' : '📚'}
                     </span>
-                  )}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                    {course.duration}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                  {course.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                  {course.description}
-                </p>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    {course.instructor}
-                  </span>
-                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span className="text-yellow-500">★</span>
-                    <span>{course.rating}</span>
-                    <span className="mx-1">·</span>
-                    <span>{course.studentsCount.toLocaleString()} estudiantes</span>
                   </div>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
+
+                  <div className="p-5">
+                    {/* Tags row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
+                        {course.level}
+                      </span>
+                      {course.isPremium && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                          Premium
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+                        {course.duration}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {course.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                      {course.description}
+                    </p>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {course.instructor}
+                      </span>
+                      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                        <span className="text-yellow-500">★</span>
+                        <span>{course.rating}</span>
+                        <span className="mx-1">·</span>
+                        <span>{course.studentsCount.toLocaleString()} estudiantes</span>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Pagination (Feature #174) */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+              hasNext={pagination.hasNext}
+              hasPrev={pagination.hasPrev}
+              total={pagination.total}
+              limit={ITEMS_PER_PAGE}
+            />
+          </>
         )}
       </div>
     </div>
   );
 }
-
-// Dashboard is now imported from DashboardPage.jsx
-
-function App() {
-  return (
-    <AuthProvider>
-      <div className="flex flex-col min-h-screen">
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
-        <Navbar />
-        <main className="flex-grow">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/courses" element={<CourseCatalogPage />} />
-            <Route path="/course/:slug" element={<CourseDetailPage />} />
-            <Route path="/course/:slug/forum" element={<ForumPage />} />
-            <Route path="/forum/thread/:threadId" element={<ThreadDetailPage />} />
-            <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
-            <Route path="/quiz/:quizId" element={<QuizPage />} />
-            <Route path="/challenge/:challengeId" element={<CodeChallengePage />} />
-            <Route path="/notebook/:notebookId" element={<NotebookPage />} />
-            <Route path="/notebook" element={<NotebookPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/admin" element={<AdminCoursesPage />} />
-            <Route path="/admin/courses" element={<AdminCoursesPage />} />
-            <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
-            <Route path="/admin/courses/new" element={<CourseCreatorPage />} />
-            <Route path="/admin/courses/:courseId/edit" element={<CourseCreatorPage />} />
-            <Route path="/admin/submissions" element={<SubmissionsReviewPage />} />
-            <Route path="/admin/review/:submissionId" element={<InstructorFeedbackPage />} />
-            <Route path="/feedback/:submissionId" element={<SubmissionFeedbackPage />} />
-            <Route path="/project/:projectId/submit" element={<ProjectSubmissionPage />} />
-            <Route path="/webinars" element={<WebinarsPage />} />
-            <Route path="/webinars/schedule" element={<WebinarSchedulePage />} />
-            <Route path="/certificates" element={<CertificatesPage />} />
-            <Route path="/certificate/verify/:code" element={<CertificateVerifyPage />} />
-            <Route path="/certificate/verify" element={<CertificateVerifyPage />} />
-            <Route path="/upgrade" element={<UpgradePage />} />
-            <Route path="/upgrade/success" element={<UpgradeSuccessPage />} />
-            <Route path="/upgrade/error" element={<UpgradeErrorPage />} />
-            <Route path="/career-paths" element={<CareerPathsPage />} />
-            <Route path="/career-paths/:slug" element={<CareerPathsPage />} />
-            <Route path="/server-error" element={<ServerErrorPage />} />
-            <Route path="/test-error" element={<ErrorTestPage />} />
-            <Route path="/test-upload" element={<FileUploadTestPage />} />
-            <Route path="/test-video" element={<VideoTestPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </AuthProvider>
-  );
-}
-
-export default App;

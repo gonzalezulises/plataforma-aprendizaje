@@ -1,7 +1,7 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 
-console.log('Courses routes loading... (updated 2026-01-25 - Feature #163 career path cascade)');
+console.log('Courses routes loading... (updated 2026-01-25 - Feature #174 pagination)');
 
 const router = express.Router();
 
@@ -105,44 +105,66 @@ router.get('/categories', (req, res) => {
 
 /**
  * GET /api/courses - List all published courses (public) or all courses (instructor)
+ * Supports pagination with page/limit query params (Feature #174)
  */
 router.get('/', (req, res) => {
   try {
     const isInstructorUser = isInstructor(req);
-    const { category, level, premium, search } = req.query;
+    const { category, level, premium, search, page = 1, limit = 6 } = req.query;
 
-    let sql = 'SELECT * FROM courses WHERE 1=1';
+    // Parse pagination params
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 6));
+    const offset = (pageNum - 1) * limitNum;
+
+    let baseSql = 'FROM courses WHERE 1=1';
     const params = [];
 
     // Only show published courses for non-instructors
     if (!isInstructorUser) {
-      sql += ' AND is_published = 1';
+      baseSql += ' AND is_published = 1';
     }
 
     if (category) {
-      sql += ' AND category = ?';
+      baseSql += ' AND category = ?';
       params.push(category);
     }
 
     if (level) {
-      sql += ' AND level = ?';
+      baseSql += ' AND level = ?';
       params.push(level);
     }
 
     if (premium !== undefined) {
-      sql += ' AND is_premium = ?';
+      baseSql += ' AND is_premium = ?';
       params.push(premium === 'true' ? 1 : 0);
     }
 
     if (search) {
-      sql += ' AND (title LIKE ? OR description LIKE ?)';
+      baseSql += ' AND (title LIKE ? OR description LIKE ?)';
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    sql += ' ORDER BY created_at DESC';
+    // Get total count for pagination
+    const countResult = queryOne(`SELECT COUNT(*) as total ${baseSql}`, params);
+    const total = countResult?.total || 0;
+    const totalPages = Math.ceil(total / limitNum);
 
-    const courses = queryAll(sql, params);
-    res.json({ courses });
+    // Get paginated results
+    const sql = `SELECT * ${baseSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const courses = queryAll(sql, [...params, limitNum, offset]);
+
+    res.json({
+      courses,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching courses:', error);
     res.status(500).json({ error: 'Failed to fetch courses' });
@@ -1098,3 +1120,4 @@ router.delete('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId
 
 export default router;
 // Trigger reload do., 25 de ene. de 2026 11:58:54
+// Trigger reload do., 25 de ene. de 2026 15:01:34

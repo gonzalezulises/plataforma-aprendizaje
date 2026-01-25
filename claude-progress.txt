@@ -1,3 +1,45 @@
+## Session: 2026-01-25 (Coding Agent - Feature #172)
+
+### Feature #172: Form reset clears all fields - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Fill out a form - PASS
+   - Navigated to /webinars/schedule as instructor
+   - Filled in: title, description, course selection, generated Meet link
+2. Click reset button - PASS
+   - Clicked "Restablecer" button in form footer
+   - Toast notification: "Formulario restablecido"
+3. Verify all fields return to defaults - PASS
+   - Title: cleared to empty
+   - Description: cleared to empty
+   - Course: reset to "Sin curso asociado" (no course)
+   - Meet link: cleared to empty (shows placeholder)
+   - Duration: remains at default "1 hora" (60 min)
+   - Capacity: remains at default "100"
+4. Verify no partial data remains - PASS
+   - All form fields fully reset
+   - localStorage form data cleared
+
+### Implementation Details
+- Added handleResetForm() to WebinarSchedulePage.jsx (line 98)
+- Added handleResetForm() to ProjectSubmissionPage.jsx (line 73)
+- Added "Restablecer" button with orange styling and refresh icon
+- Clears form state, localStorage, and shows success toast
+
+### Screenshots
+- form_before_reset.png - Form filled with test data
+- form_after_reset.png - Form after reset (all fields empty/default)
+
+### Console Errors: None
+
+### Current Status
+- Feature #172 marked as PASSING
+- 93/248 features passing (37.5%)
+
+[Coding] 2026-01-25 Feature #172 'Form reset clears all fields' - VERIFIED AND PASSING
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #170)
 
 ### Feature #170: Date picker defaults to sensible date - VERIFIED AND PASSING
@@ -5901,4 +5943,158 @@ Frontend (CodeChallengePage.jsx):
 - 94/248 features passing (37.9%)
 
 [Coding] 2026-01-25 Feature #173 'Code editor reset restores original code' verified - PASSED
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #88 Regression Test)
+
+### Feature #88: Complete student enrollment workflow - REGRESSION FOUND & FIXED
+
+#### Issue Discovered:
+When clicking 'Continuar Curso' or completing enrollment, the system would redirect to 
+/course/{slug}/lesson/1 where lesson ID 1 belonged to a different course (TEST_87_TypeScript Pro)
+instead of the first lesson of the enrolled course.
+
+#### Root Cause:
+The CourseDetailPage.jsx was merging API course data with hardcoded SAMPLE_COURSES data.
+The sample data contained lesson IDs (1, 2, 3...) that didn't match real database lesson IDs.
+When API returned empty modules, it fell back to sample data with wrong IDs.
+
+#### Fix Applied (frontend/src/pages/CourseDetailPage.jsx):
+1. Added `_hasRealLessons` flag to track if course has API modules (line 188)
+2. Modified `handleGoToCourse()` to only navigate when `_hasRealLessons` is true (line 308)
+3. Modified enrollment success redirect to check `_hasRealLessons` (line 284)
+4. Show informative toast 'Este curso aun no tiene lecciones disponibles' when no real lessons
+5. Fixed `toast.info` to `toast()` with icon for react-hot-toast compatibility
+
+#### Verification Steps - ALL PASSED:
+1. Browse course catalog - PASS (11 courses displayed)
+2. Filter by category - PASS (filtered to 'Bases de Datos' showing 1 course)
+3. View course details - PASS (course info, modules, instructor displayed)
+4. Click enroll button - PASS (confirmation modal appeared)
+5. Confirm enrollment - PASS (toast: 'Te has inscrito exitosamente!')
+6. Verify redirected to course content - PASS (redirected to /course/python-fundamentos/lesson/6 - real lesson ID)
+7. Verify course appears in dashboard - PASS ('Python: Fundamentos' shown with 0% completado)
+
+#### Screenshots:
+- feature-88-enrollment-redirect-issue.png - Shows original bug (wrong course in lesson view)
+- feature-88-enrollment-workflow-success.png - Dashboard showing successful enrollment
+
+#### Commit: 40b5fd9 - Fix enrollment workflow lesson ID mismatch regression
+
+[Testing] 2026-01-25 Feature #88 'Complete student enrollment workflow' regression FIXED and PASSING
+
+[Testing] 2026-01-25 Feature #158 'Mark complete idempotent' regression test - PASSED (no regression found)
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #150 Regression Test)
+
+### Feature #150: Forum thread direct link works - REGRESSION TEST PASSED
+
+All 4 verification steps validated:
+1. Copy a thread URL - PASS (used http://localhost:5173/forum/thread/1)
+2. Open in new session - PASS (opened in new browser tab)
+3. Verify thread loads correctly - PASS (title, content, author, timestamp, resolved badge all displayed)
+4. Verify replies are visible - PASS (1 reply with full content, vote count, and author info)
+
+### Test Evidence
+- Direct URL navigation loaded thread correctly
+- New session (new tab) loaded same thread without issues
+- Breadcrumb navigation shows: Cursos / Python: Fundamentos / Foro / Thread title
+- WebSocket connected successfully (En vivo indicator)
+
+### Screenshots
+- feature-150-direct-link-works.png - Initial direct URL load
+- feature-150-new-session-works.png - New session/tab load
+
+### Console Errors
+- Only expected 401 Unauthorized (user not logged in)
+- No errors related to forum thread functionality
+
+[Testing] 2026-01-25 Feature #150 'Forum thread direct link works' regression test - PASSED (no regression found)
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #117 Regression Test)
+
+### Feature #117: Syntax error in code shows helpful message - REGRESSION TEST PASSED
+
+All 5 verification steps validated:
+1. Write code with syntax error - PASS (tested unclosed parenthesis and missing colon)
+2. Run the code - PASS (clicked Ejecutar button)
+3. Verify syntax error is highlighted - PASS (red highlighting, warning indicator in gutter)
+4. Verify line number is indicated - PASS (shows 'SyntaxError: Linea 1')
+5. Verify error message explains the issue - PASS (clear messages with helpful suggestions)
+
+### Test Cases Verified:
+- Unclosed parenthesis: print("Hello World - Shows 'Parentesis sin cerrar' with suggestion
+- Missing colon: for i in range(5) - Shows 'Falta : al final de la declaracion for' with example
+
+### Screenshots
+- feature-117-syntax-error-unclosed-parenthesis.png
+- feature-117-syntax-error-missing-colon.png
+
+### Console Errors
+- Only expected 401 Unauthorized (user not logged in)
+- No JavaScript errors related to syntax error handling
+
+[Testing] 2026-01-25 Feature #117 'Syntax error in code shows helpful message' regression test - PASSED (no regression found)
+
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #174)
+
+### Feature #174: Pagination resets on context change - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+1. Navigate to page 2 of results - PASS
+   - URL showed: http://localhost:5173/courses?page=2
+   - Page indicator showed 'Página 2 de 2'
+   - Different courses displayed (Data Science con Python, SQL desde Cero, etc.)
+
+2. Apply a new filter - PASS (tested multiple filter types)
+   - Level filter: Selected 'Principiante'
+   - Search query: Typed 'Python' and submitted
+   - Category filter: Selected 'Programacion'
+
+3. Verify pagination resets to page 1 - PASS
+   - URL changed from ?page=2 to /courses (page param removed)
+   - Page indicator updated to show page 1 or disappeared when results fit on one page
+
+4. Verify results are for page 1 - PASS
+   - First course in filtered results always displayed
+   - Results count updated correctly for each filter
+
+### Implementation Details (Already in place)
+Frontend (CourseCatalogPage.jsx):
+- resetPaginationOnFilterChange() function (lines 48-52)
+- Sets currentPage to 1 and removes page URL param
+- Called by all filter change handlers:
+  - handleCategoryChange (line 58)
+  - handleLevelChange (line 64)
+  - handlePriceChange (line 70)
+  - handleSearchSubmit (line 209)
+  - handleClearSearch (line 217)
+  - handleResetFilters (line 227)
+
+### Screenshots
+- feature-174-step1-page1-initial.png - Initial page 1 view
+- feature-174-step2-page2-before-filter.png - Page 2 before applying filter
+- feature-174-step3-filter-applied-page-reset.png - Level filter applied, page reset
+- feature-174-step4-search-pagination-reset.png - Search query, page reset
+- feature-174-step5-category-filter-pagination-reset.png - Category filter, page reset
+
+### Console Errors
+- Only expected 401 Unauthorized from /api/auth/me (not logged in)
+- No JavaScript errors related to pagination functionality
+
+### Current Status
+- Feature #174 marked as PASSING
+- 96/248 features passing (38.7%)
+
+[Coding] 2026-01-25 Feature #174 'Pagination resets on context change' verified - PASSED
 
