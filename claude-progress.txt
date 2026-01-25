@@ -2998,3 +2998,48 @@
 - Passing features: 54/248 (21.8%)
 
 [Testing] 2026-01-25 Feature #132 "Webinar list from database" verified - PASSED
+[Testing] 2026-01-25 Feature #113 'Invalid file type rejection' regression test - PASSED
+  - Verified all 4 steps via browser automation at /test-upload:
+    1. Attempt to upload unsupported file type - PASS
+       - Uploaded test-invalid-file.exe
+       - File was correctly rejected
+    2. Verify rejection with clear message - PASS
+       - 'Error al Subir Archivo' heading shown
+       - 'Algunos archivos no pudieron ser seleccionados' message
+       - 'Tipo de archivo no permitido' error text
+    3. Verify correct file types are listed - PASS
+       - Error shows: 'Tipos aceptados: .pdf,.doc,.docx,.txt,.py,.js,.ts,.zip,.png,.jpg,.jpeg,.md,.json,.csv'
+    4. Verify form state is preserved - PASS
+       - 'Seleccionar otro archivo' button available
+       - Valid .txt file successfully selected after rejection
+       - 'Subir archivo' button appeared for valid file
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me
+  - Screenshots: feature-113-test-upload-page.png, feature-113-error-message-and-recovery.png, feature-113-valid-file-after-rejection.png
+[Testing] Session complete - Feature #113 verified, still passing
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #131)
+
+### Completed Features
+- Feature #131: Rubric criteria from database - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Navigate to feedback form - PASS
+       - Navigated to http://localhost:5173/admin/review/5
+       - Page loaded correctly showing Evaluar Entrega form
+    2. Verify rubric API is called - PASS
+       - GET /api/feedback/submissions/5/feedback => 200 OK
+       - API returns criteria from database
+    3. Verify criteria names match database - PASS
+       - Database: Calidad del Codigo, Funcionalidad, Documentacion, Creatividad
+       - UI matches exactly
+    4. Verify scoring scale is correct - PASS
+       - Database: maxScore 25 for each criterion
+       - UI shows / 25 for each criterion
+       - Total: 100 points
+
+### Current Status
+- Feature #131 marked as PASSING
+
+[Testing] 2026-01-25 Feature #131 Rubric criteria from database verified - PASSED
