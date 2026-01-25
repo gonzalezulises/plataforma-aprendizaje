@@ -40,7 +40,7 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
 
     setIsGenerating(true);
     try {
-      const response = await fetch(`${API_BASE}/api/ai/generate-course-structure`, {
+      const response = await fetch(`${API_BASE}/api/courses/ai/generate-structure`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -100,7 +100,7 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
 
     setIsApplying(true);
     try {
-      const response = await fetch(`${API_BASE}/api/ai/apply-course-structure/${courseId}`, {
+      const response = await fetch(`${API_BASE}/api/courses/${courseId}/ai/apply-structure`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

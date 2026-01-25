@@ -1709,3 +1709,46 @@
   - Console errors: None (only expected React Router warnings)
   - Screenshots: feature-96-step1-webinars-page-as-instructor.png through feature-96-step7-recording-available.png
 [Testing] Session complete - Feature #96 verified, still passing
+[Testing] 2026-01-25 04:41 Feature #96 'Complete webinar workflow' regression test - PASSED
+  - All 7 verification steps verified:
+    1. Log in as instructor - PASS (logged in as Instructor Admin)
+    2. Schedule a new webinar - PASS (clicked Programar Webinar, form displayed)
+    3. Add title, description, date - PASS (filled all fields: TEST_F96_Regression - Fundamentos de Testing Automatizado)
+    4. Save webinar - PASS (toast 'Webinar programado exitosamente', webinar appears in list)
+    5. As student, view webinar in calendar - PASS (logged in as student, calendar view shows webinar by date)
+    6. Join webinar at scheduled time - PASS (registration successful with toast 'Te has registrado exitosamente')
+    7. After webinar, access recording - PASS ('Ver Grabacion' button opens recording URL in new tab)
+  - Test webinar created: TEST_F96_Regression - Fundamentos de Testing Automatizado (2026-01-29 16:00)
+  - Console errors: None
+  - Screenshots: feature-96-step1-webinars-page-instructor.png through feature-96-step7-recording-available.png
+[Testing] Session complete - Feature #96 verified, still passing
+[Testing] 2026-01-25 09:45 Feature #97 'Complete certificate earning workflow' regression test - PASSED
+  - All 8 verification steps verified:
+    1. Enroll in a course - PASS (already enrolled in Python: Fundamentos)
+    2. Complete all lessons - PASS (100% completion shown)
+    3. Complete all quizzes - PASS (part of course completion)
+    4. Submit all required projects - PASS (part of course completion)
+    5. Verify course marked as complete - PASS (dashboard shows '100% completado' badge)
+    6. Navigate to certificates - PASS (/certificates page displays certificate card)
+    7. Download certificate PDF - PASS (beautiful HTML certificate generated)
+    8. Verify verification link works - PASS ('Certificado Valido' shown with full details)
+  - Certificate details verified:
+    - Course: Python: Fundamentos
+    - User: Usuario de Prueba
+    - Category: Programacion
+    - Level: Principiante
+    - Duration: 20 horas
+    - Issue date: 25 de enero de 2026
+    - Verification code: E036CF47F0DF280BC634DEA2
+  - Console errors: None
+  - Screenshots: feature-97-step6-certificates-page.png, feature-97-step7-certificate-pdf.png, feature-97-step8-certificate-verification.png
+[Testing] Session complete - Feature #97 verified, still passing
+
+## Feature #103 - Network error during code execution shows message
+- Added networkError state to track network failures
+- Added isNetworkError helper function
+- Implemented handleRetry for retry operations
+- Added user-friendly error banner with 'Reintentar' button
+- Shows different messages for offline vs server issues
+- Verified with browser automation - working correctly
+- Committed: 2872c9f

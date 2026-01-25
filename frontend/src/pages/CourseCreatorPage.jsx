@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import AIQuizGeneratorModal from '../components/AIQuizGeneratorModal';
+import AICourseStructureModal from '../components/AICourseStructureModal';
 
 // Use the base URL without /api since the env var already includes it
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -56,6 +57,9 @@ export default function CourseCreatorPage() {
   const [showAIQuizModal, setShowAIQuizModal] = useState(false);
   const [aiQuizLessonId, setAIQuizLessonId] = useState(null);
   const [aiQuizLessonTitle, setAIQuizLessonTitle] = useState('');
+
+  // AI Course Structure Generator modal state
+  const [showAICourseModal, setShowAICourseModal] = useState(false);
 
   // Load course data if editing
   const loadCourse = useCallback(async () => {

@@ -26,6 +26,8 @@ import certificatesRoutes, { initCertificatesTables } from './routes/certificate
 import upgradeRoutes, { initUpgradeTables } from './routes/upgrade.js';
 import aiRoutes from './routes/ai.js';
 import careerPathsRoutes, { initCareerPathsTables } from './routes/career-paths.js';
+import directAuthRoutes from './routes/direct-auth.js';
+import aiCourseStructureRoutes from './routes/ai-course-structure.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -133,6 +135,8 @@ app.use('/api/certificates', certificatesRoutes);
 app.use('/api/upgrade', upgradeRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/career-paths', careerPathsRoutes);
+app.use('/api/direct-auth', directAuthRoutes);
+app.use('/api/ai', aiCourseStructureRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -217,3 +221,4 @@ server.listen(PORT, () => {
 
 export default app;
 // webinars routes added - feature #96
+// Trigger reload do., 25 de ene. de 2026  4:53:04

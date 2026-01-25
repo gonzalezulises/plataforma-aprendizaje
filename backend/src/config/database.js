@@ -398,7 +398,14 @@ export function queryOne(sql, params = []) {
 export function run(sql, params = []) {
   db.run(sql, params);
   saveDatabase();
-  const lastId = db.exec('SELECT last_insert_rowid()')[0]?.values[0]?.[0];
+  // Get last_insert_rowid using db.prepare for reliable results
+  const stmt = db.prepare('SELECT last_insert_rowid() as id');
+  let lastId = null;
+  if (stmt.step()) {
+    const row = stmt.getAsObject();
+    lastId = row.id;
+  }
+  stmt.free();
   const changes = db.getRowsModified();
   return { lastInsertRowid: lastId, changes };
 }

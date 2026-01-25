@@ -115,7 +115,13 @@ function ThreadDetailPage() {
     await submit(performSubmit, {
       preserveData: { content: newReply },
       onSuccess: (data) => {
-        setReplies([...replies, data.reply]);
+        // Only add reply if it's valid (not null)
+        if (data.reply) {
+          setReplies([...replies, data.reply]);
+        } else {
+          // Refetch replies if the API didn't return the created reply
+          fetchThread();
+        }
         setNewReply('');
         toast.success('Respuesta publicada');
         // Update thread reply count
