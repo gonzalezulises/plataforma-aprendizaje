@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -13,6 +13,7 @@ const SUBMIT_TIMEOUT_MS = 30000;
 function QuizPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Quiz state
   const [quiz, setQuiz] = useState(null);
@@ -41,6 +42,37 @@ function QuizPage() {
   // Store answers in localStorage to prevent loss
   const savedAnswersKey = `quiz_${quizId}_answers`;
   const savedAttemptKey = `quiz_${quizId}_attempt`;
+
+  // Initialize currentQuestion from URL on mount
+  const initialQuestionFromUrl = useRef(false);
+
+  // Sync URL to currentQuestion on mount (deep link support)
+  useEffect(() => {
+    if (!initialQuestionFromUrl.current && questions.length > 0 && quizStarted) {
+      const qParam = searchParams.get('q');
+      if (qParam !== null) {
+        const questionIndex = parseInt(qParam, 10) - 1; // URL uses 1-based index
+        if (!isNaN(questionIndex) && questionIndex >= 0 && questionIndex < questions.length) {
+          setCurrentQuestion(questionIndex);
+          console.log(`[QuizPage] Deep link: navigating to question ${questionIndex + 1} from URL`);
+        }
+      }
+      initialQuestionFromUrl.current = true;
+    }
+  }, [questions.length, quizStarted, searchParams]);
+
+  // Sync currentQuestion to URL (update URL when navigating between questions)
+  useEffect(() => {
+    if (quizStarted && questions.length > 0) {
+      // Only update URL if the question param is different from current state
+      const currentUrlQuestion = searchParams.get('q');
+      const expectedUrlQuestion = String(currentQuestion + 1); // URL uses 1-based index
+
+      if (currentUrlQuestion !== expectedUrlQuestion) {
+        setSearchParams({ q: expectedUrlQuestion }, { replace: true });
+      }
+    }
+  }, [currentQuestion, quizStarted, questions.length, setSearchParams]);
 
   // Fetch quiz data
   useEffect(() => {
@@ -144,8 +176,23 @@ function QuizPage() {
       const data = await response.json();
       setAttemptId(data.attemptId);
       setQuizStarted(true);
-      setCurrentQuestion(0);
       setAnswers({});
+
+      // Check if URL has a question param for deep linking
+      const qParam = searchParams.get('q');
+      if (qParam !== null) {
+        const questionIndex = parseInt(qParam, 10) - 1; // URL uses 1-based index
+        if (!isNaN(questionIndex) && questionIndex >= 0 && questionIndex < questions.length) {
+          setCurrentQuestion(questionIndex);
+          console.log(`[QuizPage] Starting quiz at question ${questionIndex + 1} from URL`);
+        } else {
+          setCurrentQuestion(0);
+          setSearchParams({ q: '1' }, { replace: true });
+        }
+      } else {
+        setCurrentQuestion(0);
+        setSearchParams({ q: '1' }, { replace: true });
+      }
 
       // Set timer if quiz has time limit
       if (data.timeLimitMinutes) {
@@ -277,6 +324,9 @@ function QuizPage() {
     setSubmitError(null);
     setIsTimeoutError(false);
     setRetryCount(0);
+    // Reset URL to remove question parameter
+    setSearchParams({}, { replace: true });
+    initialQuestionFromUrl.current = false;
     fetchQuiz(); // Refresh quiz data including attempts
   };
 
