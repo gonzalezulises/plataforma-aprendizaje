@@ -3458,3 +3458,52 @@
 - Passing features: 61/248 (24.6%)
 
 [Testing] 2026-01-25 Feature #139 "Session recovery after browser crash" verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #138)
+
+### Completed Features
+- Feature #138: Back button after form submission - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Submit a form successfully - PASS
+       - Created new forum thread with title 'TEST_138_BACK_BUTTON'
+       - Posted reply with 'TEST_138_REPLY'
+       - Both submissions successful with toast confirmations
+    2. Click browser back button - PASS
+       - Navigation worked correctly on both forum page and thread page
+    3. Verify form shows empty or appropriate state - PASS
+       - ForumPage: Form hidden after back, opens empty when clicked
+       - ThreadDetailPage: Reply form empty after back
+    4. Verify no duplicate submission warning - PASS
+       - No warnings shown, forms ready for new input
+
+### Implementation Details
+The feature works correctly because the existing codebase properly handles form state:
+
+- ForumPage.jsx:
+  - clearSavedFormData() called after successful submission (line 161)
+  - setNewThread({ title: '', content: '' }) resets form state (line 163)
+  - setShowNewThread(false) hides the form (line 164)
+  - navigate() moves to new thread page (line 166)
+  - On back navigation, form is hidden and localStorage is cleared
+
+- ThreadDetailPage.jsx:
+  - setReplyContent('') clears the reply textarea after submission
+  - Reply appears in list via WebSocket real-time updates
+  - On back navigation, form shows empty state
+
+### Screenshots
+- feature-138-step3-empty-form-after-back.png - Forum form empty after back
+- feature-138-step4-reply-form-empty-after-back.png - Thread reply form empty
+- feature-138-verification-complete.png - Final state verification
+
+### Console Errors
+- Only WebSocket reconnection errors (expected behavior)
+
+### Current Status
+- Feature #138 marked as PASSING
+- Passing features: 61/248 (24.6%)
+
+[Testing] 2026-01-25 Feature #138 'Back button after form submission' verified - PASSED
+
