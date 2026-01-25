@@ -23,7 +23,8 @@ function DashboardPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:3001/api/enrollments', {
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_BASE}/enrollments`, {
           credentials: 'include'
         });
 

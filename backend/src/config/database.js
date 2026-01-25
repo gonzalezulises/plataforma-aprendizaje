@@ -326,6 +326,24 @@ function createTables() {
 
   // Create indexes for lesson content
   db.run(`CREATE INDEX IF NOT EXISTS idx_lesson_content_lesson ON lesson_content(lesson_id)`);
+
+  // Notifications table - stores user notifications
+  db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT,
+      content TEXT DEFAULT '{}',
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Create indexes for notifications
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, is_read)`);
 }
 
 /**

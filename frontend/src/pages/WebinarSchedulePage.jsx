@@ -1,0 +1,332 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../store/AuthContext';
+import toast from 'react-hot-toast';
+
+// Strip trailing /api from VITE_API_URL to avoid double /api/api paths
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+
+function WebinarSchedulePage() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    course_id: '',
+    scheduled_date: '',
+    scheduled_time: '',
+    duration_minutes: 60,
+    meet_link: '',
+    max_attendees: 100
+  });
+
+  useEffect(() => {
+    // Check if user is instructor
+    if (isAuthenticated && user?.role !== 'instructor_admin') {
+      toast.error('Solo los instructores pueden programar webinars');
+      navigate('/webinars');
+    }
+    fetchCourses();
+  }, [isAuthenticated, user, navigate]);
+
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/courses`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCourses(data.courses || data);
+      }
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.scheduled_date || !formData.scheduled_time) {
+      toast.error('Por favor completa los campos requeridos');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Combine date and time
+      const scheduled_at = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
+
+      const response = await fetch(`${API_URL}/api/webinars`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          course_id: formData.course_id || null,
+          scheduled_at,
+          duration_minutes: parseInt(formData.duration_minutes),
+          meet_link: formData.meet_link || null,
+          max_attendees: parseInt(formData.max_attendees)
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Webinar programado exitosamente');
+        navigate('/webinars');
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Error al programar el webinar');
+      }
+    } catch (error) {
+      console.error('Error scheduling webinar:', error);
+      toast.error('Error al programar el webinar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Generate a random Meet link for demo purposes
+  const generateMeetLink = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    const generatePart = (len) => {
+      let result = '';
+      for (let i = 0; i < len; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    };
+    const meetLink = `https://meet.google.com/${generatePart(3)}-${generatePart(4)}-${generatePart(3)}`;
+    setFormData(prev => ({ ...prev, meet_link: meetLink }));
+    toast.success('Link de Google Meet generado');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate('/webinars')}
+            className="flex items-center text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 mb-4"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver a Webinars
+          </button>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Programar Webinar
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Crea una nueva sesion en vivo para tus estudiantes
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* Title */}
+          <div className="mb-6">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Titulo del Webinar *
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              required
+              placeholder="Ej: Introduccion a Python para Principiantes"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="mb-6">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Descripcion
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={4}
+              placeholder="Describe el contenido y objetivos de la sesion..."
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Course Selection */}
+          <div className="mb-6">
+            <label htmlFor="course_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Curso Asociado (opcional)
+            </label>
+            <select
+              id="course_id"
+              name="course_id"
+              value={formData.course_id}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="">Sin curso asociado</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date and Time */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label htmlFor="scheduled_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Fecha *
+              </label>
+              <input
+                type="date"
+                id="scheduled_date"
+                name="scheduled_date"
+                value={formData.scheduled_date}
+                onChange={handleChange}
+                required
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label htmlFor="scheduled_time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Hora *
+              </label>
+              <input
+                type="time"
+                id="scheduled_time"
+                name="scheduled_time"
+                value={formData.scheduled_time}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div className="mb-6">
+            <label htmlFor="duration_minutes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Duracion (minutos)
+            </label>
+            <select
+              id="duration_minutes"
+              name="duration_minutes"
+              value={formData.duration_minutes}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="30">30 minutos</option>
+              <option value="45">45 minutos</option>
+              <option value="60">1 hora</option>
+              <option value="90">1 hora 30 minutos</option>
+              <option value="120">2 horas</option>
+              <option value="180">3 horas</option>
+            </select>
+          </div>
+
+          {/* Google Meet Link */}
+          <div className="mb-6">
+            <label htmlFor="meet_link" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Link de Google Meet
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                id="meet_link"
+                name="meet_link"
+                value={formData.meet_link}
+                onChange={handleChange}
+                placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={generateMeetLink}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+              >
+                Generar
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Puedes crear el link en Google Meet y pegarlo aqui, o generar uno de ejemplo.
+            </p>
+          </div>
+
+          {/* Max Attendees */}
+          <div className="mb-8">
+            <label htmlFor="max_attendees" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Capacidad Maxima
+            </label>
+            <input
+              type="number"
+              id="max_attendees"
+              name="max_attendees"
+              value={formData.max_attendees}
+              onChange={handleChange}
+              min="1"
+              max="1000"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Submit */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => navigate('/webinars')}
+              className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Programando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Programar Webinar
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default WebinarSchedulePage;

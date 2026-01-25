@@ -1,0 +1,809 @@
+<project_specification>
+  <project_name>Plataforma de Aprendizaje</project_name>
+
+  <overview>
+    Plataforma de aprendizaje activo para crear cursos enriquecidos con ejecucion de codigo en vivo (Python, SQL, R), asistencia de IA basada en principios pedagogicos (Taxonomia de Bloom, Modelo 4C, Flipped Classroom), y sistema de evaluacion automatica + humana. Integrada con rizo.ma mediante subdominio (cursos.rizo.ma) con login unificado. Orientada a aprender haciendo, no a consumir contenido pasivamente.
+  </overview>
+
+  <technology_stack>
+    <frontend>
+      <framework>React</framework>
+      <styling>Tailwind CSS</styling>
+      <video_player>Plyr (open source, ligero, soporte YouTube/HTML5)</video_player>
+      <code_editor>Monaco Editor (VS Code engine)</code_editor>
+      <notebooks>Jupyter-style interactive notebooks</notebooks>
+    </frontend>
+    <backend>
+      <runtime>Node.js</runtime>
+      <framework>Express.js</framework>
+      <database>SQLite</database>
+      <code_execution>Sandboxed containers (Docker) para Python, SQL, R</code_execution>
+      <video_storage>Cloudflare R2 o Backblaze B2 (economico)</video_storage>
+    </backend>
+    <communication>
+      <api>REST API</api>
+      <realtime>WebSockets para chat y notificaciones en tiempo real</realtime>
+    </communication>
+    <integrations>
+      <webinars>Google Meet (licencia existente)</webinars>
+      <payments>Pasarela existente en rizo.ma</payments>
+      <auth>Login unificado con rizo.ma (OAuth/SSO)</auth>
+      <external>YouTube embeds, GitHub repos, NotebookLM, recursos externos</external>
+    </integrations>
+    <future_ready>
+      <languages>Preparado para: JavaScript, TypeScript, Solidity (Web3), TensorFlow/PyTorch (IA/ML)</languages>
+    </future_ready>
+  </technology_stack>
+
+  <prerequisites>
+    <environment_setup>
+      - Node.js 18+
+      - Docker para ejecucion de codigo sandboxed
+      - SQLite 3
+      - Cuenta Cloudflare R2 o Backblaze B2 para videos
+      - Credenciales Google Meet API
+      - Integracion con sistema de auth de rizo.ma
+    </environment_setup>
+  </prerequisites>
+
+  <feature_count>248</feature_count>
+
+  <security_and_access_control>
+    <user_roles>
+      <role name="student_free">
+        <permissions>
+          - Ver catalogo de cursos publicos
+          - Inscribirse en cursos gratuitos
+          - Acceder a contenido de cursos gratuitos
+          - Ejecutar codigo en ejercicios
+          - Recibir feedback correcto/incorrecto
+          - Ver progreso personal
+          - Participar en foros y comentarios
+          - Recibir certificados de cursos gratuitos
+        </permissions>
+        <protected_routes>
+          - /dashboard (autenticado)
+          - /course/* (inscrito en el curso)
+          - /profile (propio perfil)
+        </protected_routes>
+      </role>
+      <role name="student_premium">
+        <permissions>
+          - Todo lo de student_free
+          - Acceder a cursos premium
+          - Recibir sugerencias de mejora por IA
+          - Evaluaciones detalladas con IA
+          - Feedback con rubricas completas
+          - Video feedback del instructor
+          - Acceso a webinars en vivo
+          - Badges y rutas de carrera avanzadas
+        </permissions>
+        <protected_routes>
+          - /premium/* (solo premium)
+          - /webinar/* (solo premium)
+        </protected_routes>
+      </role>
+      <role name="instructor_admin">
+        <permissions>
+          - Todo lo de student_premium
+          - Crear, editar y eliminar cursos
+          - Usar asistente IA para creacion de contenido
+          - Ver metricas y analytics de todos los estudiantes
+          - Dar feedback humano con rubricas
+          - Grabar video feedback
+          - Programar y gestionar webinars
+          - Gestionar usuarios (futuro: otros instructores)
+          - Configurar cursos gratuitos vs premium
+          - Acceder a panel de administracion
+        </permissions>
+        <protected_routes>
+          - /admin/* (solo instructor/admin)
+          - /analytics/* (solo instructor/admin)
+          - /course/create (solo instructor/admin)
+          - /course/edit/* (solo instructor/admin)
+        </protected_routes>
+      </role>
+    </user_roles>
+    <authentication>
+      <method>Login unificado con rizo.ma (OAuth/SSO)</method>
+      <session_timeout>24 horas de inactividad</session_timeout>
+      <password_requirements>Manejado por rizo.ma</password_requirements>
+    </authentication>
+    <sensitive_operations>
+      - Eliminar cuenta requiere confirmacion por email
+      - Eliminar curso requiere doble confirmacion
+      - Cambios de plan free/premium requieren confirmacion
+      - Ejecucion de codigo en ambiente sandboxed aislado
+    </sensitive_operations>
+  </security_and_access_control>
+
+  <ai_pedagogical_engine>
+    <role>Disenador instruccional senior experto en aprendizaje basado en proyectos</role>
+    <frameworks>
+      <bloom_taxonomy>
+        - Toda leccion indica nivel(es) de Bloom (recordar, comprender, aplicar, analizar, evaluar, crear)
+        - Evidencia observable para cada nivel
+        - Prioriza niveles altos (analizar, evaluar, crear)
+      </bloom_taxonomy>
+      <model_4c>
+        - Connections: activar conocimientos previos, contexto o problema real
+        - Concepts: conceptos minimos necesarios (no clases largas)
+        - Concrete Practice: practica aplicada sobre el proyecto
+        - Conclusion: reflexion, sintesis, transferencia y metacognicion
+      </model_4c>
+      <flipped_classroom>
+        - Contenido expositivo se consume antes (lecturas, videos, recursos)
+        - Tiempo de interaccion dedicado a: resolver problemas, ejecutar codigo, tomar decisiones, analizar errores
+        - Evitar lecciones centradas solo en explicacion pasiva
+      </flipped_classroom>
+      <critical_thinking>
+        - Preguntas abiertas sistematicas
+        - Trade-offs y decisiones con consecuencias
+        - Casos ambiguos o incompletos
+        - No respuestas cerradas cuando el objetivo sea analizar o evaluar
+      </critical_thinking>
+    </frameworks>
+    <ai_generates>
+      <per_course>
+        - Descripcion del curso
+        - Problema real que aborda
+        - Competencias que desarrolla
+        - Proyecto central del curso
+      </per_course>
+      <per_module>
+        - Objetivo cognitivo principal (Bloom)
+        - Entregable o hito del proyecto
+        - Conexion con el proyecto global
+      </per_module>
+      <per_lesson>
+        - Objetivo de aprendizaje (Bloom)
+        - Estructura 4C explicita
+        - Tipo de contenido (video, texto, notebook, reto, quiz)
+        - Actividad practica principal
+        - Evidencia de aprendizaje esperada
+        - Preguntas de reflexion critica
+      </per_lesson>
+      <evaluation>
+        - Que se evalua
+        - Como se evalua (automatica, rubrica, reflexion, peer review)
+        - Que demuestra dominio real, no memorizacion
+      </evaluation>
+    </ai_generates>
+    <restrictions>
+      - No disenar cursos tipo "lista de temas"
+      - No priorizar cantidad sobre profundidad
+      - No generar contenido que no se pueda evaluar
+      - Todo concepto debe servir a una decision, accion o producto concreto
+    </restrictions>
+  </ai_pedagogical_engine>
+
+  <core_features>
+    <authentication_and_users>
+      - Login unificado con rizo.ma via OAuth/SSO
+      - Registro de nuevos usuarios (redirige a rizo.ma)
+      - Roles: student_free, student_premium, instructor_admin
+      - Perfil de usuario con avatar, bio, preferencias
+      - Upgrade de free a premium (integracion pasarela rizo.ma)
+      - Logout y manejo de sesiones
+      - Recuperacion de contrasena (via rizo.ma)
+    </authentication_and_users>
+
+    <student_dashboard>
+      - Vista de cursos inscritos con progreso visual
+      - Progreso por curso (porcentaje completado)
+      - Progreso por proyecto integrador
+      - Entregables pendientes con fechas
+      - Feedback recibido (automatico y humano)
+      - Rutas de carrera con porcentaje de avance
+      - Badges obtenidos
+      - Proximos webinars programados
+      - Notificaciones recientes
+    </student_dashboard>
+
+    <course_catalog>
+      - Pagina publica con catalogo de cursos
+      - Categorias de cursos (programacion, data science, web3, etc.)
+      - Etiquetas/tags para filtrar
+      - Busqueda por nombre, descripcion, instructor
+      - Filtro por nivel (principiante, intermedio, avanzado)
+      - Filtro por gratuito/premium
+      - Vista previa del curso (descripcion, modulos, duracion estimada)
+      - Boton de inscripcion
+      - Indicador de cursos populares/destacados
+    </course_catalog>
+
+    <course_structure>
+      - Cursos compuestos por modulos
+      - Modulos compuestos por lecciones
+      - Proyectos integradores por modulo/curso
+      - Orden secuencial con posibilidad de navegacion libre
+      - Prerequisitos entre modulos (opcional)
+      - Duracion estimada por leccion y modulo
+      - Indicador de progreso en sidebar
+      - Navegacion entre lecciones (anterior/siguiente)
+    </course_structure>
+
+    <content_types>
+      <video>
+        - Reproductor Plyr para videos propios
+        - Embed de YouTube
+        - Controles de velocidad (0.5x, 1x, 1.25x, 1.5x, 2x)
+        - Marcadores de tiempo para secciones
+        - Subtitulos (cuando disponibles)
+        - Vista en pantalla completa
+        - Progreso de video guardado
+      </video>
+      <text>
+        - Texto estructurado con formato rico
+        - Codigo con syntax highlighting
+        - Imagenes y diagramas
+        - Listas, tablas, citas
+        - Links a recursos externos
+      </text>
+      <executable_examples>
+        - Codigo ejecutable inline (Python, SQL, R)
+        - Boton "Ejecutar" con resultado inmediato
+        - Resetear al codigo original
+        - Copiar codigo al portapapeles
+      </executable_examples>
+      <interactive_notebooks>
+        - Estilo Jupyter con celdas de codigo y markdown
+        - Ejecucion celda por celda
+        - Visualizaciones inline (graficos, tablas)
+        - Guardar estado del notebook
+        - Integracion con NotebookLM externo (opcional)
+      </interactive_notebooks>
+      <quizzes>
+        - Preguntas de opcion multiple
+        - Preguntas de verdadero/falso
+        - Preguntas de respuesta corta
+        - Preguntas de ordenamiento
+        - Feedback inmediato por pregunta
+        - Intentos multiples (configurable)
+        - Puntuacion y progreso
+      </quizzes>
+      <practical_challenges>
+        - Codigo base proporcionado
+        - Instrucciones claras del reto
+        - Tests automaticos para validar solucion
+        - Hints progresivos (opcional)
+        - Solucion modelo (visible despues de completar)
+        - Multiples intentos con historial
+      </practical_challenges>
+    </content_types>
+
+    <code_execution_engine>
+      - Ejecucion sandboxed en contenedores Docker
+      - Lenguajes: Python 3.x, SQL (SQLite), R
+      - Timeout configurable por ejercicio
+      - Limite de memoria y CPU
+      - Captura de stdout, stderr
+      - Soporte para bibliotecas comunes (pandas, numpy, matplotlib, etc.)
+      - Preparado para futuros lenguajes (JS, Solidity, ML frameworks)
+      - Cache de resultados para ejercicios identicos
+    </code_execution_engine>
+
+    <automatic_evaluation>
+      - Ejecucion de tests automaticos
+      - Comparacion de output esperado vs obtenido
+      - Feedback correcto/incorrecto para todos
+      - Sugerencias de mejora con IA (solo premium)
+      - Deteccion de errores comunes
+      - Evaluacion de estilo de codigo (linting)
+      - Registro de todos los intentos
+      - Metricas de evolucion del estudiante
+    </automatic_evaluation>
+
+    <human_feedback>
+      - Rubricas de evaluacion configurables
+      - Puntuacion por criterio
+      - Comentarios en el codigo/entregable
+      - Video feedback grabado por instructor
+      - Notificacion cuando hay feedback disponible
+      - Historial de feedback por entregable
+    </human_feedback>
+
+    <integrative_projects>
+      - Proyecto central por curso
+      - Entregables progresivos por modulo
+      - Todo el trabajo dentro de la plataforma
+      - Link a repositorio GitHub (para proyectos grandes)
+      - Evaluacion automatica + rubrica humana
+      - Criterios de evaluacion explicitos
+      - Fecha limite configurable
+      - Entrega tardia con penalizacion (opcional)
+    </integrative_projects>
+
+    <ai_course_creation>
+      - Asistente IA para estructura pedagogica
+      - Generacion de objetivos de aprendizaje (Bloom)
+      - Estructura 4C automatica por leccion
+      - Generacion de quizzes a partir de contenido
+      - Generacion de codigo base para ejercicios
+      - Generacion de tests automaticos
+      - Sugerencias de mejora del diseno pedagogico
+      - Revision de coherencia del curso
+      - Plantillas orientadas a aprendizaje activo
+      - Integracion de recursos externos (YouTube, papers, datasets)
+    </ai_course_creation>
+
+    <webinars>
+      - Integracion con Google Meet
+      - Programacion de sesiones en vivo
+      - Calendario de webinars por curso
+      - Notificaciones de recordatorio
+      - Link de acceso para estudiantes inscritos
+      - Grabacion automatica (via Meet)
+      - Grabaciones disponibles post-sesion
+      - Chat durante el webinar (via Meet)
+      - Q&A y participacion
+    </webinars>
+
+    <analytics_and_metrics>
+      - Dashboard de instructor con metricas globales
+      - Progreso por estudiante
+      - Puntos de friccion (donde se atoran)
+      - Tasa de finalizacion por curso/modulo/leccion
+      - Calidad promedio de entregables
+      - Tiempo dedicado por leccion
+      - Intentos por ejercicio
+      - Comparativa entre cohortes
+      - Exportacion de reportes
+    </analytics_and_metrics>
+
+    <communication>
+      <email_notifications>
+        - Nuevo curso disponible
+        - Recordatorio de entregables pendientes
+        - Feedback disponible
+        - Recordatorio de webinar
+        - Resumen semanal de progreso
+        - Configuracion de preferencias de email
+      </email_notifications>
+      <forum_chat>
+        - Foro por curso
+        - Hilos de discusion
+        - Respuestas y comentarios
+        - Mencion a otros usuarios
+        - Marcar como resuelto
+        - Moderacion por instructor
+      </forum_chat>
+      <lesson_comments>
+        - Comentarios en cada leccion
+        - Preguntas y respuestas
+        - Votos en comentarios utiles
+        - Respuesta del instructor destacada
+      </lesson_comments>
+    </communication>
+
+    <certifications>
+      - Certificado de finalizacion de curso
+      - Certificado descargable (PDF)
+      - Badge digital por logro
+      - Progreso en rutas de carrera
+      - Perfil publico con certificados y badges (opcional)
+      - Verificacion de autenticidad via link unico
+    </certifications>
+
+    <payments>
+      - Integracion con pasarela existente en rizo.ma
+      - Cursos gratuitos (sin pago)
+      - Cursos premium (requieren pago o suscripcion)
+      - Upgrade de cuenta free a premium
+      - Historial de compras
+      - Facturacion (manejada por rizo.ma)
+    </payments>
+
+    <mobile_experience>
+      - Diseno responsive para todo el contenido
+      - Optimizado para ver videos en movil
+      - Quizzes funcionales en movil
+      - Lectura de texto y navegacion
+      - Ejecucion de codigo en movil (evaluar viabilidad, idealmente si)
+      - Dashboard y progreso en movil
+      - Notificaciones push (futuro)
+    </mobile_experience>
+
+    <external_integrations>
+      - YouTube para videos embebidos
+      - Google Meet para webinars
+      - GitHub para links a repositorios
+      - NotebookLM para notebooks externos
+      - rizo.ma para auth y pagos
+      - Recursos externos (papers, datasets, documentacion)
+    </external_integrations>
+  </core_features>
+
+  <database_schema>
+    <tables>
+      <users>
+        - id, external_id (rizo.ma), email, name, avatar_url
+        - role (student_free, student_premium, instructor_admin)
+        - bio, preferences (JSON), created_at, updated_at
+      </users>
+      <courses>
+        - id, title, slug, description, instructor_id
+        - category, tags (JSON), level, is_premium, is_published
+        - thumbnail_url, duration_hours, created_at, updated_at
+      </courses>
+      <modules>
+        - id, course_id, title, description, order
+        - bloom_objective, project_milestone, duration_hours
+      </modules>
+      <lessons>
+        - id, module_id, title, description, order
+        - bloom_level, structure_4c (JSON), content_type
+        - duration_minutes, created_at, updated_at
+      </lessons>
+      <lesson_content>
+        - id, lesson_id, type (video, text, code, notebook, quiz, challenge)
+        - content (JSON), order
+      </lesson_content>
+      <enrollments>
+        - id, user_id, course_id, enrolled_at, completed_at
+        - progress_percent, last_accessed_at
+      </enrollments>
+      <lesson_progress>
+        - id, user_id, lesson_id, status (not_started, in_progress, completed)
+        - completed_at, time_spent_seconds
+      </lesson_progress>
+      <quiz_attempts>
+        - id, user_id, quiz_id, answers (JSON), score
+        - attempt_number, created_at
+      </quiz_attempts>
+      <code_submissions>
+        - id, user_id, challenge_id, code, output, is_correct
+        - feedback, attempt_number, created_at
+      </code_submissions>
+      <project_submissions>
+        - id, user_id, project_id, content, github_url
+        - status (submitted, reviewed), submitted_at
+      </project_submissions>
+      <feedback>
+        - id, submission_id, type (auto, rubric, video)
+        - content (JSON), score, video_url, created_by, created_at
+      </feedback>
+      <rubrics>
+        - id, course_id, name, criteria (JSON)
+      </rubrics>
+      <webinars>
+        - id, course_id, title, description, scheduled_at
+        - meet_link, recording_url, status
+      </webinars>
+      <forum_threads>
+        - id, course_id, user_id, title, content
+        - is_resolved, created_at, updated_at
+      </forum_threads>
+      <forum_replies>
+        - id, thread_id, user_id, content
+        - is_instructor_answer, votes, created_at
+      </forum_replies>
+      <lesson_comments>
+        - id, lesson_id, user_id, content, parent_id
+        - votes, created_at
+      </lesson_comments>
+      <certificates>
+        - id, user_id, course_id, issued_at, certificate_url, verification_code
+      </certificates>
+      <badges>
+        - id, name, description, icon_url, criteria (JSON)
+      </badges>
+      <user_badges>
+        - id, user_id, badge_id, earned_at
+      </user_badges>
+      <career_paths>
+        - id, name, description, courses (JSON), order
+      </career_paths>
+      <user_career_progress>
+        - id, user_id, career_path_id, progress_percent
+      </user_career_progress>
+      <notifications>
+        - id, user_id, type, content (JSON), is_read, created_at
+      </notifications>
+      <analytics_events>
+        - id, user_id, event_type, metadata (JSON), created_at
+      </analytics_events>
+    </tables>
+  </database_schema>
+
+  <api_endpoints_summary>
+    <auth>
+      - GET /api/auth/login (redirect to rizo.ma)
+      - GET /api/auth/callback (OAuth callback)
+      - POST /api/auth/logout
+      - GET /api/auth/me (current user)
+    </auth>
+    <users>
+      - GET /api/users/:id
+      - PUT /api/users/:id (update profile)
+      - GET /api/users/:id/progress
+      - GET /api/users/:id/certificates
+      - GET /api/users/:id/badges
+    </users>
+    <courses>
+      - GET /api/courses (catalog with filters)
+      - GET /api/courses/:slug
+      - POST /api/courses (create, instructor only)
+      - PUT /api/courses/:id (update)
+      - DELETE /api/courses/:id
+      - POST /api/courses/:id/enroll
+      - GET /api/courses/:id/analytics (instructor)
+    </courses>
+    <modules>
+      - GET /api/courses/:id/modules
+      - POST /api/courses/:id/modules
+      - PUT /api/modules/:id
+      - DELETE /api/modules/:id
+    </modules>
+    <lessons>
+      - GET /api/modules/:id/lessons
+      - GET /api/lessons/:id
+      - POST /api/modules/:id/lessons
+      - PUT /api/lessons/:id
+      - DELETE /api/lessons/:id
+      - POST /api/lessons/:id/complete
+    </lessons>
+    <content>
+      - GET /api/lessons/:id/content
+      - POST /api/lessons/:id/content
+      - PUT /api/content/:id
+      - DELETE /api/content/:id
+    </content>
+    <code_execution>
+      - POST /api/execute (run code)
+      - POST /api/challenges/:id/submit
+      - GET /api/challenges/:id/attempts
+    </code_execution>
+    <quizzes>
+      - GET /api/quizzes/:id
+      - POST /api/quizzes/:id/submit
+      - GET /api/quizzes/:id/attempts
+    </quizzes>
+    <projects>
+      - GET /api/projects/:id
+      - POST /api/projects/:id/submit
+      - GET /api/projects/:id/submissions
+      - POST /api/submissions/:id/feedback
+    </projects>
+    <webinars>
+      - GET /api/courses/:id/webinars
+      - POST /api/courses/:id/webinars
+      - PUT /api/webinars/:id
+      - DELETE /api/webinars/:id
+    </webinars>
+    <forum>
+      - GET /api/courses/:id/forum
+      - POST /api/courses/:id/forum
+      - GET /api/threads/:id
+      - POST /api/threads/:id/replies
+    </forum>
+    <comments>
+      - GET /api/lessons/:id/comments
+      - POST /api/lessons/:id/comments
+      - PUT /api/comments/:id
+      - DELETE /api/comments/:id
+    </comments>
+    <notifications>
+      - GET /api/notifications
+      - PUT /api/notifications/:id/read
+      - PUT /api/notifications/read-all
+    </notifications>
+    <ai>
+      - POST /api/ai/generate-structure
+      - POST /api/ai/generate-quiz
+      - POST /api/ai/generate-challenge
+      - POST /api/ai/review-design
+      - POST /api/ai/suggest-improvements
+    </ai>
+    <analytics>
+      - GET /api/analytics/course/:id
+      - GET /api/analytics/student/:id
+      - GET /api/analytics/friction-points
+      - GET /api/analytics/completion-rates
+    </analytics>
+  </api_endpoints_summary>
+
+  <ui_layout>
+    <main_structure>
+      - Navbar superior con logo, busqueda, notificaciones, perfil
+      - Sidebar izquierdo (colapsable) para navegacion de curso
+      - Area de contenido principal central
+      - Panel derecho para progreso/chat (contextual)
+    </main_structure>
+    <key_pages>
+      - Landing/Home: hero, catalogo destacado, categorias
+      - Catalogo: grid de cursos con filtros laterales
+      - Detalle de curso: info, modulos, inscripcion
+      - Player de leccion: video/contenido arriba, ejercicios abajo
+      - Dashboard estudiante: progreso, pendientes, rutas
+      - Dashboard instructor: metricas, cursos, estudiantes
+      - Editor de curso: estructura, contenido, preview
+      - Foro: lista de hilos, detalle de hilo
+      - Perfil: info, certificados, badges
+    </key_pages>
+    <responsive_breakpoints>
+      - Desktop: 1920px+ (layout completo)
+      - Laptop: 1024px-1919px (sidebar colapsable)
+      - Tablet: 768px-1023px (sidebar oculto, menu hamburguesa)
+      - Mobile: 375px-767px (una columna, navegacion inferior)
+    </responsive_breakpoints>
+  </ui_layout>
+
+  <design_system>
+    <color_palette>
+      - Primary: Azul profesional (#2563EB)
+      - Secondary: Verde exito (#10B981)
+      - Accent: Naranja energia (#F59E0B)
+      - Neutral: Grises para texto y fondos
+      - Error: Rojo (#EF4444)
+      - Dark mode: Fondos oscuros con colores ajustados
+    </color_palette>
+    <typography>
+      - Headings: Inter (clean, moderna)
+      - Body: Inter
+      - Code: JetBrains Mono
+    </typography>
+    <components>
+      - Botones con estados claros (hover, active, disabled)
+      - Cards con sombras sutiles
+      - Progress bars animados
+      - Badges coloridos por tipo
+      - Modals centrados con overlay
+      - Toasts para notificaciones
+      - Skeletons para loading states
+    </components>
+  </design_system>
+
+  <implementation_steps>
+    <step number="1">
+      <title>Foundation y Autenticacion</title>
+      <tasks>
+        - Setup proyecto React + Node.js + SQLite
+        - Configurar estructura de carpetas
+        - Implementar integracion OAuth con rizo.ma
+        - Crear sistema de roles y permisos
+        - Configurar rutas protegidas
+        - Crear layout base y navegacion
+      </tasks>
+    </step>
+    <step number="2">
+      <title>Catalogo y Estructura de Cursos</title>
+      <tasks>
+        - Implementar pagina de catalogo con filtros
+        - Crear pagina de detalle de curso
+        - Implementar sistema de modulos y lecciones
+        - Crear navegacion de curso (sidebar)
+        - Implementar sistema de inscripcion
+        - Crear dashboard basico de estudiante
+      </tasks>
+    </step>
+    <step number="3">
+      <title>Tipos de Contenido</title>
+      <tasks>
+        - Integrar Plyr para videos
+        - Implementar renderizado de texto rico
+        - Crear editor de codigo con Monaco
+        - Implementar notebooks interactivos
+        - Crear sistema de quizzes
+        - Implementar retos practicos
+      </tasks>
+    </step>
+    <step number="4">
+      <title>Motor de Ejecucion de Codigo</title>
+      <tasks>
+        - Configurar Docker para sandboxing
+        - Implementar ejecucion de Python
+        - Implementar ejecucion de SQL
+        - Implementar ejecucion de R
+        - Crear sistema de tests automaticos
+        - Implementar feedback automatico
+      </tasks>
+    </step>
+    <step number="5">
+      <title>Sistema de Evaluacion</title>
+      <tasks>
+        - Implementar evaluacion automatica de codigo
+        - Crear sistema de rubricas
+        - Implementar feedback humano
+        - Integrar grabacion de video feedback
+        - Crear proyectos integradores
+        - Implementar entregas y revisiones
+      </tasks>
+    </step>
+    <step number="6">
+      <title>Asistente IA para Creacion</title>
+      <tasks>
+        - Implementar generacion de estructura pedagogica
+        - Crear generacion de quizzes con IA
+        - Implementar generacion de ejercicios
+        - Crear revision de diseno pedagogico
+        - Implementar sugerencias de mejora
+        - Integrar modelo 4C y Bloom automatico
+      </tasks>
+    </step>
+    <step number="7">
+      <title>Comunicacion y Webinars</title>
+      <tasks>
+        - Implementar sistema de notificaciones email
+        - Crear foro por curso
+        - Implementar comentarios en lecciones
+        - Integrar Google Meet para webinars
+        - Crear programacion y recordatorios
+        - Implementar acceso a grabaciones
+      </tasks>
+    </step>
+    <step number="8">
+      <title>Certificaciones y Gamificacion</title>
+      <tasks>
+        - Implementar certificados descargables
+        - Crear sistema de badges
+        - Implementar rutas de carrera
+        - Crear perfil publico con logros
+        - Implementar verificacion de certificados
+      </tasks>
+    </step>
+    <step number="9">
+      <title>Analytics y Metricas</title>
+      <tasks>
+        - Crear dashboard de instructor
+        - Implementar metricas de progreso
+        - Detectar puntos de friccion
+        - Implementar reportes de calidad
+        - Crear exportacion de datos
+      </tasks>
+    </step>
+    <step number="10">
+      <title>Integraciones y Pagos</title>
+      <tasks>
+        - Integrar pasarela de rizo.ma
+        - Implementar upgrade free/premium
+        - Configurar almacenamiento de videos (R2/B2)
+        - Integrar YouTube embeds
+        - Conectar GitHub para proyectos
+      </tasks>
+    </step>
+    <step number="11">
+      <title>Mobile y Polish</title>
+      <tasks>
+        - Optimizar responsive para todas las pantallas
+        - Implementar experiencia movil para contenido
+        - Evaluar e implementar ejecucion de codigo movil
+        - Pulir UI/UX general
+        - Implementar dark mode
+        - Testing exhaustivo
+      </tasks>
+    </step>
+  </implementation_steps>
+
+  <success_criteria>
+    <functionality>
+      - Estudiantes pueden inscribirse, ver contenido y completar cursos
+      - Ejecucion de codigo Python, SQL, R funciona correctamente
+      - Evaluacion automatica da feedback preciso
+      - Instructor puede crear cursos completos con asistencia IA
+      - Webinars funcionan via Google Meet
+      - Sistema de pagos integrado con rizo.ma
+    </functionality>
+    <user_experience>
+      - Navegacion intuitiva sin necesidad de tutorial
+      - Tiempos de carga rapidos (< 3 segundos)
+      - Feedback inmediato en ejecucion de codigo (< 5 segundos)
+      - Experiencia movil funcional para contenido y quizzes
+      - Progreso siempre visible y motivador
+    </user_experience>
+    <technical_quality>
+      - Codigo limpio y mantenible
+      - API bien documentada
+      - Tests automatizados con buena cobertura
+      - Ejecucion de codigo segura y aislada
+      - Base de datos optimizada para consultas comunes
+    </technical_quality>
+    <design_polish>
+      - Interfaz moderna y profesional
+      - Consistencia visual en toda la plataforma
+      - Animaciones sutiles y fluidas
+      - Estados de carga y error claros
+      - Accesibilidad basica (teclado, contraste)
+    </design_polish>
+  </success_criteria>
+</project_specification>

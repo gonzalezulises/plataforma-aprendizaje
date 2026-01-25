@@ -1,0 +1,36 @@
+# Dependencias del proyecto Web Captures Organizer con OCR
+# Instalar con: pip install -r requirements.txt
+
+# Procesamiento de imágenes (REQUERIDO para OCR)
+Pillow>=10.0.0
+
+# OCR - Reconocimiento óptico de caracteres (REQUERIDO)
+pytesseract>=0.3.10
+
+# NOTA IMPORTANTE: También necesitas instalar Tesseract-OCR en tu sistema
+#
+# Para Windows:
+#   1. Descarga el instalador desde: https://github.com/UB-Mannheim/tesseract/wiki
+#   2. Instala Tesseract-OCR (generalmente en C:\Program Files\Tesseract-OCR)
+#   3. Añade a PATH o configura pytesseract.pytesseract.tesseract_cmd
+#
+# Para macOS:
+#   brew install tesseract
+#
+# Para Linux:
+#   sudo apt-get install tesseract-ocr
+#   sudo apt-get install tesseract-ocr-spa  # Para español
+
+# Dependencias opcionales para funcionalidades avanzadas:
+
+# Para procesamiento avanzado de imágenes
+opencv-python>=4.8.0
+
+# Para lectura de metadata EXIF
+exifread>=3.0.0
+
+# Para manejo de imágenes HEIC (iPhone)
+pillow-heif>=0.13.0
+
+# Para monitoreo automático de carpetas
+watchdog>=3.0.0

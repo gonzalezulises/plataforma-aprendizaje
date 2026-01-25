@@ -169,6 +169,11 @@ router.get('/me', (req, res) => {
  * POST /api/auth/dev-login
  * Development-only endpoint to simulate OAuth login
  * This bypasses the actual OAuth flow for testing purposes
+ *
+ * Optional body parameters:
+ * - role: 'student_free', 'student_premium', or 'instructor_admin'
+ * - name: Custom name for the user
+ * - email: Custom email for the user
  */
 router.post('/dev-login', (req, res) => {
   // Only allow in development mode
@@ -178,12 +183,18 @@ router.post('/dev-login', (req, res) => {
 
   console.log('[Auth] Development login triggered');
 
+  const { role = 'student_free', name, email } = req.body || {};
+
+  // Validate role
+  const validRoles = ['student_free', 'student_premium', 'instructor_admin'];
+  const userRole = validRoles.includes(role) ? role : 'student_free';
+
   // Simulate successful login with test user
   req.session.user = {
-    id: 1,
-    email: 'test@rizo.ma',
-    name: 'Usuario de Prueba',
-    role: 'student_free',
+    id: userRole === 'instructor_admin' ? 99 : 1,
+    email: email || (userRole === 'instructor_admin' ? 'instructor@rizo.ma' : 'test@rizo.ma'),
+    name: name || (userRole === 'instructor_admin' ? 'Instructor Admin' : 'Usuario de Prueba'),
+    role: userRole,
   };
 
   req.session.isAuthenticated = true;

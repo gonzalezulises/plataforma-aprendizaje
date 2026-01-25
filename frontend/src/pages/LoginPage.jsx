@@ -39,7 +39,8 @@ function LoginPage() {
 
     try {
       // Get the OAuth authorization URL from the backend
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -68,7 +69,8 @@ function LoginPage() {
   // Development mode login - bypasses OAuth
   const handleDevLogin = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/dev-login', {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE}/auth/dev-login`, {
         method: 'POST',
         credentials: 'include',
         headers: {

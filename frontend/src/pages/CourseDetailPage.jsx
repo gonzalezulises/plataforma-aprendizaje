@@ -439,7 +439,24 @@ function CourseDetailPage() {
                     <span>♾️</span>
                     <span>Acceso de por vida</span>
                   </li>
+                  <li className="flex items-center gap-2">
+                    <span>💬</span>
+                    <span>Foro de discusion</span>
+                  </li>
                 </ul>
+              </div>
+
+              {/* Forum Link */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Link
+                  to={`/course/${slug}/forum`}
+                  className="w-full py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Ir al Foro
+                </Link>
               </div>
             </div>
           </div>

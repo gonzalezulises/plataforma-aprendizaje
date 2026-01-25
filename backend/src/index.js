@@ -21,6 +21,9 @@ import feedbackRoutes from './routes/feedback.js';
 import analyticsRoutes from './routes/analytics.js';
 import notificationsRoutes from './routes/notifications.js';
 import forumRoutes, { initForumTables } from './routes/forum.js';
+import webinarsRoutes, { initWebinarsTables } from './routes/webinars.js';
+import certificatesRoutes, { initCertificatesTables } from './routes/certificates.js';
+import upgradeRoutes, { initUpgradeTables } from './routes/upgrade.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -34,6 +37,12 @@ initDatabase().then(db => {
   initChallengesTables(db);
   // Initialize forum tables
   initForumTables(db);
+  // Initialize webinars tables
+  initWebinarsTables(db);
+  // Initialize certificates tables
+  initCertificatesTables(db);
+  // Initialize upgrade tables
+  initUpgradeTables(db);
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
@@ -115,6 +124,9 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/forum', forumRoutes);
+app.use('/api/webinars', webinarsRoutes);
+app.use('/api/certificates', certificatesRoutes);
+app.use('/api/upgrade', upgradeRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -132,8 +144,10 @@ app.get('/api', (req, res) => {
       quizzes: '/api/quizzes/*',
       projects: '/api/projects/*',
       forum: '/api/forum/*',
+      webinars: '/api/webinars/*',
       notifications: '/api/notifications/*',
       analytics: '/api/analytics/*',
+      upgrade: '/api/upgrade/*',
       ai: '/api/ai/*'
     }
   });
@@ -195,15 +209,4 @@ server.listen(PORT, () => {
 });
 
 export default app;
-// nodemon restart trigger - sab., 25 de ene. de 2026  01:20:00
-// restart trigger do., 25 de ene. de 2026  6:24:00 - added challenges routes
-// nodemon restart trigger - do., 25 de ene. de 2026  1:34:33
-// restart trigger - fixed module/lesson creation to not rely on lastInsertRowid
-// nodemon restart 1769323159
-// restart trigger do., 25 de ene. de 2026  1:45:31
-// route order fix do., 25 de ene. de 2026  1:49:50
-// feedback fix do., 25 de ene. de 2026  1:52:07
-// rate limit fix - increased to 5000 for dev - do., 25 de ene. de 2026  2:05:00
-// restart trigger do., 25 de ene. de 2026  2:05:48
-// restart trigger 1769324790
-// port 3005 restart 1769324821
+// webinars routes added - feature #96

@@ -2,7 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = 'http://localhost:3001';
+// Use env variable for API URL - remove /api suffix since we add it below
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

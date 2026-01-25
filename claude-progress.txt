@@ -1083,3 +1083,49 @@
 - Feature #95 marked as PASSING
 
 [Testing] 2026-01-25 Feature #95 "Complete forum thread workflow" verified - PASSED
+[Testing] 2026-01-25 07:20 Feature #94 'Complete rubric feedback workflow' regression test - PASSED (with fix)
+  - Found regression: SubmissionsReviewPage.jsx and InstructorFeedbackPage.jsx had hardcoded API_BASE to port 3001
+  - Fixed by changing API_BASE to use import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+  - All 9 verification steps verified:
+    1. Log in as instructor - PASS (via dev-login API with role=instructor_admin)
+    2. Navigate to submissions awaiting review - PASS (/admin/submissions loaded with pending submissions)
+    3. Select a submission - PASS (clicked Evaluar on submission #4)
+    4. View student work - PASS (code displayed with GitHub link)
+    5. Fill out rubric with scores per criterion - PASS (20/25, 22/25, 15/25, 18/25 = 75/100 total)
+    6. Add text comments - PASS (feedback text added)
+    7. Optionally record video feedback - PASS (Loom URL added)
+    8. Submit feedback - PASS (success toast shown, redirected to submissions list)
+    9. Verify student receives notification - PASS (notification created in database)
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated context)
+  - Screenshots: feature-94-rubric-filled.png, feature-94-reviewed-submissions.png
+  - Commit: 0a6e451
+[Testing] 2026-01-25 04:01:33 Feature #91 'Complete code challenge workflow' regression test - PASSED
+  - All 8 verification steps verified:
+    1. Navigate to a code challenge - PASS (/challenge/1)
+    2. Read the instructions - PASS (Objetivo, Requisitos, Ejemplo visible)
+    3. Write code in the editor - PASS (typed print("Hola Mundo"))
+    4. Run the code - PASS (clicked Ejecutar)
+    5. See output - PASS ("Hola Mundo" displayed)
+    6. Submit solution - PASS (clicked Enviar Solucion)
+    7. View automatic test results - PASS (Pruebas 1/1)
+    8. See feedback on correctness - PASS ("Todas las pruebas pasaron!", "Salida correcta")
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated)
+  - Screenshots: feature-91-step1-challenge-loaded.png, feature-91-step5-output-displayed.png, feature-91-regression-test-passed.png
+[Testing] 2026-01-25 04:02:58 Feature #1 'App loads without errors' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to the home page - PASS (http://localhost:5173/)
+    2. Wait for the page to fully load - PASS (title: Plataforma de Aprendizaje | cursos.rizo.ma)
+    3. Open browser console and check for errors - PASS (console checked)
+    4. Verify no JavaScript errors are present - PASS (only React Router warnings, not errors)
+    5. Verify no network errors are present - PASS (only expected 401 for /api/auth/me)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-1-regression-test-2026-01-25.png
+[Testing] 2026-01-25 09:05 Feature #3 'Homepage renders correctly' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to home page - PASS (http://localhost:5173/)
+    2. Verify hero section is displayed - PASS ('Aprende Haciendo' heading with feature cards)
+    3. Verify featured courses section shows courses - PASS (3 courses: Python, Data Science, SQL)
+    4. Verify categories are listed - PASS (6 categories: Programacion, Data Science, IA/ML, Bases de Datos, Web3, Estadistica)
+    5. Verify call-to-action buttons are present - PASS (Explorar Cursos, Comenzar Gratis, Ver Cursos, Registrarse Gratis)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-3-regression-test-2026-01-25-session2.png

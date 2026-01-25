@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './store/AuthContext';
@@ -17,6 +18,12 @@ import CodeChallengePage from './pages/CodeChallengePage';
 import SubmissionsReviewPage from './pages/SubmissionsReviewPage';
 import InstructorFeedbackPage from './pages/InstructorFeedbackPage';
 import SubmissionFeedbackPage from './pages/SubmissionFeedbackPage';
+import ForumPage from './pages/ForumPage';
+import ThreadDetailPage from './pages/ThreadDetailPage';
+import WebinarsPage from './pages/WebinarsPage';
+import WebinarSchedulePage from './pages/WebinarSchedulePage';
+import CertificatesPage from './pages/CertificatesPage';
+import CertificateVerifyPage from './pages/CertificateVerifyPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -82,6 +89,10 @@ function NotFound() {
 
 // Course Catalog Page
 function CourseCatalog() {
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
+  const [priceFilter, setPriceFilter] = useState('');
+
   // Sample courses data - in a real app this would come from an API
   const courses = [
     {
@@ -319,6 +330,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/courses" element={<CourseCatalog />} />
             <Route path="/course/:slug" element={<CourseDetailPage />} />
+            <Route path="/course/:slug/forum" element={<ForumPage />} />
+            <Route path="/forum/thread/:threadId" element={<ThreadDetailPage />} />
             <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/quiz/:quizId" element={<QuizPage />} />
             <Route path="/challenge/:challengeId" element={<CodeChallengePage />} />
@@ -332,6 +345,11 @@ function App() {
             <Route path="/admin/submissions" element={<SubmissionsReviewPage />} />
             <Route path="/admin/review/:submissionId" element={<InstructorFeedbackPage />} />
             <Route path="/feedback/:submissionId" element={<SubmissionFeedbackPage />} />
+            <Route path="/webinars" element={<WebinarsPage />} />
+            <Route path="/webinars/schedule" element={<WebinarSchedulePage />} />
+            <Route path="/certificates" element={<CertificatesPage />} />
+            <Route path="/certificate/verify/:code" element={<CertificateVerifyPage />} />
+            <Route path="/certificate/verify" element={<CertificateVerifyPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
