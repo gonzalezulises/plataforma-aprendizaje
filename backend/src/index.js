@@ -24,6 +24,8 @@ import forumRoutes, { initForumTables } from './routes/forum.js';
 import webinarsRoutes, { initWebinarsTables } from './routes/webinars.js';
 import certificatesRoutes, { initCertificatesTables } from './routes/certificates.js';
 import upgradeRoutes, { initUpgradeTables } from './routes/upgrade.js';
+import aiRoutes from './routes/ai.js';
+import careerPathsRoutes, { initCareerPathsTables } from './routes/career-paths.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -43,6 +45,8 @@ initDatabase().then(db => {
   initCertificatesTables(db);
   // Initialize upgrade tables
   initUpgradeTables(db);
+  // Initialize career paths tables
+  initCareerPathsTables(db);
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
@@ -127,6 +131,8 @@ app.use('/api/forum', forumRoutes);
 app.use('/api/webinars', webinarsRoutes);
 app.use('/api/certificates', certificatesRoutes);
 app.use('/api/upgrade', upgradeRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/career-paths', careerPathsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -148,7 +154,8 @@ app.get('/api', (req, res) => {
       notifications: '/api/notifications/*',
       analytics: '/api/analytics/*',
       upgrade: '/api/upgrade/*',
-      ai: '/api/ai/*'
+      ai: '/api/ai/*',
+      careerPaths: '/api/career-paths/*'
     }
   });
 });

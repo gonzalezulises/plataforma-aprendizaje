@@ -27,6 +27,7 @@ import CertificateVerifyPage from './pages/CertificateVerifyPage';
 import UpgradePage from './pages/UpgradePage';
 import UpgradeSuccessPage from './pages/UpgradeSuccessPage';
 import UpgradeErrorPage from './pages/UpgradeErrorPage';
+import CareerPathsPage from './pages/CareerPathsPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -399,6 +400,8 @@ function App() {
             <Route path="/upgrade" element={<UpgradePage />} />
             <Route path="/upgrade/success" element={<UpgradeSuccessPage />} />
             <Route path="/upgrade/error" element={<UpgradeErrorPage />} />
+            <Route path="/career-paths" element={<CareerPathsPage />} />
+            <Route path="/career-paths/:slug" element={<CareerPathsPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
