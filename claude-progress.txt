@@ -4316,3 +4316,123 @@ Screenshot: feature-6-inter-font-verification.png
 Console errors: Only expected 401 for unauthenticated user
 
 [Testing] Session complete - Feature #6 verified, no regression found
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #153)
+
+### Completed Features
+- Feature #153: Enrollment button prevents double enrollment - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to course - PASS
+       - Opened Web3 y Solidity course (/course/web3-solidity)
+       - Verified "Inscribirse" button was visible (not enrolled)
+    2. Click enroll - PASS
+       - Clicked "Inscribirse" button
+       - Confirmation modal appeared
+       - Clicked "Confirmar Inscripcion"
+       - Success toast: "Te has inscrito exitosamente!"
+       - UI changed to show "Continuar Curso" button
+    3. Try to enroll again - PASS
+       - Made direct API call to POST /api/enrollments with courseId: 8
+       - Received 409 Conflict status
+       - Error message: "Already enrolled in this course"
+    4. Verify second enrollment is prevented - PASS
+       - Backend properly blocks duplicate enrollment
+       - UI does not show "Inscribirse" button for enrolled courses
+    5. Verify single enrollment in database - PASS
+       - API response confirmed: web3SolidityEnrollments: 1
+       - Only ONE enrollment record exists (id: 14)
+
+### Technical Implementation
+- Backend (enrollments.js lines 124-131):
+  - Checks for existing enrollment before creating new one
+  - Returns 409 status code with "Already enrolled in this course" message
+- Frontend (CourseDetailPage.jsx lines 277-280):
+  - Handles 409 response with toast.info("Ya estas inscrito en este curso")
+  - Sets isEnrolled=true to update UI
+- UI Protection:
+  - When enrolled, shows "Continuar Curso" + "Cancelar inscripcion" instead of "Inscribirse"
+  - No way to trigger duplicate enrollment through normal UI flow
+
+### Screenshots
+- feature-153-step2-first-enrollment-success.png - Initial enrollment successful
+- feature-153-step4-already-enrolled-ui.png - UI shows enrolled state
+
+### Console Errors
+- None (only expected 404 for initial enrollment check before first enrollment)
+
+### Current Status
+- Feature #153 marked as PASSING
+- Passing features: 75/248 (30.2%)
+- Commit: df8a25c
+
+[Testing] 2026-01-25 Feature #153 "Enrollment button prevents double enrollment" verified - PASSED
+
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #152)
+
+### Completed Features
+- Feature #152: Submit button disabled during processing - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Fill out a form - PASS (tested login form and forum reply form)
+    2. Click submit - PASS (clicked submit on both forms)
+    3. Observe submit button - PASS (used MutationObserver to capture state)
+    4. Verify button is disabled or shows loading - PASS
+       - Login form: disabled=true, text='Iniciando sesion...', hasSpinner=true
+       - Forum reply: disabled=true, text='Publicando...', hasLoadingIndicator=true
+    5. Verify button re-enables after completion - PASS
+       - Login form: re-enabled after API error (error message shown)
+       - Forum reply: re-enabled after success (disabled only due to empty textarea validation)
+
+### Technical Details
+- Feature already implemented in 13+ components across the app
+- Uses isLoading state pattern consistently
+- Buttons show: disabled attribute, loading text, animated spinner
+- Input fields also disabled during processing to prevent editing
+- Forms include: LoginPage, ForumPage, ThreadDetailPage, CourseCreatorPage, etc.
+
+### Code References
+- frontend/src/pages/LoginPage.jsx: Lines 199-329 (disabled={isLoading})
+- frontend/src/pages/ThreadDetailPage.jsx: Forum reply form with isLoading state
+
+### Screenshots
+- feature-152-forum-reply-success.png - Forum reply form after successful submission
+
+### Console Errors
+- Only expected WebSocket reconnection errors (recovered automatically)
+- No critical JavaScript errors
+
+### Current Status
+- Feature #152 marked as PASSING
+- Commit: dae46d6
+
+[Testing] 2026-01-25 Feature #152 'Submit button disabled during processing' verified - PASSED
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #127)
+
+### Feature #127: Submission history from database - VERIFIED AND PASSING
+
+All 5 verification steps passed:
+1. View submission history - PASS (History tab shows '2 intentos registrados')
+2. Verify API call to get attempts - PASS (GET /api/challenges/1/attempts => 200 OK)
+3. Verify displayed attempts match database - PASS (Both attempts match correct/incorrect status, test results)
+4. Verify timestamps are correct - PASS (Formatted in es-ES locale: '25 ene 2026, 09:19:33')
+5. Verify code content is accurate - PASS (Full code displayed matches database exactly)
+
+### Additional Verified
+- No console errors
+- 'Cargar en editor' functionality works (loads code from history into editor)
+- Test result indicators (green/red dots) display correctly
+
+### Screenshots
+- feature-127-submission-history.png - Shows history tab with expanded code view
+
+[Testing] 2026-01-25 Feature #127 'Submission history from database' verified - PASSED
