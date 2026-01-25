@@ -1,6 +1,5 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
-import { detectInfiniteLoop, executeWithTimeout } from './challenges-timeout.js';
 
 const router = express.Router();
 
@@ -424,11 +423,8 @@ router.post('/:id/run', async (req, res) => {
     res.json({
       output: result.output,
       error: result.error,
-      timeout: result.timeout || false,
-      timeout_message: result.timeout_message || null,
-      container_cleaned: result.container_cleaned || false,
       execution_time_ms: result.execution_time_ms,
-      success: !result.error && !result.timeout
+      success: !result.error
     });
   } catch (error) {
     console.error('Error running code:', error);
@@ -623,54 +619,21 @@ router.get('/:id/hint/:hintIndex', (req, res) => {
  */
 async function executeCode(code, language, timeoutSeconds = 30) {
   const startTime = Date.now();
-  const timeoutMs = timeoutSeconds * 1000;
 
   // For development, simulate Python execution
   if (language === 'python') {
     try {
-      // Check for infinite loop patterns BEFORE execution
-      const infiniteLoopResult = detectInfiniteLoop(code);
-      if (infiniteLoopResult.isInfiniteLoop) {
-        // Simulate execution time up to timeout (max 3 seconds for demo)
-        await new Promise(resolve => setTimeout(resolve, Math.min(3000, timeoutMs)));
-        return {
-          output: '',
-          error: null,
-          timeout: true,
-          timeout_message: `TimeoutError: Tiempo de ejecucion excedido (${timeoutSeconds}s). ${infiniteLoopResult.message}`,
-          execution_time_ms: timeoutSeconds * 1000,
-          container_cleaned: true
-        };
-      }
-
-      // Parse and simulate simple Python code with timeout wrapper
-      const result = await executeWithTimeout(
-        () => simulatePython(code),
-        timeoutMs
-      );
-
-      if (result.timedOut) {
-        return {
-          output: '',
-          error: null,
-          timeout: true,
-          timeout_message: `TimeoutError: Tiempo de ejecucion excedido (${timeoutSeconds}s). Tu codigo tardo demasiado en ejecutarse.`,
-          execution_time_ms: timeoutSeconds * 1000,
-          container_cleaned: true
-        };
-      }
-
+      // Parse and simulate simple Python code
+      const output = simulatePython(code);
       return {
-        output: result.value,
+        output,
         error: null,
-        timeout: false,
         execution_time_ms: Date.now() - startTime
       };
     } catch (error) {
       return {
         output: '',
         error: error.message,
-        timeout: false,
         execution_time_ms: Date.now() - startTime
       };
     }
@@ -679,7 +642,6 @@ async function executeCode(code, language, timeoutSeconds = 30) {
   return {
     output: '',
     error: `Language ${language} not supported yet`,
-    timeout: false,
     execution_time_ms: Date.now() - startTime
   };
 }

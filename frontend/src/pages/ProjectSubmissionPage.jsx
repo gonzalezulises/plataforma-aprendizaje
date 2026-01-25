@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
+import { FileUpload } from '../components/FileUpload';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 export default function ProjectSubmissionPage() {
   const { projectId } = useParams();
@@ -12,6 +13,7 @@ export default function ProjectSubmissionPage() {
   const [project, setProject] = useState(null);
   const [content, setContent] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export default function ProjectSubmissionPage() {
 
   const fetchProject = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/projects/${projectId}`, {
+      const response = await fetch(`${API_URL}/projects/${projectId}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -52,7 +54,7 @@ export default function ProjectSubmissionPage() {
     e.preventDefault();
 
     const performSubmit = async () => {
-      const response = await fetch(`${API_URL}/api/projects/${projectId}/submit`, {
+      const response = await fetch(`${API_URL}/projects/${projectId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,6 +63,7 @@ export default function ProjectSubmissionPage() {
         body: JSON.stringify({
           content,
           github_url: githubUrl || null,
+          uploaded_files: uploadedFiles.map(f => f.id),
         }),
       });
 
@@ -212,6 +215,59 @@ export default function ProjectSubmissionPage() {
               placeholder="https://github.com/username/repository"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
+          </div>
+
+          {/* File Upload Section */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Archivos Adjuntos (opcional)
+            </label>
+            <FileUpload
+              uploadUrl={`${API_URL}/uploads/single`}
+              accept=".pdf,.doc,.docx,.txt,.py,.js,.ts,.zip,.png,.jpg,.jpeg"
+              maxSize={10 * 1024 * 1024}
+              multiple={false}
+              onUploadSuccess={(response) => {
+                setUploadedFiles(prev => [...prev, response.upload]);
+              }}
+              onUploadError={(error, errorInfo) => {
+                console.error('Upload error:', error);
+              }}
+              disabled={isSubmitting}
+            />
+
+            {/* Show uploaded files */}
+            {uploadedFiles.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Archivos subidos:
+                </p>
+                {uploadedFiles.map((file, index) => (
+                  <div
+                    key={file.id || index}
+                    className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {file.original_name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-4">

@@ -30,6 +30,8 @@ import UpgradeErrorPage from './pages/UpgradeErrorPage';
 import CareerPathsPage from './pages/CareerPathsPage';
 import ServerErrorPage from './pages/ServerErrorPage';
 import ErrorTestPage from './pages/ErrorTestPage';
+import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
+import FileUploadTestPage from './pages/FileUploadTestPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -394,6 +396,7 @@ function App() {
             <Route path="/admin/submissions" element={<SubmissionsReviewPage />} />
             <Route path="/admin/review/:submissionId" element={<InstructorFeedbackPage />} />
             <Route path="/feedback/:submissionId" element={<SubmissionFeedbackPage />} />
+            <Route path="/project/:projectId/submit" element={<ProjectSubmissionPage />} />
             <Route path="/webinars" element={<WebinarsPage />} />
             <Route path="/webinars/schedule" element={<WebinarSchedulePage />} />
             <Route path="/certificates" element={<CertificatesPage />} />
@@ -406,6 +409,7 @@ function App() {
             <Route path="/career-paths/:slug" element={<CareerPathsPage />} />
             <Route path="/server-error" element={<ServerErrorPage />} />
             <Route path="/test-error" element={<ErrorTestPage />} />
+            <Route path="/test-upload" element={<FileUploadTestPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
