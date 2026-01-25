@@ -4649,3 +4649,54 @@ Console errors: None
 
 [Testing] 2026-01-25 Feature #156 'Back and resubmit prevention' verified - PASSED
 
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #158)
+
+### Completed Features
+- Feature #158: Mark complete idempotent - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to a lesson - PASS
+       - Navigated to /course/test-120-curso-de-testing/lesson/10
+       - Lesson "Leccion 2: Testing Unitario con Jest" displayed with "Marcar como completada" button
+    2. Click mark complete - PASS
+       - Clicked "Marcar como completada" button
+       - UI updated: Badge shows "Completada", success message displayed
+       - Button replaced with completion message
+    3. Click mark complete again - PASS
+       - Button no longer visible (UI prevents double-click)
+       - Made 3 direct API calls to POST /api/lessons/10/complete
+       - All returned 200 OK with success: true
+       - Original completedAt timestamp preserved (COALESCE behavior)
+    4. Verify lesson marked complete once - PASS
+       - Database has single record (verified via multiple progress checks)
+       - All progress queries return identical data: status="completed", completedAt="2026-01-25T15:55:18.061Z"
+       - singleRecordVerified: true
+    5. Verify progress accurate - PASS
+       - Dashboard shows TEST_120_Curso de Testing: 50% completado
+       - Course has 2 lessons, 1 completed = 50% (correct calculation)
+
+### Technical Implementation
+- Frontend (LessonPage.jsx line 372):
+  - Early return if isMarkingComplete or lessonProgress.isCompleted
+  - Button not rendered when lesson already complete
+- Backend (lessons.js lines 143-151):
+  - Uses ON CONFLICT(user_id, lesson_id) DO UPDATE
+  - Uses COALESCE to preserve original completedAt timestamp
+  - Returns 200 OK even on subsequent calls (idempotent)
+
+### Screenshots
+- feature-158-step1-lesson-not-completed.png - Initial lesson page with "Marcar como completada" button
+- feature-158-step2-first-complete-click.png - After first click, showing "Completada" badge
+- feature-158-step3-after-refresh-still-complete.png - Completion persists after page refresh
+- feature-158-step5-progress-accurate.png - Dashboard showing 50% progress
+
+### Console Errors
+- None
+
+### Current Status
+- Feature #158 marked as PASSING
+- Passing features: 80/248 (32.3%)
+
+[Testing] 2026-01-25 Feature #158 'Mark complete idempotent' verified - PASSED
