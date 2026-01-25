@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import Navbar from './components/Navbar';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -63,6 +64,211 @@ function NotFound() {
   );
 }
 
+// Course Catalog Page
+function CourseCatalog() {
+  // Sample courses data - in a real app this would come from an API
+  const courses = [
+    {
+      id: 1,
+      slug: 'python-fundamentos',
+      title: 'Python: Fundamentos',
+      description: 'Aprende Python desde cero con ejercicios practicos y proyectos reales.',
+      category: 'Programacion',
+      level: 'Principiante',
+      duration: '20 horas',
+      isPremium: false,
+      thumbnail: null,
+      instructor: 'Carlos Rodriguez',
+      studentsCount: 1250,
+      rating: 4.8,
+    },
+    {
+      id: 2,
+      slug: 'data-science-python',
+      title: 'Data Science con Python',
+      description: 'Domina pandas, numpy y matplotlib para analisis de datos.',
+      category: 'Data Science',
+      level: 'Intermedio',
+      duration: '35 horas',
+      isPremium: true,
+      thumbnail: null,
+      instructor: 'Maria Garcia',
+      studentsCount: 890,
+      rating: 4.9,
+    },
+    {
+      id: 3,
+      slug: 'sql-desde-cero',
+      title: 'SQL desde Cero',
+      description: 'Aprende a consultar y manipular bases de datos con SQL.',
+      category: 'Bases de Datos',
+      level: 'Principiante',
+      duration: '15 horas',
+      isPremium: false,
+      thumbnail: null,
+      instructor: 'Ana Martinez',
+      studentsCount: 2100,
+      rating: 4.7,
+    },
+    {
+      id: 4,
+      slug: 'machine-learning-basico',
+      title: 'Machine Learning Basico',
+      description: 'Introduccion a los algoritmos de aprendizaje automatico.',
+      category: 'IA / ML',
+      level: 'Avanzado',
+      duration: '40 horas',
+      isPremium: true,
+      thumbnail: null,
+      instructor: 'Pedro Sanchez',
+      studentsCount: 650,
+      rating: 4.6,
+    },
+    {
+      id: 5,
+      slug: 'r-estadistica',
+      title: 'R para Estadistica',
+      description: 'Analisis estadistico y visualizacion con R.',
+      category: 'Data Science',
+      level: 'Intermedio',
+      duration: '25 horas',
+      isPremium: false,
+      thumbnail: null,
+      instructor: 'Laura Fernandez',
+      studentsCount: 480,
+      rating: 4.5,
+    },
+    {
+      id: 6,
+      slug: 'web3-solidity',
+      title: 'Web3 y Solidity',
+      description: 'Desarrolla smart contracts y aplicaciones descentralizadas.',
+      category: 'Web3',
+      level: 'Avanzado',
+      duration: '30 horas',
+      isPremium: true,
+      thumbnail: null,
+      instructor: 'Diego Lopez',
+      studentsCount: 320,
+      rating: 4.8,
+    },
+  ];
+
+  const getLevelColor = (level) => {
+    switch (level) {
+      case 'Principiante':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'Intermedio':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'Avanzado':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Catalogo de Cursos
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Explora nuestra coleccion de cursos interactivos con ejecucion de codigo en vivo
+          </p>
+        </div>
+
+        {/* Filters */}
+        <div className="mb-6 flex flex-wrap gap-4">
+          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Todas las categorias</option>
+            <option value="programacion">Programacion</option>
+            <option value="data-science">Data Science</option>
+            <option value="ia-ml">IA / ML</option>
+            <option value="web3">Web3</option>
+            <option value="bases-datos">Bases de Datos</option>
+          </select>
+          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Todos los niveles</option>
+            <option value="principiante">Principiante</option>
+            <option value="intermedio">Intermedio</option>
+            <option value="avanzado">Avanzado</option>
+          </select>
+          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <option value="">Todos</option>
+            <option value="free">Gratuitos</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+
+        {/* Course Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {courses.map((course) => (
+            <a
+              key={course.id}
+              href={`/course/${course.slug}`}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
+            >
+              {/* Thumbnail placeholder */}
+              <div className="h-40 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                <span className="text-6xl opacity-50">
+                  {course.category === 'Programacion' ? '💻' :
+                   course.category === 'Data Science' ? '📊' :
+                   course.category === 'IA / ML' ? '🤖' :
+                   course.category === 'Web3' ? '🔗' :
+                   course.category === 'Bases de Datos' ? '🗃️' : '📚'}
+                </span>
+              </div>
+
+              <div className="p-5">
+                {/* Tags row */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
+                    {course.level}
+                  </span>
+                  {course.isPremium && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                      Premium
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+                    {course.duration}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                  {course.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                  {course.description}
+                </p>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {course.instructor}
+                  </span>
+                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    <span className="text-yellow-500">★</span>
+                    <span>{course.rating}</span>
+                    <span className="mx-1">·</span>
+                    <span>{course.studentsCount.toLocaleString()} estudiantes</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <>
@@ -88,16 +294,16 @@ function App() {
           },
         }}
       />
+      <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        {/* Placeholder routes - to be implemented */}
-        <Route path="/courses" element={<div>Course Catalog</div>} />
-        <Route path="/course/:slug" element={<div>Course Detail</div>} />
-        <Route path="/course/:slug/lesson/:lessonId" element={<div>Lesson Player</div>} />
-        <Route path="/dashboard" element={<div>Student Dashboard</div>} />
-        <Route path="/admin" element={<div>Admin Panel</div>} />
-        <Route path="/profile" element={<div>User Profile</div>} />
-        <Route path="/login" element={<div>Login</div>} />
+        <Route path="/courses" element={<CourseCatalog />} />
+        <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
+        <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
+        <Route path="/dashboard" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Dashboard</h1></div>} />
+        <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
+        <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
+        <Route path="/login" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h1></div>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
