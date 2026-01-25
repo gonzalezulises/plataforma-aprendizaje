@@ -4436,3 +4436,21 @@ All 5 verification steps passed:
 - feature-127-submission-history.png - Shows history tab with expanded code view
 
 [Testing] 2026-01-25 Feature #127 'Submission history from database' verified - PASSED
+[Testing] 2026-01-25 Feature #152 regression test - PASSED (no regression found)
+- Button state during processing: disabled=true, text='Iniciando sesion...', hasSpinner=true
+- Button state after completion: disabled=false, text='Iniciar sesion'
+- All 5 verification steps confirmed working
+
+[Testing] 2026-01-25 Feature #9 'OAuth callback handles successful login' verified - PASSED
+
+Verification Steps:
+1. Complete OAuth login flow - PASS (via 'Iniciar Sesion con rizo.ma' button)
+2. Callback URL processed correctly - PASS (/auth/callback shows 'Autenticacion Exitosa')
+3. User session created - PASS (session established, user authenticated)
+4. Redirect to dashboard - PASS (auto-redirected to /dashboard)
+5. User profile loaded - PASS (shows 'Usuario de Prueba' with avatar 'UD')
+
+Screenshots: feature-9-oauth-login-success.png, feature-9-oauth-callback-success.png
+Console errors: None (only pre-login 401s which are expected)
+
+[Testing] Session complete - Feature #9 verified, no regression found
