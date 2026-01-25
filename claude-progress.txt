@@ -6098,3 +6098,18 @@ Frontend (CourseCatalogPage.jsx):
 
 [Coding] 2026-01-25 Feature #174 'Pagination resets on context change' verified - PASSED
 
+[Testing] 2026-01-25 Feature #138 'Back button after form submission' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Tested forum reply form submission
+- Submitted 2 test replies successfully
+- Back button navigated correctly to previous page
+- Form showed empty state after submission (correct behavior)
+- No duplicate submissions or warnings
+- Reply count correctly reflected submissions (3 Respuestas total)
+
+### Screenshots:
+- feature-138-back-button-test.png
+- feature-138-back-button-verified.png
+
+### Console Errors: None related to feature (only expected WebSocket reconnection logs)
