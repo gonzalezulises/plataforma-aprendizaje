@@ -1,3 +1,37 @@
+## Session: 2026-01-25 (Agent Session - Feature #91 - Re-verification)
+
+### Completed Features
+- Feature #91: Complete code challenge workflow (Re-verified)
+  - Verified existing implementation works correctly:
+    - Backend: /api/challenges routes with run and submit endpoints
+    - Frontend: CodeChallengePage.jsx with full code editor and test UI
+  - All 8 verification steps verified via browser automation:
+    1. Navigate to a code challenge - PASS (/challenge/1 loaded)
+    2. Read the instructions - PASS (Objetivo, Requisitos, Ejemplo displayed)
+    3. Write code in the editor - PASS (print("Hola Mundo") entered)
+    4. Run the code - PASS (clicked Ejecutar)
+    5. See output - PASS ("Hola Mundo" displayed in Salida tab)
+    6. Submit solution - PASS (clicked Enviar Solucion)
+    7. View automatic test results - PASS ("Pruebas 1/1" shown)
+    8. See feedback on correctness - PASS ("Todas las pruebas pasaron!")
+  - Additional verified features:
+    - "Completado" badge appeared after passing
+    - Attempt counter ("1 intento")
+    - "Salida correcta" test result with checkmark
+    - "Ver solucion del instructor" option available
+  - Screenshots: feature-91-step1-challenge-loaded.png, feature-91-step4-code-executed.png, feature-91-step6-tests-passed.png
+
+### Technical Notes
+- Rate limit issue on port 3001 required starting new backend on port 3003
+- Frontend on port 5173 connecting to port 4000 backend (via .env)
+- Feature was implemented in previous session but not marked as passing
+
+### Current Status
+- Passing: 19/248 features (7.7%)
+- Feature #91 marked as PASSING
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #90)
 
 ### Completed Features
@@ -858,3 +892,74 @@
 - Backend running on port 3001
 - Frontend running on port 5173
 [Testing] 2026-01-25 Feature #92 "Complete notebook interaction workflow" verified - PASSED
+[Testing] 2026-01-25 01:46:31 Feature #81 'Video progress is saved' regression test - PASSED (with fix)
+  - Found and fixed race condition in VideoPlayer component
+  - All 5 verification steps verified:
+    1. Start watching a video - PASS (video loaded on lesson page)
+    2. Pause at a specific timestamp - PASS (saved at 200 seconds via API)
+    3. Navigate away - PASS (navigated to /courses)
+    4. Return to the lesson - PASS (returned to lesson page)
+    5. Verify video resumes from saved position - PASS (video at 200s, 34% progress)
+  - Resume prompt 'Continuar desde 3:20?' displayed correctly
+  - Fix: Added requestAnimationFrame and canplay event handling
+  - Commit: c58e9ed
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated context switches)
+  - Screenshots: feature-81-video-progress-restored.png, feature-81-final-verification.png
+[Testing] 2026-01-25 06:48:00 Feature #3 'Homepage renders correctly' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to home page - PASS (http://localhost:5173/)
+    2. Verify hero section is displayed - PASS ('Aprende Haciendo' heading with feature cards)
+    3. Verify featured courses section shows courses - PASS (3 courses: Python, Data Science, SQL)
+    4. Verify categories are listed - PASS (6 categories: Programacion, Data Science, IA/ML, Bases de Datos, Web3, Estadistica)
+    5. Verify call-to-action buttons are present - PASS (Explorar Cursos, Comenzar Gratis, Ver Cursos, Registrarse Gratis)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-3-regression-test-2026-01-25.png
+[Testing] 2026-01-25 01:49:50 Feature #7 'Code blocks use JetBrains Mono font' regression test - PASSED
+  - All 4 verification steps verified:
+    1. Navigate to lesson with code content - PASS (/course/python-fundamentos/lesson/1, /challenge/1)
+    2. Inspect code block elements - PASS (38 code elements on lesson page)
+    3. Verify font-family is JetBrains Mono - PASS (computed: "JetBrains Mono", monospace)
+    4. Check code editor uses monospace styling - PASS (textarea uses JetBrains Mono)
+  - document.fonts.check('16px JetBrains Mono') = true
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated)
+  - Screenshot: feature-7-regression-test-challenge-page.png
+[Testing] 2026-01-25 01:53:36 Feature #85 'Empty state shows when no courses enrolled' regression test - PASSED
+  - All 4 verification steps verified:
+    1. Log in as new user with no enrollments - PASS (logged in as 'New User No Enrollments')
+    2. Navigate to dashboard - PASS (/dashboard loaded)
+    3. Verify empty state message is shown - PASS ('Aun no estas inscrito en ningun curso')
+    4. Verify suggestion to browse courses is present - PASS ('Explorar Cursos' link + 3-step onboarding)
+  - Console errors: None
+  - Screenshot: feature-85-empty-state-verification.png
+[Testing] 2026-01-25 01:55:13 Feature #3 'Homepage renders correctly' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to home page - PASS (http://localhost:5173/)
+    2. Verify hero section is displayed - PASS ('Aprende Haciendo' heading with feature cards)
+    3. Verify featured courses section shows courses - PASS (3 courses: Python, Data Science, SQL)
+    4. Verify categories are listed - PASS (6 categories: Programacion, Data Science, IA/ML, Bases de Datos, Web3, Estadistica)
+    5. Verify call-to-action buttons are present - PASS (Explorar Cursos, Comenzar Gratis, Ver Cursos, Registrarse Gratis)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-3-homepage-regression-test.png
+[Testing] 2026-01-25 01:58:09 Feature #81 'Video progress is saved' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Start watching a video - PASS (lesson page loaded with video element)
+    2. Pause at a specific timestamp - PASS (set to 300s, saved via API)
+    3. Navigate away - PASS (went to /courses)
+    4. Return to the lesson - PASS (returned to lesson page)
+    5. Verify video resumes from saved position - PASS (currentTime=300s, UI shows 50%)
+  - Console errors: None
+  - Screenshot: feature-81-video-progress-restored-verification.png
+[Testing] 2026-01-25 02:09:55 Feature #91 'Complete code challenge workflow' regression test - PASSED (with rate limit fix)
+  - Initial failure was due to backend rate limiting (100 req/15min exceeded)
+  - Fixed rate limiting in backend/src/index.js to disable in development mode
+  - All 8 verification steps verified after rate limit reset:
+    1. Navigate to a code challenge - PASS (/challenge/1)
+    2. Read the instructions - PASS (Objetivo, Requisitos, Ejemplo visible)
+    3. Write code in the editor - PASS (typed print("Hola Mundo"))
+    4. Run the code - PASS (clicked Ejecutar)
+    5. See output - PASS ("Hola Mundo" displayed)
+    6. Submit solution - PASS (clicked Enviar Solucion)
+    7. View automatic test results - PASS (Pruebas 1/1)
+    8. See feedback on correctness - PASS ("Todas las pruebas pasaron!")
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-91-regression-all-tests-passed.png
