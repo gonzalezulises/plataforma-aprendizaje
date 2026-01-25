@@ -1,0 +1,36 @@
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #95 Regression Test)
+
+### Feature #95: Complete forum thread workflow - REGRESSION FOUND AND FIXED
+
+**Regression Identified:**
+- ThreadDetailPage.jsx was using localStorage.getItem('user') to get current user
+- AuthContext stores user in React state, NOT localStorage
+- This caused isOwner to always be false, hiding the 'Marcar como Resuelto' button
+
+**Fix Applied:**
+- Added import { useAuth } from '../store/AuthContext';
+- Replaced getUser() function with const { user } = useAuth();
+- Added String() conversion for user ID comparison (API returns string)
+
+**Verification Steps Completed:**
+1. Navigate to course forum - PASS
+2. Create new thread with question - PASS
+3. Add a reply to the thread - PASS
+4. Mark reply as helpful (upvote) - PASS (count: 0 -> 1)
+5. Mark thread as resolved - PASS (button now visible after fix)
+6. Verify thread shows resolved status - PASS (both in thread detail and forum list)
+
+### Screenshots
+- feature-95-thread-detail.png - Thread before marking resolved
+- feature-95-thread-resolved.png - Thread after marking resolved (shows 'Resuelto' badge)
+
+### Console Errors: Only WebSocket reconnection (expected)
+
+### Current Status
+- Feature #95 marked as PASSING after fix
+- Commit: Fix regression in Feature #95: Complete forum thread workflow
+
+[Testing] 2026-01-25 Feature #95 regression test - REGRESSION FOUND AND FIXED
