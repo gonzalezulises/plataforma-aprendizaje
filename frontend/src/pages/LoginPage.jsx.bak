@@ -13,30 +13,6 @@ function LoginPage() {
   const [showDirectLogin, setShowDirectLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-
-  // Email validation regex
-  const isValidEmail = (emailToValidate) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(emailToValidate);
-  };
-
-  // Handle email field change with validation
-  const handleEmailChange = (e) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    // Clear error when user starts typing
-    if (emailError) {
-      setEmailError('');
-    }
-  };
-
-  // Validate email on blur
-  const handleEmailBlur = () => {
-    if (email && !isValidEmail(email)) {
-      setEmailError('Formato de correo electronico invalido');
-    }
-  };
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -130,13 +106,6 @@ function LoginPage() {
   // Direct email/password login
   const handleDirectLogin = async (e) => {
     e.preventDefault();
-
-    // Validate email format before submitting
-    if (!isValidEmail(email)) {
-      setEmailError('Formato de correo electronico invalido');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
@@ -299,39 +268,24 @@ function LoginPage() {
               <form onSubmit={handleDirectLogin} className="space-y-4">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Correo electronico <span className="text-red-500">*</span>
+                    Correo electronico
                   </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
                     value={email}
-                    onChange={handleEmailChange}
-                    onBlur={handleEmailBlur}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="tu@email.com"
                     required
                     disabled={isLoading}
-                    aria-invalid={emailError ? 'true' : 'false'}
-                    aria-describedby={emailError ? 'email-error' : undefined}
-                    className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${
-                      emailError
-                        ? 'border-red-500 dark:border-red-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  {emailError && (
-                    <p id="email-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      {emailError}
-                    </p>
-                  )}
                 </div>
 
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Contrasena <span className="text-red-500">*</span>
+                    Contrasena
                   </label>
                   <input
                     type="password"
@@ -348,7 +302,7 @@ function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || emailError}
+                  disabled={isLoading}
                   className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   {isLoading ? (
@@ -389,7 +343,6 @@ function LoginPage() {
                 onClick={() => {
                   setShowDirectLogin(false);
                   setError(null);
-                  setEmailError('');
                 }}
                 className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               >

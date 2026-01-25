@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+const fs = require('fs');
+
+const content = `import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 
@@ -17,7 +19,7 @@ function LoginPage() {
 
   // Email validation regex
   const isValidEmail = (emailToValidate) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
     return emailRegex.test(emailToValidate);
   };
 
@@ -69,7 +71,7 @@ function LoginPage() {
     try {
       // Get the OAuth authorization URL from the backend
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await fetch(\`\${API_BASE}/auth/login\`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -99,7 +101,7 @@ function LoginPage() {
   const handleDevLogin = async () => {
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/auth/dev-login`, {
+      const response = await fetch(\`\${API_BASE}/auth/dev-login\`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -142,7 +144,7 @@ function LoginPage() {
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/direct-auth/login`, {
+      const response = await fetch(\`\${API_BASE}/direct-auth/login\`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -313,11 +315,11 @@ function LoginPage() {
                     disabled={isLoading}
                     aria-invalid={emailError ? 'true' : 'false'}
                     aria-describedby={emailError ? 'email-error' : undefined}
-                    className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${
+                    className={\`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed \${
                       emailError
                         ? 'border-red-500 dark:border-red-500'
                         : 'border-gray-300 dark:border-gray-600'
-                    }`}
+                    }\`}
                   />
                   {emailError && (
                     <p id="email-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
@@ -430,3 +432,7 @@ function LoginPage() {
 }
 
 export default LoginPage;
+`;
+
+fs.writeFileSync('C:/Users/gonza/claude-projects/frontend/src/pages/LoginPage.jsx', content);
+console.log('LoginPage.jsx updated successfully with email validation');

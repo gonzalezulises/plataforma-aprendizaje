@@ -6946,3 +6946,19 @@ Frontend (LessonPage.jsx):
 
 [Testing] 2026-01-25 Feature #95 regression test - REGRESSION FOUND AND FIXED
 [Testing] 2026-01-25 Feature #124 'Lesson content loads from database' regression test - PASSED (no regression found)
+[Testing] 2026-01-25 Feature #95 'Complete forum thread workflow' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Navigate to course forum - PASS
+- Step 2: Create new thread with question - PASS (thread #22 created)
+- Step 3: Add a reply to the thread - PASS
+- Step 4: Mark reply as helpful (upvote) - PASS (count: 0 -> 1)
+- Step 5: Mark thread as resolved - PASS
+- Step 6: Verify thread shows resolved status - PASS (both in thread detail and forum list)
+
+### Key Observations:
+- 'Marcar como Resuelto' button visible (previous fix still working)
+- Real-time WebSocket updates working
+- No console errors
+- Screenshot: feature-95-regression-test-PASS.png
+
