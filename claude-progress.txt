@@ -1,3 +1,88 @@
+## Session: 2026-01-25 (Agent Session - Feature #109)
+
+### Completed Features
+- Feature #109: API 500 error shows user-friendly message
+  - Full workflow verified via browser automation:
+    1. Trigger an action that causes server error - PASS
+       - Navigated to /test-error page
+       - Clicked "Simular Error 500" button
+       - Called /api/test/error-500 endpoint
+       - Server returned 500 with error JSON
+    2. Verify generic error message shown - PASS
+       - ServerErrorBanner component displayed
+       - Shows "Error del Servidor" heading
+       - Shows "Lo sentimos, ha ocurrido un error en el servidor. Nuestro equipo ha sido notificado y estamos trabajando para solucionarlo."
+    3. Verify no stack traces exposed - PASS
+       - Only user-friendly message shown
+       - No technical details or error stack visible to user
+       - Error ID reference available for support
+    4. Verify option to retry or go home - PASS
+       - "Reintentar" button works (shows loading, then success)
+       - "Ir al Inicio" button navigates to home page
+       - "Cerrar" button dismisses the error banner
+       - Full-page error also has Refrescar button
+
+### Implementation Details
+- Created frontend/src/components/ServerErrorBanner.jsx:
+  - Displays inline error banner for 500 errors
+  - Server icon indicator
+  - User-friendly message with helpful suggestions
+  - Retry, Go Home, and Close action buttons
+  - No stack traces or technical details exposed
+
+- Created frontend/src/pages/ServerErrorPage.jsx:
+  - Full-page error display for severe errors
+  - Shows large 500 code
+  - "What you can do" suggestions
+  - Reintentar, Refrescar, Ir al Inicio buttons
+  - Contact support link
+
+- Created frontend/src/pages/ErrorTestPage.jsx:
+  - Development-only test page at /test-error
+  - Allows testing 500 error banner display
+  - Allows navigation to full-page error
+  - Shows test results and error states
+
+- Created frontend/src/utils/apiErrorHandler.js:
+  - isServerError() - detects 500 errors
+  - isNetworkError() - detects connection failures
+  - isTimeoutError() - detects timeouts
+  - formatApiError() - creates user-friendly error object
+  - fetchWithErrorHandling() - wrapper for fetch with error handling
+
+- Updated backend/src/index.js:
+  - Added /api/test/error-500 GET and POST endpoints (dev only)
+  - Added /api/test/error-500-crash endpoint for crash simulation
+  - Returns generic error message without stack trace
+
+- Updated frontend/src/App.jsx:
+  - Added /server-error route
+  - Added /test-error route (dev only)
+  - Imported ServerErrorPage and ErrorTestPage
+
+- Updated frontend/src/pages/DashboardPage.jsx:
+  - Added 500 error detection and display
+  - Uses ServerErrorBanner for server errors
+  - Retry functionality for failed requests
+
+### Screenshots
+- feature-109-step1-error-test-page.png - Test page loaded
+- feature-109-step2-error-banner-displayed.png - Error banner with message
+- feature-109-step3-full-page-error-top.png - Full page 500 error
+- feature-109-step4-retry-success.png - Successful retry
+
+### Console Errors
+- Only expected 401 for /api/auth/me (unauthenticated)
+- Expected 500 for /api/test/error-500 (intentional test)
+
+### Current Status
+- Feature #109 marked as PASSING
+- Commit: 0ca936a
+
+[Testing] 2026-01-25 Feature #109 "API 500 error shows user-friendly message" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #104)
 
 ### Completed Features
@@ -1931,3 +2016,20 @@
 - Commit: d40a5d9
 
 [Testing] 2026-01-25 Feature #107 "Video load failure shows fallback" verified - PASSED
+[Testing] 2026-01-25 Feature #103 'Network error during code execution shows message' regression test - PASSED
+  - All 6 verification steps verified via browser automation:
+    1. Navigate to code challenge - PASS (http://localhost:5173/challenge/1)
+    2. Write valid code - PASS (print("Hola Mundo") entered in editor)
+    3. Simulate network disconnection - PASS (fetch intercepted to throw TypeError)
+    4. Click run - PASS (Ejecutar button triggered network error)
+    5. Verify user-friendly error message - PASS
+       - Orange warning banner displayed
+       - Heading: 'Error de conexion: No se pudo conectar con el servidor para ejecutar el codigo.'
+       - Details: 'El servidor no responde. Por favor, verifica que el servidor este funcionando e intenta de nuevo.'
+    6. Verify option to retry - PASS
+       - 'Reintentar' button displayed and functional
+       - Clicking retry after restoring fetch successfully executed code
+       - Output showed 'Hola Mundo' as expected
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated)
+  - Screenshots: feature-103-network-error-displayed.png, feature-103-retry-success.png
+[Testing] Session complete - Feature #103 verified, still passing
