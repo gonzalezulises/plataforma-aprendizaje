@@ -2033,3 +2033,22 @@
   - Console errors: Only expected 401 for /api/auth/me (unauthenticated)
   - Screenshots: feature-103-network-error-displayed.png, feature-103-retry-success.png
 [Testing] Session complete - Feature #103 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #110)
+
+### Completed Features
+- Feature #110: 404 for deleted lesson shows error - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation
+  - Shows 404 error page with amber warning icon when lesson not found
+  - User-friendly message: Leccion No Encontrada
+  - Volver al Curso button navigates back to course page
+  - Screenshots: feature-110-step1-404-error-page.png, feature-110-step2-returned-to-course.png
+
+### Current Status
+- Feature #110 marked as PASSING
+- Passing: 34/248 features (13.7%)
+- Commit: c99f49a
+
+[Testing] 2026-01-25 Feature #110 '404 for deleted lesson shows error' verified - PASSED
