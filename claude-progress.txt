@@ -2206,3 +2206,54 @@
 - Commit: 4f5c357
 
 [Testing] 2026-01-25 Feature #111 "File upload error shows message" verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #113)
+
+### Completed Features
+- Feature #113: Invalid file type rejection - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Attempt to upload unsupported file type - PASS
+       - Uploaded test-invalid-file.exe (unsupported extension)
+       - File was immediately rejected before any upload attempt
+    2. Verify rejection with clear message - PASS
+       - Toast notification: "test-invalid-file.exe: Tipo de archivo no permitido. Tipos aceptados: .pdf,.doc,.docx,.txt,.py,.js,.ts,.zip,.png,.jpg,.jpeg,.md,.json,.csv"
+       - Error alert banner displayed with:
+         - Heading: "Error al Subir Archivo"
+         - Message: "Algunos archivos no pudieron ser seleccionados"
+         - Detailed list showing rejected file and reason
+         - "Seleccionar otro archivo" button
+    3. Verify correct file types are listed - PASS
+       - Accepted types clearly shown in upload area: .pdf,.doc,.docx,.txt,.py,.js,.ts,.zip,.png,.jpg,.jpeg,.md,.json,.csv
+       - Same list shown in error message for reference
+    4. Verify form state is preserved - PASS
+       - After error, "Seleccionar otro archivo" button works
+       - Selected valid file (test-upload-file.txt, 60 Bytes)
+       - Error cleared, file shown in selection list
+       - "Subir archivo" button available and functional
+       - Form fully operational for valid file upload
+
+### Technical Details
+- FileUpload component (frontend/src/components/FileUpload.jsx) handles:
+  - File type validation via accept prop
+  - Extension matching (.exe, .bat not in accept list)
+  - MIME type matching for wildcard patterns (e.g., image/*)
+  - Clear error messages with specific rejection reasons
+  - "Seleccionar otro archivo" button for easy recovery
+  - Form state preservation after validation errors
+
+### Screenshots
+- feature-113-step1-upload-page.png - Initial upload page with accepted file types
+- feature-113-step2-invalid-file-rejected.png - Page after .exe file rejected
+- feature-113-step3-error-message-details.png - Detailed error message with file types listed
+- feature-113-step4-form-state-preserved.png - Valid file selected after error recovery
+
+### Console Errors
+- Only expected 401 Unauthorized for /api/auth/me (unauthenticated user)
+
+### Current Status
+- Feature #113 marked as PASSING
+- Passing features: 37/248 (14.9%)
+
+[Testing] 2026-01-25 Feature #113 "Invalid file type rejection" verified - PASSED
