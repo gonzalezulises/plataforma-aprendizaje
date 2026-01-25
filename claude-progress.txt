@@ -1,0 +1,33 @@
+# Plataforma de Aprendizaje - Progress Notes
+
+## Session: 2025-01-25
+
+### Completed Features
+- Feature #42: Course catalog link works
+  - Added Navbar component to App.jsx with navigation links
+  - Created CourseCatalog component with 6 sample courses
+  - Course cards display: title, description, level, duration, instructor, rating, student count
+  - Filters UI (category, level, premium) added but not yet functional
+  - Verified: Click on "Cursos" link navigates to /courses and displays course catalog
+
+### Technical Changes
+- Replaced better-sqlite3 with sql.js for Windows compatibility (no native compilation needed)
+- Frontend structure:
+  - src/components/Navbar.jsx - Navigation bar with logo, links, login button
+  - src/App.jsx - Updated with Navbar and CourseCatalog components
+
+### Current Status
+- Passing: 3/248 features (1.2%)
+- Backend running on port 3001
+- Frontend running on port 5174
+
+### Next Steps
+- Implement actual course data from API (replace sample data)
+- Add filter functionality to course catalog
+- Implement course detail page
+- Add authentication flow
+
+### Notes
+- Port 5173 was in use, frontend using 5174
+- No console errors observed
+- All navigation links working (Cursos, Dashboard, Login)
