@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
+import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -64,6 +66,21 @@ function CodeChallengePage() {
   const [submissionHistory, setSubmissionHistory] = useState([]); // Full submission history from database
   const [isLoadingHistory, setIsLoadingHistory] = useState(false); // Loading state for history
   const [selectedSubmission, setSelectedSubmission] = useState(null); // Selected submission to view code
+  const [originalCode, setOriginalCode] = useState(''); // Track original code for unsaved detection
+
+  // Detect if code has unsaved changes (different from starter code or last saved state)
+  const hasUnsavedCode = code !== '' && code !== originalCode;
+
+  // Unsaved changes warning hook
+  const {
+    showModal: showUnsavedModal,
+    confirmNavigation,
+    cancelNavigation,
+    message: unsavedMessage,
+  } = useUnsavedChangesWarning(
+    hasUnsavedCode,
+    'Tienes codigo sin guardar. Si sales ahora, perderas los cambios en tu codigo.'
+  );
 
   // Helper to detect network errors
   const isNetworkError = (err) => {
@@ -105,9 +122,11 @@ function CodeChallengePage() {
           if (savedDraft !== null) {
             // Use saved draft if available
             setCode(savedDraft);
+            setOriginalCode(savedDraft); // Track the restored code as original
           } else {
             // Otherwise use starter code
             setCode(data.starter_code || '');
+            setOriginalCode(data.starter_code || ''); // Track starter code as original
           }
 
           setHints(data.hints || []);
@@ -254,6 +273,10 @@ function CodeChallengePage() {
       if (data.is_correct && data.solution) {
         setSolution(data.solution);
       }
+
+      // After successful submission, update original code to current code
+      // so user isn't warned about "unsaved changes" when navigating away
+      setOriginalCode(code);
 
       // Update attempts list (with code for history display)
       const newAttempt = {
@@ -1027,6 +1050,14 @@ function CodeChallengePage() {
           </div>
         </div>
       </div>
+
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+        message={unsavedMessage}
+      />
     </div>
   );
 }

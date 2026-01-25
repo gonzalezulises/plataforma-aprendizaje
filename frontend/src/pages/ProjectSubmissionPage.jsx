@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import { FileUpload } from '../components/FileUpload';
+import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -65,6 +67,20 @@ export default function ProjectSubmissionPage() {
   const clearSavedFormData = () => {
     localStorage.removeItem(formDataKey);
   };
+
+  // Detect if form has unsaved content
+  const hasUnsavedContent = content.trim() !== '' || githubUrl.trim() !== '' || uploadedFiles.length > 0;
+
+  // Unsaved changes warning hook
+  const {
+    showModal: showUnsavedModal,
+    confirmNavigation,
+    cancelNavigation,
+    message: unsavedMessage,
+  } = useUnsavedChangesWarning(
+    hasUnsavedContent,
+    'Tienes cambios sin guardar en tu entrega. Si sales ahora, perderas el contenido.'
+  );
 
   useEffect(() => {
     fetchProject();
@@ -348,6 +364,14 @@ export default function ProjectSubmissionPage() {
             </button>
           </div>
         </form>
+
+        {/* Unsaved Changes Warning Modal */}
+        <UnsavedChangesModal
+          isOpen={showUnsavedModal}
+          onConfirm={confirmNavigation}
+          onCancel={cancelNavigation}
+          message={unsavedMessage}
+        />
       </div>
     </div>
   );

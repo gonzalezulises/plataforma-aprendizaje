@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
+import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -46,6 +48,20 @@ function ForumPage() {
 
   // localStorage key for forum thread form persistence
   const formDataKey = `forum_thread_${slug}_form`;
+
+  // Detect if form has unsaved content
+  const hasUnsavedContent = showNewThread && (newThread.title.trim() !== '' || newThread.content.trim() !== '');
+
+  // Unsaved changes warning hook
+  const {
+    showModal: showUnsavedModal,
+    confirmNavigation,
+    cancelNavigation,
+    message: unsavedMessage,
+  } = useUnsavedChangesWarning(
+    hasUnsavedContent,
+    'Tienes una pregunta sin publicar. Si sales ahora, perderas el contenido que has escrito.'
+  );
 
   // Restore form data from localStorage on mount
   useEffect(() => {
@@ -444,6 +460,14 @@ function ForumPage() {
           </div>
         )}
       </div>
+
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+        message={unsavedMessage}
+      />
     </div>
   );
 }

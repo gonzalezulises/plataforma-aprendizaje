@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import AIQuizGeneratorModal from '../components/AIQuizGeneratorModal';
 import AICourseStructureModal from '../components/AICourseStructureModal';
+import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
+import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
 // Use the base URL without /api since the env var already includes it
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -64,6 +66,21 @@ export default function CourseCreatorPage() {
   // AI Course Structure Generator modal state
   const [showAICourseModal, setShowAICourseModal] = useState(false);
 
+  // Track original form state for unsaved changes detection
+  const originalFormRef = useRef(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Unsaved changes warning hook
+  const {
+    showModal: showUnsavedModal,
+    confirmNavigation,
+    cancelNavigation,
+    message: unsavedMessage,
+  } = useUnsavedChangesWarning(
+    hasUnsavedChanges,
+    'Tienes cambios sin guardar en este curso. Si sales ahora, perderas los cambios.'
+  );
+
   // Load course data if editing
   const loadCourse = useCallback(async () => {
     if (!courseId) return;
@@ -81,14 +98,18 @@ export default function CourseCreatorPage() {
       const data = await response.json();
       setCourse(data.course);
       setCourseVersion(data.course.updated_at); // Store version for conflict detection
-      setCourseForm({
+      const formData = {
         title: data.course.title || '',
         description: data.course.description || '',
         category: data.course.category || 'Programacion',
         level: data.course.level || 'Principiante',
         is_premium: !!data.course.is_premium,
         duration_hours: data.course.duration_hours || 0
-      });
+      };
+      setCourseForm(formData);
+      // Store original state for comparison
+      originalFormRef.current = JSON.stringify(formData);
+      setHasUnsavedChanges(false);
       setModules(data.course.modules || []);
     } catch (error) {
       console.error('Error loading course:', error);
@@ -101,8 +122,19 @@ export default function CourseCreatorPage() {
   useEffect(() => {
     if (courseId) {
       loadCourse();
+    } else {
+      // For new courses, set initial state
+      originalFormRef.current = JSON.stringify(courseForm);
     }
   }, [courseId, loadCourse]);
+
+  // Detect form changes
+  useEffect(() => {
+    if (originalFormRef.current) {
+      const currentFormString = JSON.stringify(courseForm);
+      setHasUnsavedChanges(currentFormString !== originalFormRef.current);
+    }
+  }, [courseForm]);
 
   // Redirect non-instructors (disabled in dev mode for testing)
   useEffect(() => {
@@ -161,6 +193,11 @@ export default function CourseCreatorPage() {
       const data = await response.json();
       setCourse(data.course);
       setCourseVersion(data.course.updated_at); // Update version after save
+
+      // Reset unsaved changes tracking after successful save
+      originalFormRef.current = JSON.stringify(courseForm);
+      setHasUnsavedChanges(false);
+
       toast.success(course ? 'Curso actualizado' : 'Curso creado');
 
       // If new course, update URL without triggering a navigation/reload
@@ -1296,6 +1333,14 @@ export default function CourseCreatorPage() {
           loadCourse();
           setShowAICourseModal(false);
         }}
+      />
+
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onConfirm={confirmNavigation}
+        onCancel={cancelNavigation}
+        message={unsavedMessage}
       />
     </div>
   );
