@@ -2349,3 +2349,86 @@
   - Loading indicators disappear properly when complete
 
 [Testing] 2026-01-25 Feature #114 Loading states display during API calls verified - PASSED
+[Testing] 2026-01-25 Feature #7 'Code blocks use JetBrains Mono font' regression test - PASSED
+  - Verified on CodeChallengePage at /challenge/1
+  - Code editor fontFamily: 'JetBrains Mono', monospace
+  - Line numbers fontFamily: 'JetBrains Mono', monospace
+  - Font properly loaded via Google Fonts in index.html
+  - Tailwind config defines font-mono as JetBrains Mono
+  - Monaco editor CSS override in index.css
+  - Screenshot: feature-7-code-block-font-verification.png
+  - Console errors: Only expected 401 (unauthenticated)
+[Testing] Session complete - Feature #7 verified, still passing
+[Testing] 2026-01-25 Feature #82 'Notebook state is persisted' regression test - PASSED
+  - Verified all 5 steps via browser automation:
+    1. Open interactive notebook - PASS (navigated to /notebook/demo)
+    2. Execute code cells with output - PASS (executed 2 cells with outputs)
+    3. Navigate away from the lesson - PASS (navigated to /courses)
+    4. Return to the notebook - PASS (navigated back to /notebook/demo)
+    5. Verify cell outputs are still visible - PASS (outputs persisted)
+       - Cell 2: 'Hola, Maria!' output preserved
+       - Cell 4: Data types output preserved
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me
+  - Screenshots: feature-82-step2-cells-executed.png, feature-82-step5-outputs-persisted.png
+[Testing] Session complete - Feature #82 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #117)
+
+### Completed Features
+- Feature #117: Syntax error in code shows helpful message - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Write code with syntax error - PASS (tested 'if x = 5:', 'print "hello"', 'x = (1 + 2')
+    2. Run the code - PASS (clicked Ejecutar button)
+    3. Verify syntax error is highlighted - PASS (code snippet shows error line in red with left border)
+    4. Verify line number is indicated - PASS ('SyntaxError: Linea 1' heading, warning symbol next to line number)
+    5. Verify error message explains the issue - PASS (clear messages + helpful suggestions)
+
+### Technical Implementation
+- backend/src/routes/challenges-timeout.js:
+  - Added detectSyntaxError() function with 15+ pattern detectors:
+    - Missing colon after if/elif/else/while/for/def/class
+    - Unclosed parenthesis/bracket/brace
+    - Unclosed string (single and double quotes)
+    - Invalid assignment (= instead of ==) in conditions
+    - Python 2 style print without parentheses
+    - Missing comma in list/dict/tuple
+    - def without parentheses
+    - Mixing tabs and spaces
+    - return outside function
+    - break/continue outside loop
+    - Invalid variable name starting with number
+    - Reserved keyword as variable name
+  - Each error includes: type, line number, message, suggestion, code snippet
+
+- backend/src/routes/challenges.js:
+  - Import detectSyntaxError function
+  - Check for syntax errors BEFORE execution (runs first before memory/timeout checks)
+  - Return syntax_error and syntax_error_info in API response
+
+- frontend/src/pages/CodeChallengePage.jsx:
+  - Added syntaxError state for tracking syntax errors
+  - Updated handleRunCode to handle syntax error responses
+  - Added handleCodeChange to clear syntax error when code changes
+  - Updated output tab to show styled syntax error panel:
+    - Red warning icon with error type and line number
+    - Clear error message explaining the issue
+    - Code snippet with error line highlighted (red background, left border)
+    - Yellow suggestion box with lightbulb icon
+  - Added line number highlighting in code editor (warning symbol, red background)
+
+### Screenshots
+- feature-117-step1-syntax-error-displayed.png - '= vs ==' error with full UI
+- feature-117-step2-print-syntax-error.png - Python 2 print without parentheses
+- feature-117-step3-unclosed-parenthesis.png - Unclosed parenthesis error
+- feature-117-step5-correct-code-executes.png - Correct code runs normally
+
+### Console Errors
+- Only expected 401 Unauthorized for /api/auth/me (unauthenticated user)
+
+### Current Status
+- Feature #117 marked as PASSING
+- Commit: e1cbe14
+
+[Testing] 2026-01-25 Feature #117 'Syntax error in code shows helpful message' verified - PASSED
