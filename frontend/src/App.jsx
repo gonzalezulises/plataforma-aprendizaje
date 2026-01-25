@@ -14,6 +14,9 @@ import AdminCoursesPage from './pages/AdminCoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
 import QuizPage from './pages/QuizPage';
 import CodeChallengePage from './pages/CodeChallengePage';
+import SubmissionsReviewPage from './pages/SubmissionsReviewPage';
+import InstructorFeedbackPage from './pages/InstructorFeedbackPage';
+import SubmissionFeedbackPage from './pages/SubmissionFeedbackPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -326,6 +329,9 @@ function App() {
             <Route path="/admin/courses" element={<AdminCoursesPage />} />
             <Route path="/admin/courses/new" element={<CourseCreatorPage />} />
             <Route path="/admin/courses/:courseId/edit" element={<CourseCreatorPage />} />
+            <Route path="/admin/submissions" element={<SubmissionsReviewPage />} />
+            <Route path="/admin/review/:submissionId" element={<InstructorFeedbackPage />} />
+            <Route path="/feedback/:submissionId" element={<SubmissionFeedbackPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

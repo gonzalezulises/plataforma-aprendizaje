@@ -16,6 +16,10 @@ import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
 import quizzesRoutes from './routes/quizzes.js';
 import challengesRoutes, { initChallengesTables } from './routes/challenges.js';
+import projectsRoutes from './routes/projects.js';
+import feedbackRoutes from './routes/feedback.js';
+import analyticsRoutes from './routes/analytics.js';
+import notificationsRoutes from './routes/notifications.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -98,6 +102,10 @@ app.use('/api/courses', coursesRoutes);
 app.use('/api/lessons', lessonsRoutes);
 app.use('/api/quizzes', quizzesRoutes);
 app.use('/api/challenges', challengesRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -181,3 +189,8 @@ export default app;
 // nodemon restart trigger - sab., 25 de ene. de 2026  01:20:00
 // restart trigger do., 25 de ene. de 2026  6:24:00 - added challenges routes
 // nodemon restart trigger - do., 25 de ene. de 2026  1:34:33
+// restart trigger - fixed module/lesson creation to not rely on lastInsertRowid
+// nodemon restart 1769323159
+// restart trigger do., 25 de ene. de 2026  1:45:31
+// route order fix do., 25 de ene. de 2026  1:49:50
+// feedback fix do., 25 de ene. de 2026  1:52:07

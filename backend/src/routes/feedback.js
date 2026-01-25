@@ -189,11 +189,51 @@ router.post('/submissions/:submissionId/feedback', (req, res) => {
       [now, submissionId]
     );
 
-    const feedback = queryOne('SELECT * FROM feedback WHERE id = ?', [result.lastInsertRowid]);
-    feedback.content = JSON.parse(feedback.content || '{}');
-    feedback.scores = JSON.parse(feedback.scores || '{}');
+    // Create notification for the student
+    const notificationContent = JSON.stringify({
+      submissionId: parseInt(submissionId),
+      feedbackId: result.lastInsertRowid,
+      total_score,
+      max_score,
+      type: type || 'rubric'
+    });
 
-    res.status(201).json({ feedback });
+    run(
+      `INSERT INTO notifications (user_id, type, title, message, content, is_read, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?)`,
+      [
+        submission.user_id,
+        'feedback_received',
+        'Nueva Retroalimentacion',
+        `Tu entrega ha recibido retroalimentacion. Puntuacion: ${total_score || 0}/${max_score || 100}`,
+        notificationContent,
+        now
+      ]
+    );
+
+    // Fetch the newly created feedback
+    // result.lastInsertRowid might be BigInt, so we need to handle it
+    const feedbackId = result.lastInsertRowid ? Number(result.lastInsertRowid) : null;
+    let feedback = null;
+
+    if (feedbackId) {
+      feedback = queryOne('SELECT * FROM feedback WHERE id = ?', [feedbackId]);
+    }
+
+    // If we couldn't get by ID, get the most recent one for this submission
+    if (!feedback) {
+      feedback = queryOne(
+        'SELECT * FROM feedback WHERE submission_id = ? ORDER BY created_at DESC LIMIT 1',
+        [submissionId]
+      );
+    }
+
+    if (feedback) {
+      feedback.content = JSON.parse(feedback.content || '{}');
+      feedback.scores = JSON.parse(feedback.scores || '{}');
+    }
+
+    res.status(201).json({ feedback: feedback || { success: true, submissionId } });
   } catch (error) {
     console.error('Error creating feedback:', error);
     res.status(500).json({ error: 'Failed to create feedback' });

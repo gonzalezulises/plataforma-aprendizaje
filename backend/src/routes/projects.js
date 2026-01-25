@@ -65,6 +65,76 @@ router.get('/', (req, res) => {
 });
 
 /**
+ * Get all submissions for the current user
+ * MUST be before /:id routes to avoid matching "my" as an id
+ */
+router.get('/my/submissions', (req, res) => {
+  try {
+    const userId = req.session?.user?.id || 'test-user';
+    const submissions = queryAll(
+      `SELECT ps.*, p.title as project_title, p.course_id
+       FROM project_submissions ps
+       JOIN projects p ON ps.project_id = p.id
+       WHERE ps.user_id = ?
+       ORDER BY ps.submitted_at DESC`,
+      [userId]
+    );
+    res.json({ submissions });
+  } catch (error) {
+    console.error('Error fetching user submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
+  }
+});
+
+/**
+ * Get all submissions awaiting review (instructor only)
+ * MUST be before /:id routes
+ */
+router.get('/pending/review', (req, res) => {
+  try {
+    const submissions = queryAll(
+      `SELECT ps.*, p.title as project_title, p.course_id
+       FROM project_submissions ps
+       JOIN projects p ON ps.project_id = p.id
+       WHERE ps.status = 'submitted'
+       ORDER BY ps.submitted_at ASC`,
+      []
+    );
+    res.json({ submissions });
+  } catch (error) {
+    console.error('Error fetching pending submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch pending submissions' });
+  }
+});
+
+/**
+ * Get all submissions (instructor only - for review page)
+ * MUST be before /:id routes
+ */
+router.get('/all/submissions', (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = `SELECT ps.*, p.title as project_title, p.course_id
+                 FROM project_submissions ps
+                 JOIN projects p ON ps.project_id = p.id`;
+    let params = [];
+
+    if (status) {
+      query += ` WHERE ps.status = ?`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY ps.submitted_at DESC`;
+
+    const submissions = queryAll(query, params);
+    res.json({ submissions });
+  } catch (error) {
+    console.error('Error fetching all submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
+  }
+});
+
+/**
  * Get a single project by ID
  */
 router.get('/:id', (req, res) => {
@@ -175,27 +245,6 @@ router.get('/submissions/:submissionId', (req, res) => {
   } catch (error) {
     console.error('Error fetching submission:', error);
     res.status(500).json({ error: 'Failed to fetch submission' });
-  }
-});
-
-/**
- * Get all submissions for the current user
- */
-router.get('/my/submissions', (req, res) => {
-  try {
-    const userId = req.session?.user?.id || 'test-user';
-    const submissions = queryAll(
-      `SELECT ps.*, p.title as project_title, p.course_id
-       FROM project_submissions ps
-       JOIN projects p ON ps.project_id = p.id
-       WHERE ps.user_id = ?
-       ORDER BY ps.submitted_at DESC`,
-      [userId]
-    );
-    res.json({ submissions });
-  } catch (error) {
-    console.error('Error fetching user submissions:', error);
-    res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 

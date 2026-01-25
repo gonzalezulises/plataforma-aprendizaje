@@ -23,7 +23,7 @@ export default function SubmissionFeedbackPage() {
   const fetchSubmissionAndFeedback = async () => {
     try {
       // Fetch submission
-      const response = await fetch(`${API_URL}/api/projects/submissions/${submissionId}`, {
+      const response = await fetch(`${API_URL}/projects/submissions/${submissionId}`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -32,7 +32,7 @@ export default function SubmissionFeedbackPage() {
 
         // Also fetch feedback
         try {
-          const feedbackRes = await fetch(`${API_URL}/api/feedback/submissions/${submissionId}/feedback`, {
+          const feedbackRes = await fetch(`${API_URL}/feedback/submissions/${submissionId}/feedback`, {
             credentials: 'include',
           });
           if (feedbackRes.ok) {
@@ -253,6 +253,26 @@ export default function SubmissionFeedbackPage() {
                         {feedback.comment}
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Video Feedback */}
+                {feedback.video_url && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                      <span className="text-2xl">{'\uD83C\uDFA5'}</span>
+                      Video Feedback
+                    </h3>
+                    <a
+                      href={feedback.video_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-3 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                      data-testid="video-feedback-link"
+                    >
+                      <span className="mr-2">{'\u25B6\uFE0F'}</span>
+                      Ver video de retroalimentacion del instructor
+                    </a>
                   </div>
                 )}
 

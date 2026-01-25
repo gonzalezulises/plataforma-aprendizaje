@@ -41,6 +41,7 @@ function InstructorFeedbackPage() {
   const [saving, setSaving] = useState(false);
   const [scores, setScores] = useState({});
   const [comment, setComment] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [criteria] = useState(DEFAULT_CRITERIA);
 
   // Calculate total score
@@ -76,6 +77,7 @@ function InstructorFeedbackPage() {
             const existingFeedback = feedbackData.feedback[0];
             setScores(existingFeedback.scores || {});
             setComment(existingFeedback.comment || '');
+            setVideoUrl(existingFeedback.video_url || '');
           }
         }
       } catch (e) {
@@ -110,6 +112,7 @@ function InstructorFeedbackPage() {
           total_score: totalScore,
           max_score: maxScore,
           comment,
+          video_url: videoUrl || null,
           content: { criteria: criteria.map(c => ({ ...c, score: scores[c.id] || 0 })) }
         })
       });
@@ -279,6 +282,36 @@ function InstructorFeedbackPage() {
               rows={5}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
             />
+          </div>
+
+          {/* Video Feedback Section (Optional) */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span className="text-2xl">{'\uD83C\uDFA5'}</span>
+              Video Feedback (Opcional)
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Puedes grabar un video de retroalimentacion y pegar el enlace aqui (YouTube, Loom, etc.)
+            </p>
+            <input
+              type="url"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=... o https://www.loom.com/share/..."
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            {videoUrl && (
+              <div className="mt-4">
+                <a
+                  href={videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-2"
+                >
+                  <span>{'\u25B6\uFE0F'}</span> Ver video de retroalimentacion
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
