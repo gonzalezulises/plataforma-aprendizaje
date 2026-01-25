@@ -7352,3 +7352,59 @@ WebinarSchedulePage.jsx:
 
 ### Console Errors: Only WebSocket reconnection (unrelated)
 ### Screenshots: feature-151-regression-test-PASS.png, feature-151-reply-double-click-PASS.png
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #192)
+
+### Feature #192: Specific error messages per field - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Submit form with multiple errors** - PASS
+   - Submitted empty forum thread form
+   - Both title and content fields showed errors
+
+2. **Verify each field shows specific error** - PASS
+   - Title field: 'El titulo es requerido' (when empty)
+   - Content field: 'El contenido es requerido' (when empty)
+   - Title field: 'El titulo debe tener al menos 5 caracteres' (when < 5 chars)
+   - Content field: 'El contenido debe tener al menos 10 caracteres' (when < 10 chars)
+
+3. **Verify errors are actionable** - PASS
+   - Errors clearly indicate what needs to be fixed
+   - Users know exactly how to resolve each error
+   - Error icon displayed next to each message
+
+4. **Fix each error and verify** - PASS
+   - Title error cleared when valid title entered (5+ chars)
+   - Content error cleared when valid content entered (10+ chars)
+   - Errors clear independently as each field is fixed
+
+### Additional Validation Tested (WebinarSchedulePage):
+- Date field: 'La fecha no puede ser en el pasado' (past date validation)
+- Max attendees field: 'La capacidad minima es 1' (numeric range validation)
+
+### Implementation Details:
+- ForumPage.jsx: fieldErrors state with title/content, handleFieldChange() clears on valid input
+- WebinarSchedulePage.jsx: fieldErrors state with title/scheduled_date/scheduled_time/max_attendees
+- All error messages are in Spanish, matching UI language
+- Red border styling on invalid fields
+- Error icon (warning circle) displayed with messages
+- Accessibility: aria-invalid and aria-describedby attributes
+
+### Console Errors: None
+
+### Screenshots:
+- feature-192-step1-2-multiple-errors-forum.png - Both fields showing errors
+- feature-192-step3-specific-min-length-errors.png - Minimum length errors
+- feature-192-step4-title-fixed-content-error-remains.png - Title fixed, content error remains
+- feature-192-step4-all-errors-fixed.png - All errors cleared
+
+### Current Status
+- Feature #192 marked as PASSING
+- 112/248 features passing (45.2%)
+
+[Coding] 2026-01-25 Feature #192 'Specific error messages per field' verified - PASSED
+
