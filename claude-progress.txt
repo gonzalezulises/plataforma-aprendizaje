@@ -3665,3 +3665,59 @@ Screenshots:
 - feature-94-student-notification.png
 - feature-94-student-feedback-view.png
 
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #142)
+
+### Completed Features
+- Feature #142: Filter state preserved across navigation - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Apply filters in catalog - PASS
+       - Selected category: "Programacion"
+       - Selected level: "Principiante"
+       - URL updated to: /courses?category=Programacion&level=Principiante
+       - Courses filtered from 9 to 2
+    2. Navigate to course details - PASS
+       - Clicked on "Python: Fundamentos" course
+       - Navigated to /course/python-fundamentos
+    3. Click back to catalog - PASS
+       - Used browser back button
+       - Returned to /courses?category=Programacion&level=Principiante
+    4. Verify filters are still applied - PASS
+       - Category dropdown shows "Programacion" [selected]
+       - Level dropdown shows "Principiante" [selected]
+       - Same 2 filtered courses displayed
+       - Search also tested and preserved ("Python" search term)
+
+### Technical Implementation
+- frontend/src/App.jsx (CourseCatalog component):
+  - Added useSearchParams hook from react-router-dom
+  - Initialize filter states from URL search params on mount
+  - Created updateURLParams() helper function to update URL
+  - Created wrapper functions for filter changes:
+    - handleCategoryChange() - updates state + URL
+    - handleLevelChange() - updates state + URL
+    - handlePriceChange() - updates state + URL
+    - handleSearchSubmit() - updates state + URL
+    - handleClearSearch() - clears state + URL
+  - All filters now persist in URL query params:
+    - ?category=X for category filter
+    - ?level=X for level filter
+    - ?price=X for price filter
+    - ?search=X for search query
+
+### Screenshots
+- feature-142-step1-filters-applied.png - Filters applied with URL params
+- feature-142-step2-course-details.png - Course details page
+- feature-142-step4-filters-preserved-after-back.png - Filters preserved after back
+- feature-142-final-all-filters-preserved.png - All filters including search preserved
+
+### Console Errors
+- Only expected 401 errors for unauthenticated /api/auth/me requests
+
+### Current Status
+- Feature #142 marked as PASSING
+- Commit: a5c94bc
+
+[Testing] 2026-01-25 Feature #142 "Filter state preserved across navigation" verified - PASSED
