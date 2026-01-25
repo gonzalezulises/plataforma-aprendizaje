@@ -242,10 +242,18 @@ print(potencia(3, 3))   # 27 (3^3)`
               bloomLevel: data.lesson.bloom_level || 'Comprender',
               duration: data.lesson.duration_minutes || 15,
               description: data.lesson.description || '',
-              content: data.lesson.content?.map(c => ({
-                type: c.type,
-                ...c.content
-              })) || []
+              content: data.lesson.content?.map(c => {
+                // Transform API content structure to match component expectations
+                const transformed = {
+                  type: c.type,
+                  ...c.content
+                };
+                // Map 'text' property to 'content' for text blocks (API uses 'text', component expects 'content')
+                if (c.type === 'text' && c.content?.text && !transformed.content) {
+                  transformed.content = c.content.text;
+                }
+                return transformed;
+              }) || []
             };
             setApiLesson(transformedLesson);
           }
