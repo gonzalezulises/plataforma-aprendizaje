@@ -1,3 +1,52 @@
+## Session: 2026-01-25 (Agent Session - Feature #128)
+
+### Completed Features
+- Feature #128: Forum threads from database - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to forum - PASS
+       - Navigated to /course/python-fundamentos/forum
+       - Forum page displayed with "Foro del Curso" heading
+    2. Verify forum API is called - PASS
+       - Network: GET /api/forum/course/3?sort=newest => [200] OK
+       - API response includes thread data from forum_threads table
+    3. Verify thread count matches database - PASS
+       - Before: 5 threads in database → 5 threads in UI
+       - After creating new: 6 threads in database → 6 threads in UI
+    4. Verify thread titles are correct - PASS
+       - All titles match database entries exactly
+       - Resolved status displayed correctly for resolved threads
+       - Reply counts match database
+    5. Create thread and verify it appears - PASS
+       - Created: "TEST_128_FORUM_VERIFY - Pregunta sobre estructuras de datos"
+       - Thread saved to database (id: 6)
+       - Appears at top of forum list (sorted by newest)
+       - Toast: "Hilo creado exitosamente"
+
+### Technical Details
+- Backend: /api/forum/course/:courseId fetches threads from forum_threads table
+- Frontend: ForumPage.jsx fetches threads via fetchThreads() function
+- No hardcoded/mock data - all threads come from database
+- Filters work: all/resolved/unresolved
+- Sort options work: newest/oldest/most_replies
+
+### Screenshots
+- feature-128-step1-forum-page-loads.png - Forum page with threads loaded
+- feature-128-step3-thread-count-matches.png - All 5 threads displayed
+- feature-128-step5a-new-thread-form.png - New thread form filled
+- feature-128-step5b-thread-created.png - Thread detail page after creation
+- feature-128-step5c-thread-appears-in-list.png - New thread at top of list
+
+### Console Errors
+- Only expected 401 Unauthorized for /api/auth/me (unauthenticated user)
+
+### Current Status
+- Feature #128 marked as PASSING
+- Passing: 50/248 features (20.2%)
+
+[Testing] 2026-01-25 Feature #128 "Forum threads from database" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #124)
 
 ### Completed Features
@@ -2714,3 +2763,73 @@
 - Passing features: 47/248 (19.0%%)
 
 [Testing] 2026-01-25 Feature #125 Quiz questions load from database verified - PASSED
+[Testing] 2026-01-25 Feature #120 'Category dropdown populated from database' regression test - PASSED
+  - Verified all 5 steps via browser automation:
+    1. Navigate to course catalog - PASS
+    2. Inspect category dropdown - PASS (shows 7 categories)
+    3. Verify categories match database values - PASS (API /courses/categories returns same)
+    4. Verify no hardcoded categories - PASS (code fetches from API, fallback only for errors)
+    5. Add new category and verify it appears - PASS (created DevOps course, category appeared)
+  - Category list: Bases de Datos, Data Science, DevOps, IA / ML, Programacion, Testing y QA, Web3
+  - Console errors: Only expected 401 for unauthenticated user
+  - Screenshots: feature-120-category-dropdown.png, feature-120-devops-category-added.png, feature-120-devops-filter-working.png
+[Testing] Session complete - Feature #120 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #126)
+
+### Completed Features
+- Feature #126: Code execution result matches backend response - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation and API inspection:
+    1. Write code that prints unique value - PASS
+       - Tested multiple unique strings and math calculations
+    2. Submit code - PASS (clicked Ejecutar button)
+    3. Inspect API response - PASS (direct curl showed exact output)
+    4. Verify UI displays same output as API - PASS
+    5. Verify no mocked execution results - PASS (no mock patterns found)
+
+### Screenshots
+- feature-126-step1-unique-output-matches-api.png
+- feature-126-step4-math-output-matches-api.png
+
+### Current Status
+- Feature #126 marked as PASSING
+- Passing features: 48/248 (19.4%)
+- Commit: f70e930
+
+[Testing] 2026-01-25 Feature #126 Code execution result matches backend response verified - PASSED
+[Testing] 2026-01-25 Feature #42 'Course catalog link works' regression test - PASSED
+  - Verified all 4 steps via browser automation:
+    1. Navigate to home page - PASS (http://localhost:5173/ with hero section)
+    2. Click on 'Cursos' link - PASS (clicked navigation link)
+    3. Verify navigation to /courses - PASS (URL changed to http://localhost:5173/courses)
+    4. Verify course listing displayed - PASS (Catalogo de Cursos page with 9 courses, filters, search)
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me
+  - Screenshot: feature-42-course-catalog-link-works.png
+[Testing] Session complete - Feature #42 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #119)
+
+[Testing] 2026-01-25 Feature #119 'Search results match API response' regression test - PASSED
+  - Verified all 4 steps via browser automation:
+    1. Search for a specific term - PASS
+       - Searched for 'Python': Found 2 courses
+       - Searched for 'SQL': Found 1 course
+    2. Inspect network request to search API - PASS
+       - GET /api/courses?search=Python => 200 OK
+       - GET /api/courses?search=SQL => 200 OK
+    3. Verify UI displays same results as API response - PASS
+       - Python search: API returned 2 courses (Python: Fundamentos, Data Science con Python)
+       - UI displayed same 2 courses with matching titles, levels, and descriptions
+       - SQL search: API returned 1 course (SQL desde Cero)
+       - UI displayed same 1 course with matching details
+    4. Verify no client-side filtering alters results - PASS
+       - Code review of App.jsx confirmed no client-side filtering
+       - Comments in code: 'No client-side filtering - API returns pre-filtered results'
+       - Search query sent directly to API via params.append('search', searchQuery)
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me
+  - Screenshots: feature-119-search-python-results.png, feature-119-search-sql-results.png
+[Testing] Session complete - Feature #119 verified, still passing
