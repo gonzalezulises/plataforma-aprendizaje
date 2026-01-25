@@ -5244,3 +5244,64 @@ All 5 verification steps passed:
 ### Console Errors: Only expected errors (failed video load)
 
 [Testing] 2026-01-25 Feature #107 'Video load failure shows fallback' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #163)
+
+### Feature #163: Deleted course removed from career path - VERIFIED AND PASSING
+
+All 5 verification steps passed:
+1. Add course to career path - PASS
+2. Delete the course - PASS
+3. Check career path - PASS
+4. Verify course is removed - PASS
+5. Verify career path progress recalculates - PASS
+
+### Implementation
+- Added handleCourseDeletedFromCareerPaths() function in courses.js
+- Removes deleted course from all career paths course_ids array
+- Recalculates user progress for all enrolled users
+
+### Test Scripts
+- backend/test-feature-163.mjs: Tests course removal
+- backend/test-feature-163-progress.mjs: Tests progress recalculation
+
+[Testing] 2026-01-25 Feature #163 verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #125 Regression Test)
+
+### Feature #125: Quiz questions load from database - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Navigate to a quiz - PASS
+   - Navigated to /quiz/1 (Quiz: Fundamentos de Python)
+   - Quiz start screen displayed correctly with 10 questions, 10 points, 15 min timer, 70% passing
+2. Verify quiz API is called - PASS
+   - GET /api/quizzes/1 => 200 OK (fetched quiz data)
+   - POST /api/quizzes/1/start => 200 OK (started attempt)
+3. Verify questions match database entries - PASS
+   - Q1: 'Cual es el tipo de dato correcto para almacenar el numero 3.14 en Python?' - MATCHES
+   - Q2: 'Cual es la forma correcta de crear una variable en Python?' - MATCHES
+   - Q3: 'Que devuelve type(True) en Python?' - MATCHES
+   - Q5: 'Como se concatenan dos strings en Python?' - MATCHES
+4. Verify answer options are correct - PASS
+   - All 4 options per question displayed correctly
+   - Options match API/database entries exactly
+5. Verify no client-side quiz generation - PASS
+   - Code review: setQuestions() only called with API response data
+   - Questions initialized as empty array useState([])
+   - No hardcoded/mock questions in code
+
+### Screenshots
+- feature-125-step1-quiz-start-screen.png - Quiz start page with metadata
+- feature-125-step3-question1-from-database.png - Question 1 with options
+- feature-125-step4-questions-match-database.png - Question 5 verification
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #125 'Quiz questions load from database' regression test - PASSED (no regression found)
+
