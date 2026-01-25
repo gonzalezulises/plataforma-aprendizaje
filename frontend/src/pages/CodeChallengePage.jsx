@@ -12,7 +12,37 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
  * - Submit for automatic test evaluation
  * - View test results and feedback
  * - Network error handling with retry functionality
+ * - Code persistence across navigation (localStorage)
  */
+
+// Helper functions for localStorage code draft persistence
+const CODE_DRAFT_KEY_PREFIX = 'challenge_code_draft_';
+
+const getCodeDraft = (challengeId) => {
+  try {
+    return localStorage.getItem(`${CODE_DRAFT_KEY_PREFIX}${challengeId}`);
+  } catch (e) {
+    console.warn('Failed to read code draft from localStorage:', e);
+    return null;
+  }
+};
+
+const saveCodeDraft = (challengeId, code) => {
+  try {
+    localStorage.setItem(`${CODE_DRAFT_KEY_PREFIX}${challengeId}`, code);
+  } catch (e) {
+    console.warn('Failed to save code draft to localStorage:', e);
+  }
+};
+
+const clearCodeDraft = (challengeId) => {
+  try {
+    localStorage.removeItem(`${CODE_DRAFT_KEY_PREFIX}${challengeId}`);
+  } catch (e) {
+    console.warn('Failed to clear code draft from localStorage:', e);
+  }
+};
+
 function CodeChallengePage() {
   const { challengeId } = useParams();
   const [challenge, setChallenge] = useState(null);
@@ -69,7 +99,17 @@ function CodeChallengePage() {
         if (response.ok) {
           const data = await response.json();
           setChallenge(data);
-          setCode(data.starter_code || '');
+
+          // Feature #136: Check localStorage for saved code draft first
+          const savedDraft = getCodeDraft(challengeId);
+          if (savedDraft !== null) {
+            // Use saved draft if available
+            setCode(savedDraft);
+          } else {
+            // Otherwise use starter code
+            setCode(data.starter_code || '');
+          }
+
           setHints(data.hints || []);
           setAttempts(data.user_submissions || []);
         } else {
@@ -275,6 +315,8 @@ function CodeChallengePage() {
   const handleReset = () => {
     if (challenge) {
       setCode(challenge.starter_code || '');
+      // Feature #136: Clear saved draft when resetting to starter code
+      clearCodeDraft(challengeId);
       setOutput('');
       setTestResults(null);
       setFeedback('');
@@ -283,9 +325,12 @@ function CodeChallengePage() {
     }
   };
 
-  // Clear syntax error when code changes
+  // Clear syntax error when code changes and save draft to localStorage
   const handleCodeChange = (e) => {
-    setCode(e.target.value);
+    const newCode = e.target.value;
+    setCode(newCode);
+    // Feature #136: Save code draft to localStorage for persistence across navigation
+    saveCodeDraft(challengeId, newCode);
     if (syntaxError) {
       setSyntaxError(null);
     }
