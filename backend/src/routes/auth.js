@@ -121,7 +121,9 @@ router.get('/callback', async (req, res) => {
     delete req.session.returnUrl;
 
     console.log('[Auth] Login successful, redirecting to:', returnUrl);
-    res.redirect(`${FRONTEND_URL}${returnUrl}`);
+    // Redirect to frontend auth callback page which will handle the session check
+    // and show appropriate feedback before redirecting to the final destination
+    res.redirect(`${FRONTEND_URL}/auth/callback`);
 
   } catch (err) {
     console.error('[Auth] Callback error:', err);
@@ -159,6 +161,38 @@ router.get('/me', (req, res) => {
 
   res.json({
     isAuthenticated: true,
+    user: req.session.user,
+  });
+});
+
+/**
+ * POST /api/auth/dev-login
+ * Development-only endpoint to simulate OAuth login
+ * This bypasses the actual OAuth flow for testing purposes
+ */
+router.post('/dev-login', (req, res) => {
+  // Only allow in development mode
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' });
+  }
+
+  console.log('[Auth] Development login triggered');
+
+  // Simulate successful login with test user
+  req.session.user = {
+    id: 1,
+    email: 'test@rizo.ma',
+    name: 'Usuario de Prueba',
+    role: 'student_free',
+  };
+
+  req.session.isAuthenticated = true;
+
+  console.log('[Auth] Dev login successful, user:', req.session.user);
+
+  res.json({
+    success: true,
+    message: 'Logged in successfully (development mode)',
     user: req.session.user,
   });
 });

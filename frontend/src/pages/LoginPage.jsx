@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../store/AuthContext';
 
 function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { isAuthenticated, refreshAuth } = useAuth();
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
+      sessionStorage.removeItem('loginReturnUrl');
+      navigate(returnUrl, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Check for OAuth callback params
   useEffect(() => {
@@ -39,17 +50,48 @@ function LoginPage() {
 
       const data = await response.json();
 
-      if (data.authorizationUrl) {
+      if (data.authorizationUrl && !data.development) {
         // Redirect to rizo.ma OAuth authorization page
         window.location.href = data.authorizationUrl;
-      } else if (data.message) {
-        // Development mode - show message
-        setError(data.message);
-        setIsLoading(false);
+      } else if (data.development) {
+        // Development mode - use dev-login endpoint instead
+        setError(null);
+        await handleDevLogin();
       }
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Error al conectar con el servidor');
+      setIsLoading(false);
+    }
+  };
+
+  // Development mode login - bypasses OAuth
+  const handleDevLogin = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/dev-login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en login de desarrollo');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Refresh auth context and redirect
+        await refreshAuth();
+        const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
+        sessionStorage.removeItem('loginReturnUrl');
+        navigate(returnUrl, { replace: true });
+      }
+    } catch (err) {
+      console.error('Dev login error:', err);
+      setError(err.message || 'Error en login de desarrollo');
       setIsLoading(false);
     }
   };
@@ -161,7 +203,7 @@ function LoginPage() {
 
           {/* Register link */}
           <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-            ¿No tienes una cuenta?{' '}
+            No tienes una cuenta?{' '}
             <a
               href="https://rizo.ma/register"
               target="_blank"
@@ -179,7 +221,7 @@ function LoginPage() {
             onClick={() => navigate('/')}
             className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
-            ← Volver al inicio
+            Volver al inicio
           </button>
         </div>
       </div>
