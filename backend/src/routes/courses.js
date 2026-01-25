@@ -189,8 +189,29 @@ router.put('/:id', requireInstructor, (req, res) => {
       level,
       is_premium,
       thumbnail_url,
-      duration_hours
+      duration_hours,
+      version
     } = req.body;
+
+    // Check for concurrent edit conflict using optimistic locking
+    if (version && course.updated_at !== version) {
+      return res.status(409).json({
+        error: 'Conflicto de edicion',
+        message: 'Este curso fue modificado por otro usuario mientras lo editabas.',
+        conflict: {
+          yourVersion: version,
+          currentVersion: course.updated_at,
+          currentData: {
+            title: course.title,
+            description: course.description,
+            category: course.category,
+            level: course.level,
+            is_premium: course.is_premium,
+            duration_hours: course.duration_hours
+          }
+        }
+      });
+    }
 
     const updates = [];
     const params = [];

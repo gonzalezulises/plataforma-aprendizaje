@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './store/AuthContext';
@@ -96,99 +96,76 @@ function NotFound() {
   );
 }
 
+// API URL - use environment variable or default to port 3001
+const CATALOG_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
 // Course Catalog Page
 function CourseCatalog() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [priceFilter, setPriceFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [apiResponseData, setApiResponseData] = useState(null); // Store raw API response for verification
 
-  // Sample courses data - in a real app this would come from an API
-  const courses = [
-    {
-      id: 1,
-      slug: 'python-fundamentos',
-      title: 'Python: Fundamentos',
-      description: 'Aprende Python desde cero con ejercicios practicos y proyectos reales.',
-      category: 'Programacion',
-      level: 'Principiante',
-      duration: '20 horas',
-      isPremium: false,
-      thumbnail: null,
-      instructor: 'Carlos Rodriguez',
-      studentsCount: 1250,
-      rating: 4.8,
-    },
-    {
-      id: 2,
-      slug: 'data-science-python',
-      title: 'Data Science con Python',
-      description: 'Domina pandas, numpy y matplotlib para analisis de datos.',
-      category: 'Data Science',
-      level: 'Intermedio',
-      duration: '35 horas',
-      isPremium: true,
-      thumbnail: null,
-      instructor: 'Maria Garcia',
-      studentsCount: 890,
-      rating: 4.9,
-    },
-    {
-      id: 3,
-      slug: 'sql-desde-cero',
-      title: 'SQL desde Cero',
-      description: 'Aprende a consultar y manipular bases de datos con SQL.',
-      category: 'Bases de Datos',
-      level: 'Principiante',
-      duration: '15 horas',
-      isPremium: false,
-      thumbnail: null,
-      instructor: 'Ana Martinez',
-      studentsCount: 2100,
-      rating: 4.7,
-    },
-    {
-      id: 4,
-      slug: 'machine-learning-basico',
-      title: 'Machine Learning Basico',
-      description: 'Introduccion a los algoritmos de aprendizaje automatico.',
-      category: 'IA / ML',
-      level: 'Avanzado',
-      duration: '40 horas',
-      isPremium: true,
-      thumbnail: null,
-      instructor: 'Pedro Sanchez',
-      studentsCount: 650,
-      rating: 4.6,
-    },
-    {
-      id: 5,
-      slug: 'r-estadistica',
-      title: 'R para Estadistica',
-      description: 'Analisis estadistico y visualizacion con R.',
-      category: 'Data Science',
-      level: 'Intermedio',
-      duration: '25 horas',
-      isPremium: false,
-      thumbnail: null,
-      instructor: 'Laura Fernandez',
-      studentsCount: 480,
-      rating: 4.5,
-    },
-    {
-      id: 6,
-      slug: 'web3-solidity',
-      title: 'Web3 y Solidity',
-      description: 'Desarrolla smart contracts y aplicaciones descentralizadas.',
-      category: 'Web3',
-      level: 'Avanzado',
-      duration: '30 horas',
-      isPremium: true,
-      thumbnail: null,
-      instructor: 'Diego Lopez',
-      studentsCount: 320,
-      rating: 4.8,
-    },
-  ];
+  // Fetch courses from API with search and filters
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Build query string with search and filters
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('search', searchQuery);
+        if (categoryFilter) params.append('category', categoryFilter);
+        if (levelFilter) params.append('level', levelFilter);
+        if (priceFilter) params.append('premium', priceFilter === 'premium' ? 'true' : priceFilter === 'free' ? 'false' : '');
+
+        const queryString = params.toString();
+        const url = `${CATALOG_API_URL}/courses${queryString ? `?${queryString}` : ''}`;
+
+        console.log('[Search] Fetching courses from:', url);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+
+        // Store raw API response for verification (Feature #119)
+        setApiResponseData(data);
+        console.log('[Search] API Response:', data);
+
+        // Map API response to component format WITHOUT client-side filtering
+        // The API already handles search/filtering - we just display results
+        const mappedCourses = (data.courses || []).map(course => ({
+          id: course.id,
+          slug: course.slug,
+          title: course.title,
+          description: course.description,
+          category: course.category,
+          level: course.level,
+          duration: `${course.duration_hours} horas`,
+          isPremium: course.is_premium === 1 || course.is_premium === true,
+          thumbnail: course.thumbnail_url,
+          instructor: course.instructor_name || 'Instructor',
+          studentsCount: course.students_count || 0,
+          rating: course.rating || 4.5,
+        }));
+        setCourses(mappedCourses);
+      } catch (err) {
+        console.error('Error fetching courses:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCourses();
+  }, [searchQuery, categoryFilter, levelFilter, priceFilter]);
 
   const getLevelColor = (level) => {
     switch (level) {
@@ -203,36 +180,15 @@ function CourseCatalog() {
     }
   };
 
-  // Filter courses based on selected filters
-  const filteredCourses = courses.filter((course) => {
-    // Category filter
-    if (categoryFilter) {
-      const categoryMap = {
-        'programacion': 'Programacion',
-        'data-science': 'Data Science',
-        'ia-ml': 'IA / ML',
-        'web3': 'Web3',
-        'bases-datos': 'Bases de Datos'
-      };
-      if (course.category !== categoryMap[categoryFilter]) return false;
-    }
+  // Handle search form submission
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setSearchQuery(searchInput);
+  };
 
-    // Level filter
-    if (levelFilter) {
-      const levelMap = {
-        'principiante': 'Principiante',
-        'intermedio': 'Intermedio',
-        'avanzado': 'Avanzado'
-      };
-      if (course.level !== levelMap[levelFilter]) return false;
-    }
-
-    // Price filter
-    if (priceFilter === 'free' && course.isPremium) return false;
-    if (priceFilter === 'premium' && !course.isPremium) return false;
-
-    return true;
-  });
+  // No client-side filtering - API returns pre-filtered results
+  // This ensures UI displays exactly what the API returns (Feature #119)
+  const filteredCourses = courses;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -247,34 +203,84 @@ function CourseCatalog() {
           </p>
         </div>
 
+        {/* Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="mb-6" data-testid="search-form">
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar cursos por nombre o descripcion..."
+                className="w-full px-4 py-2 pl-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                data-testid="search-input"
+              />
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+              data-testid="search-button"
+            >
+              Buscar
+            </button>
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchInput(''); setSearchQuery(''); }}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                data-testid="clear-search-button"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400" data-testid="search-results-info">
+              Resultados para: <span className="font-medium">"{searchQuery}"</span>
+              {!loading && ` - ${filteredCourses.length} curso(s) encontrado(s)`}
+            </p>
+          )}
+        </form>
+
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-4">
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            data-testid="category-filter"
           >
             <option value="">Todas las categorias</option>
-            <option value="programacion">Programacion</option>
-            <option value="data-science">Data Science</option>
-            <option value="ia-ml">IA / ML</option>
-            <option value="web3">Web3</option>
-            <option value="bases-datos">Bases de Datos</option>
+            <option value="Programacion">Programacion</option>
+            <option value="Data Science">Data Science</option>
+            <option value="IA / ML">IA / ML</option>
+            <option value="Web3">Web3</option>
+            <option value="Bases de Datos">Bases de Datos</option>
           </select>
           <select
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            data-testid="level-filter"
           >
             <option value="">Todos los niveles</option>
-            <option value="principiante">Principiante</option>
-            <option value="intermedio">Intermedio</option>
-            <option value="avanzado">Avanzado</option>
+            <option value="Principiante">Principiante</option>
+            <option value="Intermedio">Intermedio</option>
+            <option value="Avanzado">Avanzado</option>
           </select>
           <select
             value={priceFilter}
             onChange={(e) => setPriceFilter(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            data-testid="price-filter"
           >
             <option value="">Todos</option>
             <option value="free">Gratuitos</option>
@@ -282,7 +288,38 @@ function CourseCatalog() {
           </select>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex justify-center items-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <span className="ml-4 text-gray-600 dark:text-gray-400">Cargando cursos...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-red-500 text-2xl">⚠️</span>
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 dark:text-red-200">Error al cargar cursos</h3>
+                <p className="text-red-600 dark:text-red-300">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && filteredCourses.length === 0 && (
+          <div className="text-center py-16">
+            <span className="text-6xl mb-4 block">📚</span>
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No hay cursos disponibles</h3>
+            <p className="text-gray-500 dark:text-gray-400">Intenta con otros filtros o vuelve mas tarde.</p>
+          </div>
+        )}
+
         {/* Course Grid */}
+        {!loading && !error && filteredCourses.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredCourses.map((course) => (
             <a
@@ -333,9 +370,9 @@ function CourseCatalog() {
                     {course.instructor}
                   </span>
                   <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span className="text-yellow-500">\u2605</span>
+                    <span className="text-yellow-500">★</span>
                     <span>{course.rating}</span>
-                    <span className="mx-1">\u00B7</span>
+                    <span className="mx-1">·</span>
                     <span>{course.studentsCount.toLocaleString()} estudiantes</span>
                   </div>
                 </div>
@@ -343,6 +380,7 @@ function CourseCatalog() {
             </a>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

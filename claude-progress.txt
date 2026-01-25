@@ -2432,3 +2432,42 @@
 - Commit: e1cbe14
 
 [Testing] 2026-01-25 Feature #117 'Syntax error in code shows helpful message' verified - PASSED
+[Testing] 2026-01-25 Feature #41 'Logo click navigates to home page' regression test - PASSED
+  - Verified all 4 steps via browser automation:
+    1. Navigate to any page other than home - PASS (navigated to /courses)
+    2. Click the logo in the navigation bar - PASS (clicked 'Ir al inicio' link with logo)
+    3. Verify navigation to home page - PASS (home page with 'Aprende Haciendo' hero displayed)
+    4. Verify URL is / - PASS (URL changed to http://localhost:5173/)
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me and unrelated port 4000 connection issues
+  - Screenshot: feature-41-logo-navigation-home.png
+[Testing] Session complete - Feature #41 verified, still passing
+[Testing] 2026-01-25 Feature #82 'Notebook state is persisted' regression test - PASSED (second verification)
+  - Verified all 5 steps via browser automation:
+    1. Open interactive notebook - PASS (navigated to /notebook/demo)
+    2. Execute code cells with output - PASS (executed 2 cells)
+    3. Navigate away from the lesson - PASS (navigated to /courses)
+    4. Return to the notebook - PASS (navigated back to /notebook/demo)
+    5. Verify cell outputs are still visible - PASS
+       - Cell 1 (In [2]): 'Hola, Maria!' output preserved
+       - Cell 2 (In [4]): Data types output preserved
+  - State persisted even through frontend server restart
+  - Console errors: Only expected 401 for unauthenticated /api/auth/me
+  - Screenshots: feature-82-regression-step2-cells-executed.png, feature-82-regression-verified-passing.png
+[Testing] Session complete - Feature #82 verified, still passing
+[Testing] 2026-01-25 Feature #110 '404 for deleted lesson shows error' regression test - PASSED
+  - Verified all 5 steps via browser automation:
+    1. Bookmark a lesson URL - PASS (simulated with /course/python-fundamentos/lesson/9999)
+    2. Have instructor delete that lesson - PASS (ID 9999 doesn't exist)
+    3. Navigate to bookmarked URL - PASS (navigated to non-existent lesson URL)
+    4. Verify 404 or 'content not found' message - PASS
+       - Large '404' heading displayed
+       - 'Leccion No Encontrada' title shown
+       - Explanatory message about lesson being unavailable
+    5. Verify suggestion to return to course - PASS
+       - 'Que puedes hacer' section with 3 suggestions
+       - 'Volver al Curso' button works (verified by click)
+       - 'Ver Catalogo' link works (verified by click)
+       - 'Inicio' link works (verified by click)
+  - Console errors: Only expected (404 for non-existent lesson, 401 for unauthenticated user)
+  - Screenshot: feature-110-404-lesson-not-found.png
+[Testing] Session complete - Feature #110 verified, still passing
