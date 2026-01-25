@@ -14,6 +14,8 @@ import notebooksRoutes from './routes/notebooks.js';
 import enrollmentsRoutes from './routes/enrollments.js';
 import coursesRoutes from './routes/courses.js';
 import lessonsRoutes from './routes/lessons.js';
+import quizzesRoutes from './routes/quizzes.js';
+import challengesRoutes, { initChallengesTables } from './routes/challenges.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -22,7 +24,10 @@ import { initDatabase } from './config/database.js';
 dotenv.config();
 
 // Initialize database
-initDatabase().catch(err => {
+initDatabase().then(db => {
+  // Initialize challenges tables
+  initChallengesTables(db);
+}).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
 });
@@ -91,6 +96,8 @@ app.use('/api/notebooks', notebooksRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
 app.use('/api/courses', coursesRoutes);
 app.use('/api/lessons', lessonsRoutes);
+app.use('/api/quizzes', quizzesRoutes);
+app.use('/api/challenges', challengesRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -172,3 +179,4 @@ server.listen(PORT, () => {
 
 export default app;
 // nodemon restart trigger - sab., 25 de ene. de 2026  01:20:00
+// restart trigger do., 25 de ene. de 2026  6:24:00 - added challenges routes

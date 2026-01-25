@@ -12,6 +12,8 @@ import DashboardPage from './pages/DashboardPage';
 import CourseCreatorPage from './pages/CourseCreatorPage';
 import AdminCoursesPage from './pages/AdminCoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
+import QuizPage from './pages/QuizPage';
+import CodeChallengePage from './pages/CodeChallengePage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -315,6 +317,8 @@ function App() {
             <Route path="/courses" element={<CourseCatalog />} />
             <Route path="/course/:slug" element={<CourseDetailPage />} />
             <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
+            <Route path="/quiz/:quizId" element={<QuizPage />} />
+            <Route path="/challenge/:challengeId" element={<CodeChallengePage />} />
             <Route path="/notebook/:notebookId" element={<NotebookPage />} />
             <Route path="/notebook" element={<NotebookPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
