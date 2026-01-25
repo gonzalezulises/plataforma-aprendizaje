@@ -4,8 +4,9 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
- * VideoPlayer component with progress tracking
+ * VideoPlayer component with progress tracking and error handling
  * Saves playback position and resumes from saved position
+ * Shows fallback UI when video fails to load
  */
 function VideoPlayer({
   src,
@@ -15,12 +16,18 @@ function VideoPlayer({
   poster,
   onProgress,
   onComplete,
+  onError,
+  alternativeContent,
   className = ''
 }) {
   const videoRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [savedTime, setSavedTime] = useState(null);
   const [hasRestored, setHasRestored] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [showAlternative, setShowAlternative] = useState(false);
   const lastSaveTimeRef = useRef(0);
 
   // Fetch saved progress on mount
@@ -159,6 +166,61 @@ function VideoPlayer({
     saveProgress(video.currentTime, video.duration);
   }, [saveProgress]);
 
+  // Handle video error - show fallback UI
+  const handleVideoError = useCallback((event) => {
+    const video = videoRef.current;
+    let message = 'El video no pudo cargarse.';
+
+    if (video && video.error) {
+      switch (video.error.code) {
+        case 1: // MEDIA_ERR_ABORTED
+          message = 'La reproduccion del video fue cancelada.';
+          break;
+        case 2: // MEDIA_ERR_NETWORK
+          message = 'Error de red. Verifica tu conexion a internet.';
+          break;
+        case 3: // MEDIA_ERR_DECODE
+          message = 'El video no pudo ser decodificado.';
+          break;
+        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+          message = 'El formato de video no es compatible.';
+          break;
+        default:
+          message = 'Ocurrio un error al cargar el video.';
+      }
+    }
+
+    setHasError(true);
+    setErrorMessage(message);
+    setIsLoading(false);
+
+    if (onError) {
+      onError({ code: video?.error?.code, message });
+    }
+
+    console.error('Video error:', message, video?.error);
+  }, [onError]);
+
+  // Retry loading the video
+  const handleRetry = useCallback(() => {
+    setHasError(false);
+    setErrorMessage('');
+    setIsLoading(true);
+    setRetryCount(prev => prev + 1);
+    setShowAlternative(false);
+
+    const video = videoRef.current;
+    if (video) {
+      // Reset video element
+      video.load();
+    }
+  }, []);
+
+  // Toggle alternative content view
+  const toggleAlternative = useCallback(() => {
+    setShowAlternative(prev => !prev);
+  }, []);
+
   // Save progress before unmount or navigation
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -197,12 +259,99 @@ function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (isLoading) {
+  if (isLoading && !hasError) {
     return (
       <div className={`relative bg-gray-900 rounded-lg overflow-hidden ${className}`}>
         <div className="aspect-video flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent"></div>
         </div>
+      </div>
+    );
+  }
+
+  // Error state - show fallback UI
+  if (hasError) {
+    return (
+      <div className={`relative bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+        <div className="aspect-video flex flex-col items-center justify-center p-8">
+          {/* Error icon */}
+          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          {/* Error message */}
+          <h3 className="text-white font-medium text-lg mb-2">
+            Error al cargar el video
+          </h3>
+          <p className="text-gray-400 text-center mb-6 max-w-md">
+            {errorMessage}
+          </p>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button
+              onClick={handleRetry}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reintentar{retryCount > 0 ? ` (${retryCount})` : ''}
+            </button>
+
+            {alternativeContent && (
+              <button
+                onClick={toggleAlternative}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Ver contenido alternativo
+              </button>
+            )}
+          </div>
+
+          {/* Retry hint */}
+          {retryCount >= 2 && (
+            <p className="text-gray-500 text-sm mt-4 text-center">
+              Si el problema persiste, verifica tu conexion a internet o intenta mas tarde.
+            </p>
+          )}
+        </div>
+
+        {/* Video title in error state */}
+        {title && (
+          <div className="p-4 bg-gray-800 border-t border-gray-700">
+            <h3 className="text-white font-medium">{title}</h3>
+          </div>
+        )}
+
+        {/* Alternative content panel */}
+        {showAlternative && alternativeContent && (
+          <div className="p-6 bg-gray-800 border-t border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-white font-medium">Contenido alternativo</h4>
+              <button
+                onClick={toggleAlternative}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="text-gray-300 prose prose-invert max-w-none">
+              {typeof alternativeContent === 'string' ? (
+                <p>{alternativeContent}</p>
+              ) : (
+                alternativeContent
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -240,6 +389,7 @@ function VideoPlayer({
       )}
 
       <video
+        key={retryCount}
         ref={videoRef}
         src={src}
         poster={poster}
@@ -248,6 +398,8 @@ function VideoPlayer({
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onPause={handlePause}
+        onError={handleVideoError}
+        onLoadedData={() => setIsLoading(false)}
       >
         Tu navegador no soporta la reproduccion de video.
       </video>

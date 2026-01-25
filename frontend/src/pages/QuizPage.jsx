@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Timeout duration for quiz submission (30 seconds)
+const SUBMIT_TIMEOUT_MS = 30000;
 
 /**
  * QuizPage - Complete quiz attempt workflow
@@ -29,10 +32,51 @@ function QuizPage() {
   const [showResults, setShowResults] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Timeout and network error state
+  const [submitError, setSubmitError] = useState(null);
+  const [isTimeoutError, setIsTimeoutError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const abortControllerRef = useRef(null);
+
+  // Store answers in localStorage to prevent loss
+  const savedAnswersKey = `quiz_${quizId}_answers`;
+  const savedAttemptKey = `quiz_${quizId}_attempt`;
+
   // Fetch quiz data
   useEffect(() => {
     fetchQuiz();
   }, [quizId]);
+
+  // Save answers to localStorage whenever they change
+  useEffect(() => {
+    if (quizStarted && Object.keys(answers).length > 0) {
+      localStorage.setItem(savedAnswersKey, JSON.stringify(answers));
+    }
+  }, [answers, quizStarted, savedAnswersKey]);
+
+  // Save attemptId to localStorage
+  useEffect(() => {
+    if (attemptId) {
+      localStorage.setItem(savedAttemptKey, attemptId.toString());
+    }
+  }, [attemptId, savedAttemptKey]);
+
+  // Restore answers from localStorage on mount (for recovery after timeout)
+  useEffect(() => {
+    const savedAnswers = localStorage.getItem(savedAnswersKey);
+    const savedAttempt = localStorage.getItem(savedAttemptKey);
+    if (savedAnswers && savedAttempt) {
+      try {
+        const parsed = JSON.parse(savedAnswers);
+        if (Object.keys(parsed).length > 0) {
+          setAnswers(parsed);
+          setAttemptId(parseInt(savedAttempt, 10));
+        }
+      } catch (e) {
+        console.error('Error restoring saved answers:', e);
+      }
+    }
+  }, [savedAnswersKey, savedAttemptKey]);
 
   // Timer effect
   useEffect(() => {
@@ -51,6 +95,15 @@ function QuizPage() {
 
     return () => clearInterval(timer);
   }, [quizStarted, timeRemaining]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const fetchQuiz = async () => {
     try {
@@ -126,18 +179,43 @@ function QuizPage() {
   const handleSubmit = async () => {
     if (submitting) return;
 
+    // Clear previous submit errors
+    setSubmitError(null);
+    setIsTimeoutError(false);
+
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${API_BASE_URL}/quizzes/${quizId}/submit`, {
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          abortControllerRef.current?.abort();
+          reject(new Error('TIMEOUT'));
+        }, SUBMIT_TIMEOUT_MS);
+      });
+
+      // Create fetch promise
+      const fetchPromise = fetch(`${API_BASE_URL}/quizzes/${quizId}/submit`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           attemptId,
           answers
-        })
+        }),
+        signal: abortControllerRef.current.signal
       });
+
+      // Race between fetch and timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
         const data = await response.json();
@@ -145,23 +223,60 @@ function QuizPage() {
       }
 
       const data = await response.json();
+
+      // Clear saved answers on successful submission
+      localStorage.removeItem(savedAnswersKey);
+      localStorage.removeItem(savedAttemptKey);
+
       setResults(data);
       setShowResults(true);
       setQuizStarted(false);
+      setRetryCount(0);
     } catch (err) {
       console.error('Error submitting quiz:', err);
-      setError(err.message);
+
+      // Check if it's a timeout or abort error
+      if (err.message === 'TIMEOUT' || err.name === 'AbortError') {
+        setIsTimeoutError(true);
+        setSubmitError('La solicitud ha tardado demasiado. El servidor no responde. Tus respuestas se han guardado localmente.');
+      } else if (err.message.includes('NetworkError') || err.message.includes('Failed to fetch') || !navigator.onLine) {
+        setIsTimeoutError(true);
+        setSubmitError('No hay conexion a internet. Por favor, verifica tu conexion y vuelve a intentar. Tus respuestas estan guardadas.');
+      } else {
+        setSubmitError(err.message || 'Error al enviar el quiz. Por favor, intenta de nuevo.');
+      }
+
+      // Don't set general error - keep quiz state so user can retry
+      setRetryCount(prev => prev + 1);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleRetrySubmit = () => {
+    setSubmitError(null);
+    setIsTimeoutError(false);
+    handleSubmit();
+  };
+
+  const handleDismissError = () => {
+    setSubmitError(null);
+    setIsTimeoutError(false);
+  };
+
   const handleRetry = () => {
+    // Clear saved data when starting fresh
+    localStorage.removeItem(savedAnswersKey);
+    localStorage.removeItem(savedAttemptKey);
+
     setShowResults(false);
     setResults(null);
     setAttemptId(null);
     setAnswers({});
     setCurrentQuestion(0);
+    setSubmitError(null);
+    setIsTimeoutError(false);
+    setRetryCount(0);
     fetchQuiz(); // Refresh quiz data including attempts
   };
 
@@ -444,6 +559,74 @@ function QuizPage() {
             </div>
           </div>
         </div>
+
+        {/* Timeout/Network Error Banner */}
+        {submitError && (
+          <div className={`mb-6 rounded-xl border p-4 ${
+            isTimeoutError
+              ? 'bg-amber-50 border-amber-300'
+              : 'bg-red-50 border-red-300'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`flex-shrink-0 text-2xl ${
+                isTimeoutError ? 'text-amber-500' : 'text-red-500'
+              }`}>
+                {isTimeoutError ? '⏱' : '⚠'}
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-semibold mb-1 ${
+                  isTimeoutError ? 'text-amber-800' : 'text-red-800'
+                }`}>
+                  {isTimeoutError ? 'Tiempo de espera agotado' : 'Error al enviar'}
+                </h3>
+                <p className={`text-sm mb-3 ${
+                  isTimeoutError ? 'text-amber-700' : 'text-red-700'
+                }`}>
+                  {submitError}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleRetrySubmit}
+                    disabled={submitting}
+                    className={`px-4 py-2 rounded-lg font-medium text-white transition-colors ${
+                      isTimeoutError
+                        ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400'
+                        : 'bg-red-600 hover:bg-red-700 disabled:bg-red-400'
+                    }`}
+                  >
+                    {submitting ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Reintentando...
+                      </span>
+                    ) : (
+                      <>
+                        Reintentar envio
+                        {retryCount > 0 && <span className="ml-1 text-xs opacity-80">(intento {retryCount + 1})</span>}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDismissError}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      isTimeoutError
+                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    }`}
+                  >
+                    Continuar respondiendo
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  💾 Tus {Object.keys(answers).length} respuestas estan guardadas y no se perderan.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Question card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">

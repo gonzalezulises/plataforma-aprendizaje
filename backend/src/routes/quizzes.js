@@ -217,6 +217,22 @@ router.post('/:id/start', (req, res) => {
 });
 
 /**
+ * POST /api/quizzes/:id/submit-timeout
+ * Test endpoint: Simulate a slow server response for timeout testing
+ * DEV ONLY - delays response by 35 seconds
+ */
+router.post('/:id/submit-timeout', async (req, res) => {
+  // Only available in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  console.log('[DEV] Simulating 35-second timeout for quiz submission...');
+  await new Promise(resolve => setTimeout(resolve, 35000));
+  res.json({ simulated: true, message: 'This response was delayed for testing' });
+});
+
+/**
  * POST /api/quizzes/:id/submit
  * Submit quiz answers and get results
  */

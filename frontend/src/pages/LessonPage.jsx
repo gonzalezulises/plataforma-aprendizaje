@@ -38,7 +38,8 @@ function LessonPage() {
           id: 'intro-video',
           title: 'Video: Introduccion a Variables en Python',
           src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          poster: null
+          poster: null,
+          alternativeContent: 'Esta leccion cubre los fundamentos de variables en Python: como declarar variables, los tipos de datos basicos (strings, integers, floats, booleans), y las reglas para nombrar variables. Puedes revisar el contenido de texto y los ejemplos de codigo a continuacion para aprender los mismos conceptos.'
         },
         {
           type: 'text',
@@ -89,7 +90,8 @@ print(type(es_estudiante))  # <class 'bool'>`
           id: 'conditionals-video',
           title: 'Video: Condicionales en Python',
           src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-          poster: null
+          poster: null,
+          alternativeContent: 'Esta leccion explica las estructuras condicionales en Python: if, elif, y else. Aprende como controlar el flujo de tu programa basandose en condiciones. Revisa el contenido de texto a continuacion para una explicacion detallada.'
         },
         {
           type: 'text',
@@ -118,7 +120,8 @@ Las estructuras condicionales permiten ejecutar codigo basandose en condiciones.
           id: 'loops-video',
           title: 'Video: Bucles en Python',
           src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          poster: null
+          poster: null,
+          alternativeContent: 'Esta leccion cubre los bucles en Python: for y while. Domina como repetir acciones en tu codigo de forma eficiente. El contenido de texto a continuacion explica los conceptos principales.'
         },
         {
           type: 'text',
@@ -129,6 +132,56 @@ Los bucles permiten repetir bloques de codigo.
 ### Tipos de bucles:
 - for: itera sobre una secuencia
 - while: repite mientras una condicion sea verdadera`
+        }
+      ]
+    },
+    // Test lesson with broken video URL for testing error handling
+    4: {
+      id: 4,
+      title: 'Funciones: Definicion y uso',
+      module: 'Modulo 2: Funciones',
+      course: 'Python: Fundamentos',
+      bloomLevel: 'Aplicar',
+      duration: 30,
+      description: 'Aprende a crear y usar funciones en Python.',
+      content: [
+        {
+          type: 'video',
+          id: 'functions-video',
+          title: 'Video: Funciones en Python',
+          src: 'https://invalid-video-url-for-testing.com/nonexistent-video.mp4',
+          poster: null,
+          alternativeContent: 'Esta leccion explica como definir y usar funciones en Python. Las funciones te permiten encapsular codigo reutilizable. Incluye parametros, valores de retorno, y buenas practicas. Puedes revisar el contenido de texto y los ejemplos de codigo a continuacion para aprender los mismos conceptos.'
+        },
+        {
+          type: 'text',
+          content: `## Funciones en Python
+
+Las funciones son bloques de codigo reutilizables que realizan una tarea especifica.
+
+### Sintaxis basica:
+- def: palabra clave para definir una funcion
+- return: devuelve un valor de la funcion
+- Parametros: valores que se pasan a la funcion`
+        },
+        {
+          type: 'code',
+          language: 'python',
+          title: 'ejemplo_funciones.py',
+          code: `# Definicion de una funcion simple
+def saludar(nombre):
+    return f"Hola, {nombre}!"
+
+# Llamar a la funcion
+mensaje = saludar("Maria")
+print(mensaje)  # Hola, Maria!
+
+# Funcion con valor por defecto
+def potencia(base, exponente=2):
+    return base ** exponente
+
+print(potencia(3))      # 9 (3^2)
+print(potencia(3, 3))   # 27 (3^3)`
         }
       ]
     }
@@ -402,6 +455,7 @@ Es estudiante: True
                     poster={block.poster}
                     onProgress={handleVideoProgress}
                     onComplete={handleVideoComplete}
+                    alternativeContent={block.alternativeContent}
                   />
                 </div>
               );
