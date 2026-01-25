@@ -1,3 +1,44 @@
+## Session: 2026-01-25 (Coding Agent - Feature #187)
+
+### Feature #187: Minimum length validation - VERIFIED AND PASSING
+
+All 5 verification steps completed successfully:
+
+1. Enter 1 character in field with minimum - PASS
+   - Entered "A" in title field (1 char, minimum is 5)
+   - Entered "Test" in content field (4 chars, minimum is 10)
+
+2. Submit form - PASS
+   - Clicked "Publicar Pregunta" button
+   - Form did not submit due to validation errors
+
+3. Verify minimum length error - PASS
+   - Title error: "El titulo debe tener al menos 5 caracteres"
+   - Content error: "El contenido debe tener al menos 10 caracteres"
+   - Toast: "Por favor corrige los errores en el formulario"
+
+4. Enter sufficient characters - PASS
+   - Updated title to "TEST_187_MinLength" (18 chars >= 5)
+   - Updated content to long test message (57 chars >= 10)
+
+5. Verify validation passes - PASS
+   - Both field errors cleared
+   - Form submitted successfully
+   - Thread created with ID 23
+   - Toast: "Hilo creado exitosamente"
+
+### Implementation Details
+- Added MIN_TITLE_LENGTH = 5 and MIN_CONTENT_LENGTH = 10 constants
+- Modified handleFieldChange to clear errors only when minimum met
+- Modified handleCreateThread to validate minimum lengths
+- Spanish error messages: "debe tener al menos X caracteres"
+
+### Current Status
+- Feature #187 marked as PASSING
+- Commit: 831e1bd
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #95)
 
 ### Feature #95: Complete forum thread workflow - VERIFIED AND PASSING
@@ -6961,4 +7002,56 @@ Frontend (LessonPage.jsx):
 - Real-time WebSocket updates working
 - No console errors
 - Screenshot: feature-95-regression-test-PASS.png
+
+[Testing] 2026-01-25 Feature #141 'Video playback position preserved' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Start watching video - PASS (Big Buck Bunny loaded, 596s duration)
+- Step 2: Pause at 5:30 (330 seconds) - PASS
+- Step 3: Navigate away to /courses - PASS
+- Step 4: Return to lesson page - PASS
+- Step 5: Verify video starts at 5:30 - PASS (currentTime = 330 seconds)
+
+### Implementation:
+- Frontend: VideoPlayer.jsx with progress tracking (save on pause, every 5s, on unload)
+- Backend: /api/video-progress/:lessonId/:videoId endpoints for GET/POST
+- Database: video_progress table stores saved_time, duration, completed
+
+### Console Errors: None
+### Screenshots: feature-141-step1-video-at-530.png, feature-141-step5-position-restored.png
+
+[Testing] 2026-01-25 Feature #4 'Footer displays on all pages' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Navigate to home page - PASS
+- Step 2: Footer visible at bottom - PASS (contentinfo section with all expected links)
+- Step 3: Navigate to course catalog - PASS
+- Step 4: Footer visible on catalog page - PASS
+- Step 5: Footer contains expected links - PASS
+
+### Footer Content Verified:
+- Social links: Twitter, GitHub, LinkedIn
+- Cursos section: Catalogo, Python, Data Science, Web3
+- Recursos section: Dashboard, Documentacion, Blog, FAQ
+- Empresa section: Sobre Nosotros, Contacto, Privacidad, Terminos
+- Copyright notice: © 2026 Plataforma de Aprendizaje
+- Main link: rizo.ma
+
+### Additional Pages Tested:
+- Login page: Footer visible and consistent
+
+### Console Errors: Only expected 401 Unauthorized (not logged in)
+### Screenshots: feature-4-footer-verification.png
+
+[Testing] 2026-01-25 Feature #178 'Special characters in search handled' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Search for @#$%^&*() - PASS (no error/crash)
+- Step 2: Verify no error or crash - PASS
+- Step 3: Verify no results or escaped search - PASS (0 results displayed)
+- Step 4: Try <script>alert(1)</script> - PASS (displayed as text, not executed)
+- Step 5: Verify no XSS vulnerability - PASS (no alert dialog)
+
+### Console Errors: Only expected 401 Unauthorized (not logged in)
+### Screenshots: feature-178-step1-special-chars-search.png, feature-178-step4-xss-test.png
 
