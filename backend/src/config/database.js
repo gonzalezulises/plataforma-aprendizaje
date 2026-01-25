@@ -113,6 +113,60 @@ function createTables() {
   // Create indexes for notebook state lookups
   db.run(`CREATE INDEX IF NOT EXISTS idx_notebook_states_notebook ON notebook_states(notebook_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_notebook_states_session ON notebook_states(session_id)`);
+
+  // Users table - stores user data synced from rizo.ma OAuth
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      external_id TEXT UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      avatar_url TEXT,
+      role TEXT NOT NULL DEFAULT 'student_free',
+      bio TEXT,
+      preferences TEXT DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Courses table - stores course information
+  db.run(`
+    CREATE TABLE IF NOT EXISTS courses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      description TEXT,
+      instructor_id INTEGER,
+      category TEXT,
+      tags TEXT DEFAULT '[]',
+      level TEXT NOT NULL DEFAULT 'Principiante',
+      is_premium INTEGER NOT NULL DEFAULT 0,
+      is_published INTEGER NOT NULL DEFAULT 1,
+      thumbnail_url TEXT,
+      duration_hours REAL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Enrollments table - tracks user course enrollments
+  db.run(`
+    CREATE TABLE IF NOT EXISTS enrollments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      course_id INTEGER NOT NULL,
+      enrolled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TEXT,
+      progress_percent REAL NOT NULL DEFAULT 0,
+      last_accessed_at TEXT,
+      UNIQUE(user_id, course_id)
+    )
+  `);
+
+  // Create indexes for enrollments
+  db.run(`CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id)`);
 }
 
 /**

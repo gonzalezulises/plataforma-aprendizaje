@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import videoProgressRoutes from './routes/video-progress.js';
 import notebooksRoutes from './routes/notebooks.js';
+import enrollmentsRoutes from './routes/enrollments.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -85,6 +86,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/video-progress', videoProgressRoutes);
 app.use('/api/notebooks', notebooksRoutes);
+app.use('/api/enrollments', enrollmentsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {

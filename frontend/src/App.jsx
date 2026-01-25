@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/HomePage';
 import LessonPage from './pages/LessonPage';
+import NotebookPage from './pages/NotebookPage';
+import DashboardPage from './pages/DashboardPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -275,21 +277,7 @@ function CourseCatalog() {
   );
 }
 
-// Dashboard page with user info
-function Dashboard() {
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Student Dashboard</h1>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <p className="text-gray-600 dark:text-gray-400">
-            Bienvenido a tu panel de estudiante. Aqui podras ver tu progreso en los cursos.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Dashboard is now imported from DashboardPage.jsx
 
 function App() {
   return (
@@ -324,7 +312,9 @@ function App() {
             <Route path="/courses" element={<CourseCatalog />} />
             <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
             <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/notebook/:notebookId" element={<NotebookPage />} />
+            <Route path="/notebook" element={<NotebookPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
