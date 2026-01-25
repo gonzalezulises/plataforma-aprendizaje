@@ -6618,3 +6618,93 @@ Backend (courses.js):
 - 103/248 features passing (41.5%)
 
 [Coding] 2026-01-25 Feature #183 'Search pagination works correctly' verified - PASSED
+[Testing] 2026-01-25 Feature #4 'Footer displays on all pages' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Navigated to home page (http://localhost:5173/) - Footer visible ✓
+- Step 2: Scrolled to bottom on home page - Footer fully visible ✓
+- Step 3: Navigated to course catalog (/courses) - Footer visible ✓
+- Step 4: Verified footer on course catalog - Footer visible ✓
+- Step 5: Verified footer contains expected links ✓
+
+### Additional Pages Tested:
+- Login page (/login) - Footer visible ✓
+- Course detail page (/course/python-fundamentos) - Footer visible ✓
+
+### Footer Content Verified:
+- Plataforma logo and description ✓
+- Social media links (Twitter, GitHub, LinkedIn) ✓
+- CURSOS section: Catalogo, Python, Data Science, Web3 ✓
+- RECURSOS section: Dashboard, Documentacion, Blog, FAQ ✓
+- EMPRESA section: Sobre Nosotros, Contacto, Privacidad, Terminos ✓
+- Copyright notice: © 2026 Plataforma de Aprendizaje ✓
+- rizo.ma link ✓
+
+### Console Errors: Only expected 401 from /api/auth/me (not logged in)
+
+### Screenshots:
+- feature-4-step1-home-footer.png
+- feature-4-step3-courses-footer.png
+- feature-4-step4-login-footer.png
+
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #184)
+
+### Feature #184: Filter persistence across sessions - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. Apply filters - PASS
+   - Applied Category: 'Programacion' and Level: 'Principiante'
+   - Filters saved to localStorage automatically
+   - Console logged: '[CourseCatalog] Saved filters to localStorage'
+
+2. Close browser - PASS
+   - Navigated away from courses page (simulates closing browser)
+   - localStorage preserved across navigation
+
+3. Reopen and return to catalog - PASS
+   - Returned to /courses page
+   - Filters restored from localStorage
+   - URL synced: /courses?category=Programacion&level=Principiante
+
+4. Verify filters are remembered or reset appropriately - PASS
+   - Filters correctly remembered after navigation
+   - Category dropdown showed 'Programacion' selected
+   - Level dropdown showed 'Principiante' selected
+   - Only 3 filtered courses displayed
+
+### Additional Testing
+- Reset button clears localStorage - PASS
+- After reset, filters NOT remembered - PASS (appropriate behavior)
+- URL params take priority over localStorage - PASS (for shareable links)
+- Search query intentionally NOT persisted - PASS (contextual behavior)
+
+### Implementation Details
+Frontend (CourseCatalogPage.jsx):
+- Added FILTER_STORAGE_KEY constant for localStorage key
+- Added getSavedFilters() helper to read from localStorage
+- Added saveFilters() helper to write to localStorage
+- Modified useState initializers to check URL params first, then localStorage
+- Added useEffect to save filters when they change
+- Added useEffect to sync URL with restored filters on mount
+- Updated handleResetFilters to clear localStorage
+
+### Screenshots
+- feature-184-step1-filters-applied.png - Initial filter application
+- feature-184-step2-filters-remembered-after-navigation.png - Filters restored after navigation
+- feature-184-step3-filters-reset.png - Filters reset
+- feature-184-step4-no-filters-after-reset.png - No filters after reset
+
+### Console Errors
+- Only expected 401 Unauthorized from /api/auth/me (not logged in)
+- No JavaScript errors related to filter persistence
+
+### Current Status
+- Feature #184 marked as PASSING
+- 104/248 features passing (41.9%)
+
+[Coding] 2026-01-25 Feature #184 'Filter persistence across sessions' verified - PASSED
