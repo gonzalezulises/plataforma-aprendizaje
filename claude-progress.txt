@@ -6807,3 +6807,62 @@ WebinarSchedulePage.jsx changes:
 [Coding] 2026-01-25 Feature #179 'Quotes in search work correctly' verified - PASSED
 Implementation: parseSearchQuery utility in backend/src/utils/searchUtils.js
 Tests passed: Quoted phrases, unbalanced quotes, mixed searches all handled correctly
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #144 Regression Verification)
+
+### Feature #144: Direct URL to lesson requires enrollment - REGRESSION VERIFIED - STILL PASSING
+
+Feature was already marked as passing. Performed comprehensive regression testing to verify feature still works correctly.
+
+### Verification Steps Completed:
+
+1. **Unauthenticated access blocked** - PASS
+   - Navigated to /course/python-fundamentos/lesson/6 without login
+   - Page shows 'Inicia sesion para continuar'
+   - API returns 401 Unauthorized
+   - Screenshot: feature-144-step1-unauthenticated-access-blocked.png
+
+2. **Created test course and lesson for enrollment check**
+   - Created course ID 37 (TEST_144_NoEnroll_Course)
+   - Created lesson ID 35 (Test Lesson 144)
+   - Published course
+
+3. **Authenticated but non-enrolled user blocked** - PASS
+   - Logged in as Test User (testuser@example.com)
+   - Navigated directly to /course/test-144-noenroll-course/lesson/35
+   - Page shows 'Inscripcion requerida'
+   - API returns 403 Forbidden
+   - Screenshot: feature-144-step3-authenticated-not-enrolled-blocked.png
+
+4. **Redirect to enrollment page works** - PASS
+   - 'Ver Curso e Inscribirme' button works
+   - Redirects to course detail page
+   - Shows 'Inscribirse Gratis' button
+   - Screenshot: feature-144-step4-redirect-to-enrollment.png
+
+### Console Errors:
+- 403 Forbidden on /api/lessons/35 - EXPECTED (enrollment check working)
+- 404 Not Found on /api/enrollments/37 - EXPECTED (user not enrolled)
+- No unexpected JavaScript errors
+
+### Implementation Details:
+Backend (lessons.js):
+- Checks if user is authenticated (returns 401 if not)
+- Checks if user is enrolled in course (returns 403 if not)
+- Instructor/admin users bypass enrollment check
+- Returns courseSlug, courseId, courseTitle for frontend redirect
+
+Frontend (LessonPage.jsx):
+- Handles 401/403 responses from API
+- Shows appropriate UI for unauthenticated vs non-enrolled users
+- Provides clear call-to-action buttons for login/enrollment
+
+### Current Status:
+- Feature #144 remains PASSING (no regression found)
+- 105/248 features passing (42.3%)
+
+[Testing] 2026-01-25 Feature #144 'Direct URL to lesson requires enrollment' regression verified - PASSED (no regression found)
+
