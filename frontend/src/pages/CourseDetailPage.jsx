@@ -161,24 +161,69 @@ function CourseDetailPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showUnenrollModal, setShowUnenrollModal] = useState(false);
+  const [unenrolling, setUnenrolling] = useState(false);
 
   useEffect(() => {
-    // Simulate API call - in production this would fetch from backend
-    setLoading(true);
+    async function fetchCourseData() {
+      setLoading(true);
 
-    // Check if course exists in sample data
-    const courseData = SAMPLE_COURSES[slug];
+      try {
+        // First try to fetch actual course from API by slug
+        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_BASE}/courses/${slug}`, {
+          credentials: 'include'
+        });
 
-    if (courseData) {
-      setCourse(courseData);
+        if (response.ok) {
+          const data = await response.json();
+          const apiCourse = data.course;
 
-      // Check enrollment status if authenticated
-      if (isAuthenticated) {
-        checkEnrollmentStatus(courseData.id);
+          // Merge API data with sample data for additional fields (modules, etc.)
+          const sampleCourse = SAMPLE_COURSES[slug];
+          const mergedCourse = {
+            ...sampleCourse,
+            id: apiCourse.id, // Use actual database ID!
+            title: apiCourse.title,
+            description: apiCourse.description,
+            category: apiCourse.category,
+            level: apiCourse.level,
+            isPremium: !!apiCourse.is_premium,
+            duration: `${apiCourse.duration_hours || 0} horas`,
+          };
+
+          setCourse(mergedCourse);
+
+          // Check enrollment status with the correct database ID
+          if (isAuthenticated) {
+            checkEnrollmentStatus(apiCourse.id);
+          }
+        } else {
+          // Fallback to sample data if API fails
+          const courseData = SAMPLE_COURSES[slug];
+          if (courseData) {
+            setCourse(courseData);
+            if (isAuthenticated) {
+              checkEnrollmentStatus(courseData.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching course:', error);
+        // Fallback to sample data
+        const courseData = SAMPLE_COURSES[slug];
+        if (courseData) {
+          setCourse(courseData);
+          if (isAuthenticated) {
+            checkEnrollmentStatus(courseData.id);
+          }
+        }
+      } finally {
+        setLoading(false);
       }
     }
 
-    setLoading(false);
+    fetchCourseData();
   }, [slug, isAuthenticated]);
 
   const checkEnrollmentStatus = async (courseId) => {
@@ -249,6 +294,36 @@ function CourseDetailPage() {
     if (course.modules?.[0]?.lessons?.[0]) {
       const firstLesson = course.modules[0].lessons[0];
       navigate(`/course/${slug}/lesson/${firstLesson.id}`);
+    }
+  };
+
+  const handleUnenrollClick = () => {
+    setShowUnenrollModal(true);
+  };
+
+  const handleConfirmUnenroll = async () => {
+    setUnenrolling(true);
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE}/enrollments/${course.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        toast.success('Te has desinscrito del curso');
+        setIsEnrolled(false);
+        setShowUnenrollModal(false);
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Error al desinscribirse');
+      }
+    } catch (error) {
+      console.error('Unenroll error:', error);
+      toast.error('Error de conexion. Intenta de nuevo.');
+    } finally {
+      setUnenrolling(false);
     }
   };
 
@@ -396,16 +471,27 @@ function CourseDetailPage() {
 
               {/* CTA Button */}
               {isEnrolled ? (
-                <button
-                  onClick={handleGoToCourse}
-                  className="w-full py-3 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Continuar Curso
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleGoToCourse}
+                    className="w-full py-3 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Continuar Curso
+                  </button>
+                  <button
+                    onClick={handleUnenrollClick}
+                    className="w-full py-2 px-4 text-red-600 dark:text-red-400 text-sm hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Cancelar inscripcion
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={handleEnrollClick}
@@ -594,6 +680,56 @@ function CourseDetailPage() {
                   </>
                 ) : (
                   'Confirmar Inscripcion'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unenroll Confirmation Modal */}
+      {showUnenrollModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Cancelar Inscripcion
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Estas seguro de que deseas cancelar tu inscripcion en <strong>{course.title}</strong>?
+              Perderas tu progreso en el curso.
+            </p>
+
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  Esta accion no se puede deshacer.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUnenrollModal(false)}
+                className="flex-1 py-2 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                disabled={unenrolling}
+              >
+                Mantener inscripcion
+              </button>
+              <button
+                onClick={handleConfirmUnenroll}
+                disabled={unenrolling}
+                className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {unenrolling ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Cancelando...
+                  </>
+                ) : (
+                  'Cancelar inscripcion'
                 )}
               </button>
             </div>
