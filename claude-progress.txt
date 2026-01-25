@@ -1017,3 +1017,69 @@
     5. Verify cell outputs are still visible - PASS (all outputs preserved)
   - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
   - Screenshots: feature-82-cells-executed.png, feature-82-state-persisted.png
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #95)
+
+### Completed Features
+- Feature #95: Complete forum thread workflow
+  - Fixed API_URL handling in ForumPage.jsx and ThreadDetailPage.jsx
+    - VITE_API_URL was configured as "http://localhost:4000/api"
+    - Code was appending "/api/..." causing double paths like "/api/api/courses"
+    - Added .replace(/\/api$/, '') to strip trailing /api
+  - Full workflow verified via browser automation:
+    1. Navigate to course forum - PASS (/course/python-fundamentos/forum)
+       - Forum page displays with course title and "Nueva Pregunta" button
+       - Filters for "Todos los hilos", "Sin resolver", "Resueltos"
+       - Sort options for "Mas recientes", "Mas antiguos", "Mas respuestas"
+    2. Create new thread with question - PASS
+       - Created thread "TEST_95_Como usar funciones en Python?"
+       - Question about creating functions with parameters and return values
+       - Thread created successfully (201 response)
+    3. Wait for or add a reply - PASS
+       - Added detailed reply with Python code example
+       - Reply shows with author "Usuario de Prueba"
+       - Reply count updated to "1 Respuesta"
+    4. Mark reply as helpful (upvote) - PASS
+       - Clicked upvote button on reply
+       - Vote count changed from 0 to 1
+       - Toast "Voto registrado" displayed
+    5. Mark thread as resolved - PASS
+       - Set user in localStorage to match thread owner
+       - "Marcar como Resuelto" button appeared
+       - Clicked button, status changed to "Resuelto"
+       - Button changed to "Reabrir Hilo"
+       - Toast "Hilo marcado como resuelto" displayed
+    6. Verify thread shows resolved status - PASS
+       - Thread in forum listing shows green checkmark
+       - "Resuelto" badge displayed
+  - Backend routes: backend/src/routes/forum.js
+    - GET /api/forum/course/:courseId - List threads
+    - GET /api/forum/thread/:threadId - Get thread with replies
+    - POST /api/forum/course/:courseId/thread - Create thread
+    - POST /api/forum/thread/:threadId/reply - Add reply
+    - POST /api/forum/reply/:replyId/vote - Upvote reply
+    - PATCH /api/forum/thread/:threadId/resolve - Mark resolved
+  - Database tables: forum_threads, forum_replies, reply_votes
+  - Screenshots saved:
+    - feature-95-step1-forum-page.png
+    - feature-95-step2-thread-created.png
+    - feature-95-step3-reply-added.png
+    - feature-95-step4-upvote.png
+    - feature-95-step5-mark-resolved-button.png
+    - feature-95-step5-6-resolved.png
+    - feature-95-step6-resolved-in-list.png
+
+### Technical Notes
+- Multiple agents modifying files caused race conditions
+- Used node scripts to apply edits atomically
+- Console errors: Only expected 401 for /api/auth/me (unauthenticated)
+- Forum functionality was already built by previous sessions
+- This session fixed API URL path issues and verified full workflow
+
+### Current Status
+- Passing: 19/248 features (7.7%)
+- Feature #95 marked as PASSING
+
+[Testing] 2026-01-25 Feature #95 "Complete forum thread workflow" verified - PASSED
