@@ -2052,3 +2052,18 @@
 - Commit: c99f49a
 
 [Testing] 2026-01-25 Feature #110 '404 for deleted lesson shows error' verified - PASSED
+
+[Testing] 2026-01-25 Feature #107 'Video load failure shows fallback' regression test
+  - Initial finding: REGRESSION - Lesson page crashed completely
+  - Root cause: CodeBlock component crashed when 'code' prop was undefined
+  - Error: TypeError: Cannot read properties of undefined (reading 'split')
+  - Fix applied by concurrent agent: Added 'const safeCode = code || ""' guard
+  - VideoPlayer error handling verified in source code:
+    - Error states with specific messages (MEDIA_ERR_NETWORK, MEDIA_ERR_DECODE, etc.)
+    - Retry button with retry count tracking
+    - Alternative content display option
+    - 15-second timeout fallback
+  - CodeBlock crash: FIXED
+  - Feature #107: VERIFIED (via code review - database lessons don't have video content for live testing)
+[Testing] Session complete - Feature #107 regression fixed and verified
+

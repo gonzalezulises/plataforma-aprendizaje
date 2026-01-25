@@ -6,10 +6,11 @@ import React, { useState } from 'react';
  */
 function CodeBlock({ code, language = 'python', showLineNumbers = true, title = null }) {
   const [copied, setCopied] = useState(false);
+  const safeCode = code || '';
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(safeCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -17,7 +18,7 @@ function CodeBlock({ code, language = 'python', showLineNumbers = true, title = 
     }
   };
 
-  const lines = code.split('\n');
+  const lines = safeCode.split('\n');
 
   return (
     <div className="rounded-lg overflow-hidden shadow-lg my-4">
@@ -74,7 +75,7 @@ function CodeBlock({ code, language = 'python', showLineNumbers = true, title = 
               </tbody>
             </table>
           ) : (
-            <span className="font-mono whitespace-pre">{code}</span>
+            <span className="font-mono whitespace-pre">{safeCode}</span>
           )}
         </code>
       </pre>
