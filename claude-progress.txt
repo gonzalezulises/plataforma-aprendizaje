@@ -1,3 +1,53 @@
+## Session: 2026-01-25 (Agent Session - Feature #144)
+
+### Completed Features
+- Feature #144: Direct URL to lesson requires enrollment - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Get URL for a lesson - PASS
+       - Identified lesson 5 in course "tab1-saved-first" (course_id 18)
+       - URL: /course/tab1-saved-first/lesson/5
+    2. Log in as non-enrolled user - PASS
+       - Tested both unauthenticated and authenticated scenarios
+    3. Navigate to lesson URL - PASS
+       - Unauthenticated: Returns 401, shows "Inicia sesion para continuar"
+       - Authenticated but not enrolled: Returns 403, shows "Inscripcion requerida"
+    4. Verify redirect to enrollment or error - PASS
+       - "Ver Curso e Inscribirme" button links to course page
+       - After enrollment, lesson content is accessible
+
+### Implementation Details
+- **backend/src/routes/lessons.js**:
+  - Added enrollment check to GET /api/lessons/:id
+  - Returns 401 with requiresEnrollment flag for unauthenticated users
+  - Returns 403 with requiresEnrollment flag for non-enrolled users
+  - Includes courseSlug, courseId, courseTitle in response for redirect
+  - Instructors/admins bypass enrollment check
+
+- **frontend/src/pages/LessonPage.jsx**:
+  - Added enrollmentRequired state
+  - Handles 401/403 responses to show appropriate UI
+  - "Inicia sesion para continuar" for unauthenticated users
+  - "Inscripcion requerida" for non-enrolled authenticated users
+  - Info boxes with clear next steps
+  - Buttons: "Iniciar Sesion", "Ver Curso e Inscribirme", "Ver Catalogo", "Inicio"
+
+### Screenshots
+- feature-144-step1-unauthenticated-blocked.png - Unauthenticated user blocked
+- feature-144-step2-logged-in-not-enrolled.png - Authenticated but non-enrolled blocked
+- feature-144-step3-course-page-enroll.png - Course page with enroll button
+- feature-144-step4-enrolled-can-access.png - Enrolled user can access lesson
+
+### Console Errors
+- None (only expected 401/403 for blocked access)
+
+### Current Status
+- Feature #144 marked as PASSING
+- Passing features: 68/248 (27.4%)
+
+[Testing] 2026-01-25 Feature #144 "Direct URL to lesson requires enrollment" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #145)
 
 ### Completed Features
@@ -3847,3 +3897,20 @@ Console errors: Only expected 401s (unauthenticated requests)
 Screenshot: feature-105-regression-test-error-message.png
 
 [Testing] Session complete - Feature #105 verified, no regression found
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #133)
+
+[Testing] 2026-01-25 Feature #133 'API error displayed in UI' - REGRESSION TEST PASSED
+
+Verification Steps:
+1. Submit form with invalid data - PASS (invalid@wrongemail.com / wrongpassword123)
+2. Verify API returns validation errors - PASS (401 Unauthorized at /api/direct-auth/login)
+3. Verify UI displays same error messages - PASS ('Credenciales incorrectas. Por favor verifica tu correo y contrasena.')
+4. Fix errors and verify submission works - PASS (Login with testuser@example.com succeeded)
+
+Screenshot: feature-133-api-error-displayed.png
+Console errors: Only expected 401s (unauthenticated requests and invalid login)
+
+[Testing] Session complete - Feature #133 verified, no regression found
