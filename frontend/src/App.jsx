@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import LoginPage from './pages/LoginPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -271,7 +273,7 @@ function CourseCatalog() {
 
 function App() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -295,18 +297,21 @@ function App() {
         }}
       />
       <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/courses" element={<CourseCatalog />} />
-        <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
-        <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
-        <Route path="/dashboard" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Dashboard</h1></div>} />
-        <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
-        <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
-        <Route path="/login" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Login</h1></div>} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/courses" element={<CourseCatalog />} />
+          <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
+          <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
+          <Route path="/dashboard" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Dashboard</h1></div>} />
+          <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
+          <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   );
 }
 

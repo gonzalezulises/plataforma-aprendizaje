@@ -7,6 +7,9 @@ import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 
+// Import routes
+import authRoutes from './routes/auth.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -49,7 +52,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes placeholder - to be implemented
+// API Routes
+app.use('/api/auth', authRoutes);
+
+// API info endpoint
 app.get('/api', (req, res) => {
   res.json({
     name: 'Plataforma de Aprendizaje API',
