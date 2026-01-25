@@ -30,6 +30,7 @@ function CodeChallengePage() {
   const [attempts, setAttempts] = useState([]);
   const [activeTab, setActiveTab] = useState('instructions'); // instructions, output, tests
   const [networkError, setNetworkError] = useState(null); // Track network errors for retry
+  const [syntaxError, setSyntaxError] = useState(null); // Track syntax errors for highlighting
 
   // Helper to detect network errors
   const isNetworkError = (err) => {
@@ -88,6 +89,7 @@ function CodeChallengePage() {
     setOutput('');
     setError(null);
     setNetworkError(null);
+    setSyntaxError(null);
     setActiveTab('output');
 
     try {
@@ -99,8 +101,13 @@ function CodeChallengePage() {
       });
 
       const data = await response.json();
+
+      // Feature #117: Handle syntax errors with line highlighting
+      if (data.syntax_error && data.syntax_error_info) {
+        setSyntaxError(data.syntax_error_info);
+        setOutput(''); // Clear output - syntax error panel will show
       // Feature #116: Handle memory limit exceeded
-      if (data.memory_exceeded) {
+      } else if (data.memory_exceeded) {
         setOutput(`💾 ${data.memory_error_message}\n\n${data.container_cleaned ? '✅ Sandbox limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo sin problemas.' : ''}`);
       // Feature #108: Handle timeout from infinite loop or long-running code
       } else if (data.timeout) {
@@ -211,6 +218,15 @@ function CodeChallengePage() {
       setTestResults(null);
       setFeedback('');
       setNetworkError(null);
+      setSyntaxError(null);
+    }
+  };
+
+  // Clear syntax error when code changes
+  const handleCodeChange = (e) => {
+    setCode(e.target.value);
+    if (syntaxError) {
+      setSyntaxError(null);
     }
   };
 
@@ -431,7 +447,68 @@ function CodeChallengePage() {
 
               {activeTab === 'output' && (
                 <div className="h-full">
-                  {output ? (
+                  {/* Feature #117: Syntax Error Display */}
+                  {syntaxError ? (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 h-full overflow-auto">
+                      {/* Error Header */}
+                      <div className="flex items-start gap-3 mb-4">
+                        <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <h3 className="font-bold text-red-800 dark:text-red-200 text-lg">
+                            {syntaxError.type}: Linea {syntaxError.line}
+                          </h3>
+                          <p className="text-red-700 dark:text-red-300 mt-1">
+                            {syntaxError.message}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Code Snippet with Line Highlighting */}
+                      {syntaxError.codeSnippet && (
+                        <div className="bg-gray-900 rounded-lg overflow-hidden mb-4">
+                          <div className="px-3 py-2 bg-gray-800 text-gray-400 text-xs font-medium border-b border-gray-700">
+                            Codigo con error
+                          </div>
+                          <div className="font-mono text-sm">
+                            {syntaxError.codeSnippet.map((line, idx) => (
+                              <div
+                                key={idx}
+                                className={`flex ${line.isErrorLine ? 'bg-red-900/40 border-l-4 border-red-500' : ''}`}
+                              >
+                                <span className={`w-12 px-2 py-1 text-right select-none ${
+                                  line.isErrorLine ? 'text-red-400 font-bold' : 'text-gray-500'
+                                }`}>
+                                  {line.lineNum}
+                                </span>
+                                <span className={`flex-1 px-2 py-1 ${
+                                  line.isErrorLine ? 'text-red-300' : 'text-gray-300'
+                                }`}>
+                                  {line.code || ' '}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Suggestion */}
+                      {syntaxError.suggestion && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <div>
+                              <span className="font-medium text-amber-800 dark:text-amber-200">Sugerencia: </span>
+                              <span className="text-amber-700 dark:text-amber-300">{syntaxError.suggestion}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : output ? (
                     <pre className="font-mono text-sm bg-gray-900 text-green-400 p-4 rounded-lg h-full overflow-auto whitespace-pre-wrap">
                       {output}
                     </pre>
@@ -591,16 +668,36 @@ function CodeChallengePage() {
             <div className="flex-1 relative">
               <textarea
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                className="w-full h-[400px] p-4 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none"
+                onChange={handleCodeChange}
+                className={`w-full h-[400px] p-4 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none ${
+                  syntaxError ? 'border-2 border-red-500' : ''
+                }`}
                 spellCheck={false}
                 placeholder="Escribe tu codigo aqui..."
               />
-              {/* Line numbers overlay */}
-              <div className="absolute left-0 top-0 p-4 font-mono text-sm text-gray-500 pointer-events-none select-none">
-                {code.split('\n').map((_, idx) => (
-                  <div key={idx} className="h-5 text-right pr-4 w-8">{idx + 1}</div>
-                ))}
+              {/* Line numbers overlay with syntax error highlighting */}
+              <div className="absolute left-0 top-0 p-4 font-mono text-sm pointer-events-none select-none">
+                {code.split('\n').map((_, idx) => {
+                  const lineNum = idx + 1;
+                  const isErrorLine = syntaxError && syntaxError.line === lineNum;
+                  return (
+                    <div
+                      key={idx}
+                      className={`h-5 text-right pr-4 w-8 ${
+                        isErrorLine
+                          ? 'text-red-400 font-bold bg-red-900/30 rounded-l'
+                          : 'text-gray-500'
+                      }`}
+                    >
+                      {lineNum}
+                      {isErrorLine && (
+                        <span className="absolute left-10 text-red-400" title={syntaxError.message}>
+                          ⚠
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

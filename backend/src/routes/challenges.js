@@ -1,6 +1,6 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
-import { detectInfiniteLoop, detectMemoryOveruse, executeWithTimeout } from './challenges-timeout.js';
+import { detectInfiniteLoop, detectMemoryOveruse, detectSyntaxError, executeWithTimeout } from './challenges-timeout.js';
 
 const router = express.Router();
 
@@ -428,9 +428,11 @@ router.post('/:id/run', async (req, res) => {
       timeout_message: result.timeout_message || null,
       memory_exceeded: result.memory_exceeded || false,
       memory_error_message: result.memory_error_message || null,
+      syntax_error: result.syntax_error || false,
+      syntax_error_info: result.syntax_error_info || null,
       container_cleaned: result.container_cleaned || false,
       execution_time_ms: result.execution_time_ms,
-      success: !result.error && !result.timeout && !result.memory_exceeded
+      success: !result.error && !result.timeout && !result.memory_exceeded && !result.syntax_error
     });
   } catch (error) {
     console.error('Error running code:', error);
@@ -630,6 +632,19 @@ async function executeCode(code, language, timeoutSeconds = 30) {
   // For development, simulate Python execution
   if (language === 'python') {
     try {
+      // Feature #117: Check for syntax errors BEFORE execution
+      const syntaxResult = detectSyntaxError(code);
+      if (syntaxResult.hasSyntaxError) {
+        return {
+          output: '',
+          error: null,
+          timeout: false,
+          syntax_error: true,
+          syntax_error_info: syntaxResult.error,
+          execution_time_ms: 0
+        };
+      }
+
       // Feature #116: Check for memory overuse patterns BEFORE execution
       const memoryResult = detectMemoryOveruse(code);
       if (memoryResult.isMemoryOveruse) {
