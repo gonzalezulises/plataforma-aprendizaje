@@ -28,6 +28,7 @@ function LessonPage() {
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [apiLesson, setApiLesson] = useState(null);
+  const [enrollmentRequired, setEnrollmentRequired] = useState(null); // { courseSlug, courseTitle }
 
   // Sample lesson data with multiple lessons for navigation testing
   const lessonsData = {
@@ -210,6 +211,7 @@ print(potencia(3, 3))   # 27 (3^3)`
       setNotFound(false);
       setLoadError(null);
       setApiLesson(null);
+      setEnrollmentRequired(null);
 
       try {
         // First, try to fetch from API
@@ -226,6 +228,25 @@ print(potencia(3, 3))   # 27 (3^3)`
             setNotFound(true);
           }
           // If we have sample data, we'll use that (loading state ends, no API lesson)
+        } else if (response.status === 401 || response.status === 403) {
+          // User not authenticated or not enrolled - check response for enrollment requirement
+          const data = await response.json();
+          if (data.requiresEnrollment) {
+            setEnrollmentRequired({
+              courseSlug: data.courseSlug || slug,
+              courseId: data.courseId,
+              courseTitle: data.courseTitle || 'este curso',
+              requiresAuth: response.status === 401
+            });
+          } else if (!hasSampleData) {
+            // No sample data and access denied
+            setEnrollmentRequired({
+              courseSlug: slug,
+              courseTitle: 'este curso',
+              requiresAuth: response.status === 401
+            });
+          }
+          // If we have sample data, we'll use that for sample lessons
         } else if (!response.ok) {
           throw new Error('Failed to load lesson');
         } else {
@@ -413,6 +434,144 @@ Es estudiante: True
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
           <p className="text-gray-600 dark:text-gray-400">Cargando leccion...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Enrollment required - User not enrolled in the course
+  if (enrollmentRequired) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+            {/* Lock Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-12 h-12 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {enrollmentRequired.requiresAuth ? 'Inicia sesion para continuar' : 'Inscripcion requerida'}
+            </h1>
+
+            {/* Description */}
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {enrollmentRequired.requiresAuth
+                ? 'Debes iniciar sesion para acceder a esta leccion.'
+                : `Para acceder a esta leccion, necesitas estar inscrito en "${enrollmentRequired.courseTitle}".`
+              }
+            </p>
+
+            {/* Info box */}
+            <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-6 mb-8 text-left border border-primary-200 dark:border-primary-700">
+              <h3 className="font-semibold text-primary-900 dark:text-primary-100 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {enrollmentRequired.requiresAuth ? 'Acceso restringido' : 'Como inscribirte'}
+              </h3>
+              <ul className="space-y-2 text-sm text-primary-800 dark:text-primary-200">
+                {enrollmentRequired.requiresAuth ? (
+                  <>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Esta leccion es parte de un curso que requiere cuenta
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Inicia sesion o crea una cuenta para continuar
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      La inscripcion es rapida y sencilla
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Podras guardar tu progreso en cada leccion
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Recibiras certificado al completar el curso
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {enrollmentRequired.requiresAuth ? (
+                <Link
+                  to="/login"
+                  className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Iniciar Sesion
+                </Link>
+              ) : (
+                <Link
+                  to={`/course/${enrollmentRequired.courseSlug}`}
+                  className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Ver Curso e Inscribirme
+                </Link>
+              )}
+
+              <div className="flex gap-3">
+                <Link
+                  to="/courses"
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-center"
+                >
+                  Ver Catalogo
+                </Link>
+                <Link
+                  to="/"
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  Inicio
+                </Link>
+              </div>
+            </div>
+
+            {/* Lesson ID info */}
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Leccion ID: {currentLessonId} | Curso: {enrollmentRequired.courseSlug}
+            </p>
+          </div>
         </div>
       </div>
     );

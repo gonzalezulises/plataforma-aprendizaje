@@ -1,3 +1,55 @@
+## Session: 2026-01-25 (Agent Session - Feature #145)
+
+### Completed Features
+- Feature #145: URL manipulation security - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to /lesson/1 - PASS (sample lesson page loads correctly)
+    2. Change URL to /lesson/999 (non-existent) - PASS
+       - Returns proper 404 error page
+       - Shows "Leccion No Encontrada" heading
+       - Displays helpful suggestions for next steps
+       - Links to go back to course, view catalog, or home
+    3. Verify 404 error - PASS (verified with screenshot)
+    4. Try /admin without permissions - PASS
+       - Unauthenticated user: Redirected to /login
+       - Student user (testuser@example.com): Redirected to /dashboard
+       - Toast error: "Solo los instructores pueden acceder a esta pagina"
+    5. Verify access denied - PASS
+       - Instructor user (instructor@test.com): CAN access /admin
+       - Admin page shows "Mis Cursos" with full course management
+
+### Security Fixes Implemented
+- **AdminCoursesPage.jsx**: Enabled role-based access control
+  - Uncommented role check that was disabled for development
+  - Non-instructor users redirected to /dashboard with error toast
+
+- **CourseCreatorPage.jsx**: Enabled role-based access control
+  - Uncommented role check that was disabled for development
+  - Non-instructor users cannot create/edit courses
+
+### Verification Details
+- Backend lessons.js already had proper 404 handling (lines 31-33)
+- LessonPage.jsx has proper 404 UI component (lines 422-573)
+- Admin pages now properly enforce instructor_admin role
+
+### Screenshots
+- feature-145-step1-lesson-999-404.png - 404 page for non-existent lesson
+- feature-145-step3-admin-redirect-to-login.png - Unauthenticated access blocked
+- feature-145-step4-admin-access-denied-toast.png - Student access denied (redirected)
+- feature-145-step5-instructor-admin-access-granted.png - Instructor access granted
+
+### Console Errors
+- None (only expected 401 for unauthenticated /api/auth/me requests)
+
+### Current Status
+- Feature #145 marked as PASSING
+- Passing features: 67/248 (27.0%)
+- Commit: 5850dde
+
+[Testing] 2026-01-25 Feature #145 "URL manipulation security" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #140)
 
 ### Completed Features
@@ -3761,3 +3813,37 @@ Screenshots:
 
 [Testing] 2026-01-25 Feature #143 'Direct URL to course works' verified - PASSED
 
+
+[Testing] 2026-01-25 Feature #82 'Notebook state is persisted' verified - PASSED
+
+Verification Steps:
+1. Open interactive notebook - PASS (navigated to /notebook)
+2. Execute code cells with output - PASS (3 cells executed)
+3. Navigate away from lesson - PASS (went to dashboard)
+4. Return to notebook - PASS (navigated back to /notebook)
+5. Verify cell outputs still visible - PASS (all 3 outputs preserved)
+
+Screenshots:
+- feature-82-step1-notebook-page.png
+- feature-82-step2-cells-executed.png
+- feature-82-step5-outputs-persisted.png
+
+Console errors: None
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #105 Regression)
+
+[Testing] 2026-01-25 Feature #105 'Invalid login credentials show error' - REGRESSION TEST PASSED
+
+Verification Steps:
+1. Navigate to login - PASS
+2. Enter invalid credentials (invalid@wrongemail.com / wrongpassword123) - PASS
+3. Verify clear error message - PASS ('Credenciales incorrectas. Por favor verifica tu correo y contrasena.')
+4. Verify no sensitive info in error - PASS (generic message, no username enumeration)
+5. Verify input fields are still accessible - PASS (fields remain editable)
+
+Console errors: Only expected 401s (unauthenticated requests)
+Screenshot: feature-105-regression-test-error-message.png
+
+[Testing] Session complete - Feature #105 verified, no regression found

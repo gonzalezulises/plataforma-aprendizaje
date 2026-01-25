@@ -3,13 +3,18 @@ import { queryOne, queryAll, run } from '../config/database.js';
 
 const router = express.Router();
 
+// Feature #144: Lesson URLs check enrollment status
+
 /**
  * GET /api/lessons/:id
  * Get a specific lesson with its content
+ * Requires enrollment in the course (unless instructor/admin)
  */
 router.get('/:id', (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.session?.user?.id;
+    const userRole = req.session?.user?.role;
 
     const lesson = queryOne(`
       SELECT
@@ -17,7 +22,8 @@ router.get('/:id', (req, res) => {
         m.title as module_title,
         m.course_id,
         c.title as course_title,
-        c.slug as course_slug
+        c.slug as course_slug,
+        c.is_premium as course_is_premium
       FROM lessons l
       LEFT JOIN modules m ON l.module_id = m.id
       LEFT JOIN courses c ON m.course_id = c.id
@@ -26,6 +32,37 @@ router.get('/:id', (req, res) => {
 
     if (!lesson) {
       return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    // Check enrollment status (unless instructor/admin)
+    const isInstructorAdmin = userRole === 'instructor_admin';
+
+    if (!isInstructorAdmin && lesson.course_id) {
+      // User must be authenticated to access lessons
+      if (!userId) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          requiresEnrollment: true,
+          courseSlug: lesson.course_slug,
+          courseId: lesson.course_id
+        });
+      }
+
+      // Check if user is enrolled in the course
+      const enrollment = queryOne(`
+        SELECT id FROM enrollments
+        WHERE user_id = ? AND course_id = ?
+      `, [userId, lesson.course_id]);
+
+      if (!enrollment) {
+        return res.status(403).json({
+          error: 'Enrollment required',
+          requiresEnrollment: true,
+          courseSlug: lesson.course_slug,
+          courseId: lesson.course_id,
+          courseTitle: lesson.course_title
+        });
+      }
     }
 
     // Get lesson content
