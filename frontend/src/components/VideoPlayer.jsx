@@ -168,6 +168,12 @@ function VideoPlayer({
 
   // Handle video error - show fallback UI
   const handleVideoError = useCallback((event) => {
+    // Clear any pending timeout
+    if (window._videoLoadTimeout) {
+      clearTimeout(window._videoLoadTimeout);
+      window._videoLoadTimeout = null;
+    }
+
     const video = videoRef.current;
     let message = 'El video no pudo cargarse.';
 
@@ -209,11 +215,19 @@ function VideoPlayer({
     setRetryCount(prev => prev + 1);
     setShowAlternative(false);
 
-    const video = videoRef.current;
-    if (video) {
-      // Reset video element
-      video.load();
+    // Set a timeout to show error if video doesn't load within 15 seconds
+    const timeout = setTimeout(() => {
+      setIsLoading(false);
+      setHasError(true);
+      setErrorMessage('El video no pudo cargarse. Tiempo de espera agotado.');
+    }, 15000);
+
+    // The video element will be recreated due to the key change
+    // Store the timeout so we can clear it if video loads or errors
+    if (window._videoLoadTimeout) {
+      clearTimeout(window._videoLoadTimeout);
     }
+    window._videoLoadTimeout = timeout;
   }, []);
 
   // Toggle alternative content view
@@ -399,7 +413,14 @@ function VideoPlayer({
         onEnded={handleEnded}
         onPause={handlePause}
         onError={handleVideoError}
-        onLoadedData={() => setIsLoading(false)}
+        onLoadedData={() => {
+          // Clear any pending timeout since video loaded successfully
+          if (window._videoLoadTimeout) {
+            clearTimeout(window._videoLoadTimeout);
+            window._videoLoadTimeout = null;
+          }
+          setIsLoading(false);
+        }}
       >
         Tu navegador no soporta la reproduccion de video.
       </video>

@@ -1822,3 +1822,61 @@
   - Console errors: None (only expected 401 for /api/auth/me when unauthenticated)
   - Screenshots: feature-3-step1-homepage-loaded.png
 [Testing] Session complete - Feature #3 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #106)
+
+### Completed Features
+- Feature #106: Quiz submission timeout shows error
+  - Full workflow of handling timeout errors during quiz submission verified:
+    1. Submit a quiz answer - PASS
+       - Answered 2 questions (float for Q1, 1 for Q10)
+       - Clicked "Enviar Quiz" button
+    2. Simulate server timeout - PASS
+       - Used JavaScript fetch interception to simulate 100ms timeout
+       - Error triggered correctly
+    3. Verify timeout error message - PASS
+       - Amber banner displayed with clock icon
+       - Heading: "Tiempo de espera agotado"
+       - Message: "La solicitud ha tardado demasiado. El servidor no responde. Tus respuestas se han guardado localmente."
+    4. Verify option to retry - PASS
+       - "Reintentar envio (intento 2)" button displayed
+       - "Continuar respondiendo" button to dismiss error
+       - Retry counter increments with each attempt
+    5. Verify answers are not lost - PASS
+       - Answers stored in localStorage during quiz
+       - Message shows: "💾 Tus 2 respuestas estan guardadas y no se perderan."
+       - Successful retry submitted with preserved answers
+       - Results showed correct 20% score (2/10 - both answered questions correct)
+       - localStorage cleared after successful submission
+
+### Technical Implementation
+- frontend/src/pages/QuizPage.jsx:
+  - Added SUBMIT_TIMEOUT_MS constant (30 seconds)
+  - Added submitError, isTimeoutError, retryCount states
+  - Added abortControllerRef for request cancellation
+  - Added localStorage persistence for answers (quiz_{id}_answers, quiz_{id}_attempt)
+  - Modified handleSubmit to detect timeout and network errors
+  - Added handleRetrySubmit and handleDismissError handlers
+  - Added amber error banner UI with retry/continue buttons
+  - Clear localStorage on successful submission
+  
+- backend/src/routes/quizzes.js:
+  - Added POST /api/quizzes/:id/submit-timeout test endpoint (dev only)
+  - Simulates 35-second delay for timeout testing
+
+### Screenshots
+- feature-106-step1-quiz-in-progress.png - Quiz with 2 answers selected
+- feature-106-step2-timeout-error-displayed.png - Amber timeout error banner
+- feature-106-step3-network-error.png - Network error variant (backend was down)
+- feature-106-step4-successful-retry.png - Quiz results after successful retry
+
+### Console Errors
+- Only expected simulated timeout error during testing
+
+### Current Status
+- Feature #106 marked as PASSING
+- Commit: dc6e072
+
+[Testing] 2026-01-25 Feature #106 "Quiz submission timeout shows error" verified - PASSED
