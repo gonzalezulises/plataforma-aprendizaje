@@ -3942,3 +3942,80 @@ Console errors: Only expected 401s (unauthenticated requests and invalid login)
 - Commit: ab90b95
 
 [Testing] 2026-01-25 Feature #146 Shareable filter URLs work verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #134)
+
+[Testing] 2026-01-25 Feature #134 'Real-time updates via WebSocket' - REGRESSION TEST PASSED
+
+Verification Steps:
+1. Open course in two browser sessions - PASS (opened Tab 0 and Tab 1 on /forum/thread/3)
+2. Post a comment in one session - PASS (posted TEST_134_WEBSOCKET test reply in Tab 0)
+3. Verify comment appears in other session - PASS (comment appeared in Tab 1 in real-time, count updated 8->9)
+4. Verify WebSocket connection is used - PASS (console logs confirm WebSocket messages received)
+
+Console Evidence:
+- [WebSocket] Connected
+- [WebSocket] Subscribed to thread 3
+- [WebSocket] Message received: {type: new_reply, threadId: 3, reply: Object}
+
+UI Indicators:
+- 'En vivo' (Live) indicator visible in both tabs
+- Reply count updated in real-time
+- New reply appeared without page refresh
+
+Screenshot: feature-134-websocket-realtime-update.png
+Console errors: None critical (only expected WebSocket reconnection attempts during initial connection)
+
+[Testing] Session complete - Feature #134 verified, no regression found
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #134 Re-Verification)
+
+### Completed Features
+- Feature #134: Real-time updates via WebSocket - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Open course in two browser sessions - PASS
+       - Tab 0: Thread page at /forum/thread/3
+       - Tab 1: Same thread page opened in new tab
+       - Both tabs logged in as Test User
+    2. Post a comment in one session - PASS
+       - Typed test reply: "TEST_134_REALTIME_VERIFY - This reply is posted from Session 1..."
+       - Clicked "Publicar Respuesta" button
+       - Toast: "Respuesta publicada"
+       - WebSocket notification: "Nueva respuesta recibida"
+    3. Verify comment appears in other session - PASS
+       - Switched to Tab 1 (without refreshing)
+       - Reply count updated from "9 Respuestas" to "10 Respuestas"
+       - New reply visible: "TEST_134_REALTIME_VERIFY..."
+       - No page refresh required
+    4. Verify WebSocket connection is used - PASS
+       - Console logs confirm WebSocket activity:
+         - [WebSocket] Connected
+         - [WebSocket] Subscribed to thread 3
+         - [WebSocket] Message received: {type: new_reply, threadId: 3, reply: Object}
+       - "En vivo" (Live) indicator visible in both tabs
+
+### Technical Implementation
+- Backend WebSocket server on port 5001 at /ws path
+- frontend/src/hooks/useWebSocket.js - Custom hook for WebSocket connections
+- frontend/src/pages/ThreadDetailPage.jsx - Real-time forum reply updates
+- backend/src/utils/websocket-events.js - Event bus for broadcast messages
+
+### Screenshots
+- feature-134-step1-websocket-connected.png - Thread page with WebSocket connected
+- feature-134-step2-reply-posted-in-tab1.png - Reply posted in Tab 0
+- feature-134-step3-reply-received-in-tab2-via-websocket.png - Reply received in Tab 1 via WebSocket
+- feature-134-step4-websocket-verification-complete.png - Full verification
+
+### Console Errors
+- None critical (only expected WebSocket reconnection during initial connection)
+
+### Current Status
+- Feature #134 marked as PASSING
+- Passing features: 69/248 (27.8%)
+
+[Testing] 2026-01-25 Feature #134 'Real-time updates via WebSocket' verified - PASSED
