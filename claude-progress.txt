@@ -1,3 +1,56 @@
+## Session: 2026-01-25 (Coding Agent - Feature #182)
+
+### Feature #182: Combined filters with no results - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Apply multiple restrictive filters - PASS
+   - Applied Category: Web3
+   - Applied Level: Principiante
+   - Applied Price: Gratuitos
+   - Applied Search: "nonexistent"
+
+2. Verify no results message - PASS
+   - "No hay cursos disponibles" heading displayed
+   - "Intenta con otros filtros o vuelve mas tarde" suggestion shown
+   - "Resultados para: "nonexistent" - 0 curso(s) encontrado(s)" displayed
+
+3. Verify each filter shown - PASS
+   - Category dropdown shows "Web3" selected
+   - Level dropdown shows "Principiante" selected
+   - Price dropdown shows "Gratuitos" selected
+   - Search input shows "nonexistent" with result count
+
+4. Verify can remove individual filters - PASS
+   - Tested removing level filter individually - results updated to show 1 course
+   - Tested "Restablecer filtros" button - all filters cleared at once
+   - Tested "Limpiar" button for search - search cleared independently
+
+### Implementation Details (Already in place)
+Frontend (CourseCatalogPage.jsx):
+- All filter dropdowns maintain selected state
+- "Restablecer filtros" button appears when any filter is active
+- handleResetFilters() clears all filters and search
+- Empty state shows friendly message with suggestion
+
+### Screenshots
+- feature-182-step1-initial-catalog.png - Initial page with all courses
+- feature-182-step2-no-results-combined-filters.png - No results with Web3 + Principiante
+- feature-182-step3-removed-level-filter.png - Results after removing level filter
+- feature-182-step4-all-filters-no-results.png - All 4 filters applied
+- feature-182-step5-all-filters-reset.png - All filters reset, all courses shown
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to filter functionality
+
+### Current Status
+- Feature #182 marked as PASSING
+- 102/248 features passing (41.1%)
+
+[Coding] 2026-01-25 Feature #182 'Combined filters with no results' verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #175)
 
 ### Feature #175: Default notification preferences - VERIFIED AND PASSING
@@ -6439,3 +6492,40 @@ The existing search implementation handles long queries well:
 - 101/248 features passing (40.7%)
 
 [Coding] 2026-01-25 Feature #180 'Very long search query handled' verified - PASSED
+[Testing] 2026-01-25 Feature #156 'Back and resubmit prevention' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Submitted forum thread 'TEST_156_REGRESSION_CHECK'
+- Step 2: Clicked browser back button - returned to forum with no form visible
+- Step 3: Clicked forward - returned to thread page, no resubmission occurred
+- Step 4: Verified only ONE entry exists (thread ID 19)
+- Step 5: Opened form again - it was EMPTY (data cleared after submission)
+
+### Implementation:
+- useNetworkAwareSubmit hook manages submission state
+- clearSavedFormData() clears localStorage after successful submission
+- Form resets properly after navigation
+
+### Console Errors: None related to submission
+
+### Screenshots:
+- feature-156-step1-form-filled.png
+- feature-156-step2-thread-created.png
+- feature-156-step3-back-to-forum.png
+- feature-156-step4-forward-to-thread.png
+- feature-156-step5-form-empty-after-back.png
+
+[Testing] 2026-01-25 Feature #127 'Submission history from database' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: View submission history - PASS (Historial tab shows 5 attempts)
+- Step 2: Verify API call - PASS (GET /api/challenges/1/attempts => 200 OK)
+- Step 3: Verify displayed attempts match database - PASS (5 attempts with correct status)
+- Step 4: Verify timestamps are correct - PASS (e.g., '25 ene 2026, 09:19:33')
+- Step 5: Verify code content is accurate - PASS (code visible with expand/load options)
+
+### Console Errors: None
+
+### Screenshot: feature-127-submission-history.png
+
+---
