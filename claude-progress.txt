@@ -1,3 +1,64 @@
+## Session: 2026-01-25 (Agent Session - Feature #141)
+
+### Completed Features
+- Feature #141: Video playback position preserved - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Start watching a video - PASS
+       - Navigated to /test-video page (VideoTestPage)
+       - Video loaded: BigBuckBunny.mp4 (duration: 596.47 seconds / 9:56)
+       - Started playback via JavaScript: video.play()
+    2. Pause at 5:30 - PASS
+       - Set video.currentTime = 330 (5:30)
+       - Called video.pause()
+       - VideoPlayer component automatically saved progress via POST /api/video-progress/998/test-working
+    3. Navigate away - PASS
+       - Navigated to /dashboard, then /courses
+       - User session maintained (logged in as Test User)
+    4. Return to the video - PASS
+       - Navigated back to /test-video
+       - VideoPlayer fetched saved progress via GET /api/video-progress/998/test-working
+    5. Verify video starts at 5:30 - PASS
+       - video.currentTime confirmed as 330 seconds (5:30)
+       - Position restored correctly from database
+
+### Technical Implementation (Already Complete)
+- **Frontend (VideoPlayer.jsx)**:
+  - Fetches saved progress on mount via GET /api/video-progress/lessonId/videoId
+  - Restores position when video loads (lines 61-99)
+  - Saves progress every 5 seconds during playback (lines 127-147)
+  - Saves on pause (lines 162-167)
+  - Uses beforeunload and sendBeacon for reliable saving during navigation (lines 239-267)
+
+- **Backend (video-progress.js)**:
+  - GET /api/video-progress/:lessonId/:videoId - fetch saved position
+  - POST /api/video-progress/:lessonId/:videoId - save position
+  - Uses UPSERT for efficient save/update
+
+- **Database**:
+  - video_progress table with user_id, lesson_id, video_id, saved_time, duration, completed, timestamps
+
+### Network Verification
+- [GET] http://localhost:5001/api/video-progress/998/test-working => [200] OK (fetch saved)
+- [POST] http://localhost:5001/api/video-progress/998/test-working => [200] OK (save on pause)
+
+### Screenshots
+- feature-141-video-test-page.png - Video test page with Test 1 error UI
+- feature-141-video-player-test.png - Video player at 0:00 / 9:56 ready
+- feature-141-step2-paused-at-530.png - Video paused at 5:30
+- feature-141-step5-position-restored.png - Video restored to 5:30 after navigation
+- feature-141-final-verification.png - Final verification with user logged in
+
+### Console Errors
+- Only expected errors: ERR_NAME_NOT_RESOLVED for invalid test video URL (Test 1)
+
+### Current Status
+- Feature #141 marked as PASSING
+- Passing: 63/248 features (25.4%)
+
+[Testing] 2026-01-25 Feature #141 "Video playback position preserved" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #127)
 
 ### Completed Features
@@ -3507,3 +3568,24 @@ The feature works correctly because the existing codebase properly handles form 
 
 [Testing] 2026-01-25 Feature #138 'Back button after form submission' verified - PASSED
 
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #105)
+
+### Regression Test Results
+- Feature #105: Invalid login credentials show error - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to login - PASS
+    2. Enter invalid credentials - PASS (wronguser@example.com / wrongpassword123)
+    3. Verify clear error message - PASS ("Credenciales incorrectas. Por favor verifica tu correo y contrasena.")
+    4. Verify no sensitive info in error - PASS (generic error, no username enumeration)
+    5. Verify input fields are still accessible - PASS (fields remain editable after error)
+
+### Console Errors
+- Expected 401 errors only (unauthenticated /api/auth/me and rejected login attempt)
+
+### Screenshots
+- feature-105-error-message.png - Error message displayed after invalid login
+
+[Testing] 2026-01-25 Feature #105 'Invalid login credentials show error' verified - PASSED
