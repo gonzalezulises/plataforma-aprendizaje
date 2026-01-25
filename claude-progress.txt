@@ -1,3 +1,44 @@
+## Session: 2026-01-25 (Coding Agent - Feature #165)
+
+### Feature #165: Deleted item removed from search index - VERIFIED AND PASSING
+
+All 5 verification steps passed:
+1. Create a searchable item - PASS
+   - Created course "TEST_165_SEARCHINDEX_DeleteTest" with unique identifier
+   - Published course with module and lesson to make it searchable
+2. Verify it appears in search - PASS
+   - Searched for "TEST_165_SEARCHINDEX" at /courses
+   - Result: "1 curso(s) encontrado(s)"
+   - Course displayed with full details in search results
+3. Delete the item - PASS
+   - Navigated to /admin/courses
+   - Clicked "Eliminar curso" button for course ID 31
+   - Confirmed deletion in modal dialog
+   - Status message: "Curso eliminado"
+4. Search again - PASS
+   - Navigated to /courses?search=TEST_165_SEARCHINDEX
+   - API called: GET /api/courses?search=TEST_165_SEARCHINDEX
+5. Verify item not found - PASS
+   - Result: "0 curso(s) encontrado(s)"
+   - "No hay cursos disponibles" message displayed
+   - API Response: {courses: Array(0)}
+
+### Technical Implementation
+- Course deletion physically removes the record from the courses table
+- Search query runs against courses table with is_published = 1 filter
+- Deleted courses are immediately removed from search results (no index lag)
+- Backend courses.js DELETE /api/courses/:id properly cascades deletion
+
+### Screenshots
+- feature-165-step2-course-in-search.png - Course appearing in search (1 result)
+- feature-165-step5-deleted-not-in-search.png - Course not found after deletion (0 results)
+
+### Console Errors: None
+
+[Coding] 2026-01-25 Feature #165 'Deleted item removed from search index' - VERIFIED AND PASSING
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #157)
 
 ### Completed Features
@@ -5305,3 +5346,25 @@ All 5 verification steps passed:
 
 [Testing] 2026-01-25 Feature #125 'Quiz questions load from database' regression test - PASSED (no regression found)
 
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #158 Regression Test)
+
+### Feature #158: Mark complete idempotent - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Navigate to a lesson - PASS (TAB1_SAVED_FIRST_ course, lesson 5)
+2. Click mark complete - PASS (clicked 'Marcar como completada' button)
+3. Click mark complete again - PASS (button replaced with static success message)
+4. Verify lesson marked complete once - PASS (page refresh shows Completada badge)
+5. Verify progress accurate - PASS (dashboard shows 100% completion)
+
+### Idempotency Implementation
+- UI Level: Button replaced with success message after click (prevents duplicate clicks)
+- Backend Level: Uses INSERT ON CONFLICT DO UPDATE with unique constraint on (user_id, lesson_id)
+- Original completed_at timestamp preserved on subsequent calls
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #158 'Mark complete idempotent' regression test - PASSED (no regression found)
