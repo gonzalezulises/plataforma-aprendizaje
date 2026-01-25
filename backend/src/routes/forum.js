@@ -350,8 +350,27 @@ router.delete('/thread/:threadId', async (req, res) => {
       return res.status(404).json({ error: 'Thread not found' });
     }
 
-    // Delete replies first (cascade should handle this but being explicit)
+    // Delete in proper order to maintain referential integrity:
+    // 1. Delete reply_votes for all replies in this thread
+    // 2. Delete replies
+    // 3. Delete thread
+    // Note: sql.js doesn't enforce foreign key cascades at runtime,
+    // so we handle cascade deletes explicitly
+
+    // Get all reply IDs for this thread first
+    const replies = queryAll(`SELECT id FROM forum_replies WHERE thread_id = ?`, [threadId]);
+    const replyIds = replies.map(r => r.id);
+
+    // Delete votes for these replies
+    if (replyIds.length > 0) {
+      const placeholders = replyIds.map(() => '?').join(',');
+      run(`DELETE FROM reply_votes WHERE reply_id IN (${placeholders})`, replyIds);
+    }
+
+    // Delete replies
     run(`DELETE FROM forum_replies WHERE thread_id = ?`, [threadId]);
+
+    // Delete the thread
     run(`DELETE FROM forum_threads WHERE id = ?`, [threadId]);
 
     res.json({

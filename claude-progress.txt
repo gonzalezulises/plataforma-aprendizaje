@@ -5447,3 +5447,115 @@ The cascade delete is implemented in forum.js DELETE endpoint (lines 342-384):
 - 88/248 features passing (35.5%)
 
 [Testing] 2026-01-25 Feature #164 'Deleted thread removes replies' verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #132 Regression Test)
+
+### Feature #132: Webinar list from database - REGRESSION TEST PASSED
+
+All 4 verification steps passed:
+1. Check database for scheduled webinars - PASS
+   - API /api/webinars returns webinars from database
+   - Found 6+ webinars with various statuses (completed, scheduled)
+2. Navigate to webinar section - PASS
+   - Successfully navigated to /webinars page
+   - Page displays with proper title and filters
+3. Verify webinars match database - PASS
+   - All webinars from database displayed in UI
+   - Titles, descriptions, registration counts match
+   - Status badges (Finalizado/Programado) correct
+4. Verify dates and times are correct - PASS
+   - Dates correctly formatted in Spanish locale
+   - Times correctly converted from UTC to local
+   - Duration displayed correctly
+
+### Additional Testing:
+- Calendar view: Works correctly (webinars grouped by date)
+- List view: Works correctly
+- Filters: All work (Todos, Proximos, Finalizados)
+
+### Screenshots:
+- feature-132-webinars-list.png - Webinars list view
+- feature-132-webinars-calendar-view.png - Calendar view
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #132 'Webinar list from database' regression test - PASSED (no regression found)
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #101 Regression Test)
+
+### Feature #101: Complete career path progression - REGRESSION TEST PASSED
+
+All 7 verification steps passed:
+1. View available career paths - PASS (3 paths displayed)
+2. Start a career path - PASS (Started Web3 Developer, toast shown)
+3. Complete first course in path - PASS (Python: Fundamentos 100%)
+4. Verify progress updates - PASS (Progress synced to 50%)
+5. Continue to next course - PASS (Navigated to Web3 y Solidity)
+6. Complete all courses - PASS (Python Developer path at 100%)
+7. Verify career path completion badge - PASS (Completado\! badge with star icon)
+
+### Screenshots
+- feature-101-step1-career-paths-list.png
+- feature-101-step2-started-career-path.png
+- feature-101-step4-progress-updated.png
+- feature-101-step5-career-paths-with-progress.png
+- feature-101-step7-completion-badge.png
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #101 'Complete career path progression' regression test - PASSED (no regression found)
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #168)
+
+### Feature #168: New course has sensible defaults - VERIFIED AND PASSING
+
+All 5 verification steps passed:
+1. Navigate to create course - PASS
+   - Successfully navigated to /admin/courses/new as instructor
+2. Observe default values - PASS
+   - Title: Empty (user must provide)
+   - Description: Empty (user must provide)
+   - Category: "Programacion" (sensible default)
+   - Level: "Principiante" (beginner default)
+   - is_premium: Unchecked (false)
+   - Duration: 0 hours
+3. Verify is_published defaults to false - PASS
+   - Backend code (courses.js line 248): is_published set to 0 on INSERT
+   - UI shows "Borrador" (Draft) badge after creation
+   - "Publicar Curso" button available (course not published)
+4. Verify level defaults to beginner or empty - PASS
+   - Level dropdown defaults to "Principiante" (beginner)
+   - Confirmed in both frontend and backend
+5. Verify is_premium defaults to false - PASS
+   - Premium checkbox is unchecked by default
+   - No "Premium" badge on created course
+
+### Code Review
+Frontend (CourseCreatorPage.jsx lines 34-41): level='Principiante', is_premium=false
+Backend (courses.js lines 226-248): level='Principiante', is_premium=false, is_published=0 on INSERT
+
+### Test Verification
+- Created test course "TEST_168_VERIFY_DEFAULTS"
+- Verified "Borrador" badge (is_published=false)
+- Verified "Principiante" badge (level=beginner)
+- Verified no "Premium" badge (is_premium=false)
+- Deleted test course after verification
+
+### Screenshots
+- feature-168-course-creation-defaults.png - Form with default values
+- feature-168-course-created-draft-status.png - Created course shows draft status
+- feature-168-course-preview-defaults-verified.png - Preview tab showing all defaults
+
+### Console Errors: None
+
+### Current Status
+- Feature #168 marked as PASSING
+- 90/248 features passing (36.3%)
+
+[Coding] 2026-01-25 Feature #168 'New course has sensible defaults' verified - PASSED

@@ -353,10 +353,23 @@ router.delete('/:id', (req, res) => {
       return res.status(404).json({ error: 'Webinar not found' });
     }
 
+    // Delete webinar reminder notifications for this webinar (Feature #167)
+    const deletedNotifications = run(`
+      DELETE FROM notifications
+      WHERE type = 'webinar_reminder'
+      AND json_extract(content, '$.webinar_id') = ?
+    `, [parseInt(id)]);
+
+    console.log(`[Webinars] Deleted ${deletedNotifications.changes || 0} reminder notifications for webinar ${id}`);
+
     run('DELETE FROM webinar_registrations WHERE webinar_id = ?', [id]);
     run('DELETE FROM webinars WHERE id = ?', [id]);
 
-    res.json({ success: true, message: 'Webinar deleted' });
+    res.json({
+      success: true,
+      message: 'Webinar deleted',
+      reminders_cancelled: deletedNotifications.changes || 0
+    });
   } catch (error) {
     console.error('[Webinars] Error deleting webinar:', error);
     res.status(500).json({ error: 'Failed to delete webinar' });
@@ -403,6 +416,26 @@ router.post('/:id/register', (req, res) => {
       VALUES (?, ?, datetime('now'))
     `, [id, userId]);
 
+    // Create webinar reminder notification for the user (Feature #167)
+    const reminderContent = JSON.stringify({
+      webinar_id: parseInt(id),
+      webinar_title: webinar.title,
+      scheduled_at: webinar.scheduled_at,
+      meet_link: webinar.meet_link
+    });
+
+    run(`
+      INSERT INTO notifications (user_id, type, title, message, content, is_read, created_at)
+      VALUES (?, 'webinar_reminder', ?, ?, ?, 0, datetime('now'))
+    `, [
+      userId,
+      `Recordatorio: ${webinar.title}`,
+      `Te has inscrito al webinar "${webinar.title}". Fecha: ${new Date(webinar.scheduled_at).toLocaleString('es-ES')}`,
+      reminderContent
+    ]);
+
+    console.log(`[Webinars] Created reminder notification for user ${userId} for webinar ${id}`);
+
     res.json({ success: true, message: 'Registered successfully' });
   } catch (error) {
     console.error('[Webinars] Error registering for webinar:', error);
@@ -423,6 +456,16 @@ router.delete('/:id/register', (req, res) => {
     const userId = req.session.user.id;
 
     run('DELETE FROM webinar_registrations WHERE webinar_id = ? AND user_id = ?', [id, userId]);
+
+    // Also delete the user's reminder notification for this webinar (Feature #167)
+    run(`
+      DELETE FROM notifications
+      WHERE user_id = ?
+      AND type = 'webinar_reminder'
+      AND json_extract(content, '$.webinar_id') = ?
+    `, [userId, parseInt(id)]);
+
+    console.log(`[Webinars] User ${userId} unregistered from webinar ${id}, reminder notification removed`);
 
     res.json({ success: true, message: 'Unregistered successfully' });
   } catch (error) {
