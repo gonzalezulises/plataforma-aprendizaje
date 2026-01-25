@@ -110,6 +110,46 @@ function CourseCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [apiResponseData, setApiResponseData] = useState(null); // Store raw API response for verification
+  const [availableLevels, setAvailableLevels] = useState([]); // Dynamic levels from database
+  const [availableCategories, setAvailableCategories] = useState([]); // Dynamic categories from database (Feature #120)
+
+  // Fetch available categories from database (Feature #120)
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${CATALOG_API_URL}/courses/categories`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[CourseCatalog] Available categories from database:', data.categories);
+          setAvailableCategories(data.categories || []);
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        // Fallback to default categories if API fails
+        setAvailableCategories(['Programacion', 'Data Science', 'IA / ML', 'Web3', 'Bases de Datos']);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch available levels from database (Feature #121)
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const response = await fetch(`${CATALOG_API_URL}/courses/levels`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[CourseCatalog] Available levels from database:', data.levels);
+          setAvailableLevels(data.levels || []);
+        }
+      } catch (err) {
+        console.error('Error fetching levels:', err);
+        // Fallback to default levels if API fails
+        setAvailableLevels(['Principiante', 'Intermedio', 'Avanzado']);
+      }
+    };
+    fetchLevels();
+  }, []);
 
   // Fetch courses from API with search and filters
   useEffect(() => {
@@ -259,11 +299,9 @@ function CourseCatalog() {
             data-testid="category-filter"
           >
             <option value="">Todas las categorias</option>
-            <option value="Programacion">Programacion</option>
-            <option value="Data Science">Data Science</option>
-            <option value="IA / ML">IA / ML</option>
-            <option value="Web3">Web3</option>
-            <option value="Bases de Datos">Bases de Datos</option>
+            {availableCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
           </select>
           <select
             value={levelFilter}
@@ -272,9 +310,9 @@ function CourseCatalog() {
             data-testid="level-filter"
           >
             <option value="">Todos los niveles</option>
-            <option value="Principiante">Principiante</option>
-            <option value="Intermedio">Intermedio</option>
-            <option value="Avanzado">Avanzado</option>
+            {availableLevels.map(level => (
+              <option key={level} value={level}>{level}</option>
+            ))}
           </select>
           <select
             value={priceFilter}

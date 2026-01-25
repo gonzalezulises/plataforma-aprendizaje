@@ -36,6 +36,23 @@ function requireInstructor(req, res, next) {
 }
 
 /**
+ * GET /api/courses/categories - Get all distinct categories from courses
+ */
+router.get('/categories', (req, res) => {
+  try {
+    // Get distinct categories from published courses
+    const categories = queryAll(
+      'SELECT DISTINCT category FROM courses WHERE is_published = 1 AND category IS NOT NULL AND category != "" ORDER BY category'
+    );
+
+    res.json({ categories: categories.map(c => c.category) });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+/**
  * GET /api/courses - List all published courses (public) or all courses (instructor)
  */
 router.get('/', (req, res) => {
@@ -78,6 +95,28 @@ router.get('/', (req, res) => {
   } catch (error) {
     console.error('Error fetching courses:', error);
     res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+/**
+ * GET /api/courses/levels - Get distinct course levels from database
+ * Returns levels that exist in published courses for filter dropdown
+ */
+router.get('/levels', (req, res) => {
+  try {
+    // Get distinct levels from published courses only
+    const levels = queryAll(
+      'SELECT DISTINCT level FROM courses WHERE is_published = 1 AND level IS NOT NULL AND level != "" ORDER BY level',
+      []
+    );
+
+    // Extract level values as array
+    const levelValues = levels.map(row => row.level);
+
+    res.json({ levels: levelValues });
+  } catch (error) {
+    console.error('Error fetching course levels:', error);
+    res.status(500).json({ error: 'Failed to fetch course levels' });
   }
 });
 

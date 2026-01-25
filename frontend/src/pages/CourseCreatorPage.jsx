@@ -119,7 +119,7 @@ export default function CourseCreatorPage() {
   }, [authLoading, isAuthenticated, user, navigate]);
 
   // Save course details
-  const saveCourse = async () => {
+  const saveCourse = async (overrideVersion = null) => {
     if (!courseForm.title.trim()) {
       toast.error('El titulo es obligatorio');
       return null;
@@ -133,7 +133,7 @@ export default function CourseCreatorPage() {
 
       // Include version for optimistic locking when updating
       const bodyData = course
-        ? { ...courseForm, version: courseVersion }
+        ? { ...courseForm, version: overrideVersion || courseVersion }
         : courseForm;
 
       const response = await fetch(url, {
@@ -631,7 +631,7 @@ export default function CourseCreatorPage() {
               {/* Actions */}
               <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={saveCourse}
+                  onClick={() => saveCourse()}
                   disabled={isSaving}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                 >
@@ -1254,10 +1254,12 @@ export default function CourseCreatorPage() {
               </button>
               <button
                 onClick={async () => {
-                  setCourseVersion(conflictData.currentVersion);
+                  const newVersion = conflictData.currentVersion;
                   setShowConflictModal(false);
                   setConflictData(null);
-                  setTimeout(() => saveCourse(), 100);
+                  setCourseVersion(newVersion);
+                  // Pass version directly to avoid React state timing issues
+                  saveCourse(newVersion);
                 }}
                 className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
               >
