@@ -397,17 +397,16 @@ export function queryOne(sql, params = []) {
  */
 export function run(sql, params = []) {
   db.run(sql, params);
-  // Get last_insert_rowid BEFORE saveDatabase to ensure it's still valid
+  saveDatabase();
+  // Get last_insert_rowid using db.prepare for reliable results
   const stmt = db.prepare('SELECT last_insert_rowid() as id');
   let lastId = null;
   if (stmt.step()) {
     const row = stmt.getAsObject();
-    // Convert BigInt to Number if necessary
-    lastId = typeof row.id === 'bigint' ? Number(row.id) : row.id;
+    lastId = row.id;
   }
   stmt.free();
   const changes = db.getRowsModified();
-  saveDatabase();
   return { lastInsertRowid: lastId, changes };
 }
 

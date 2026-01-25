@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 /**
  * CodeChallengePage - Full coding challenge workflow
@@ -99,7 +99,10 @@ function CodeChallengePage() {
       });
 
       const data = await response.json();
-      if (data.error) {
+      // Feature #108: Handle timeout from infinite loop or long-running code
+      if (data.timeout) {
+        setOutput(`⏱️ ${data.timeout_message}\n\n${data.container_cleaned ? '✅ Contenedor limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo.' : ''}`);
+      } else if (data.error) {
         setOutput(`Error: ${data.error}`);
       } else {
         setOutput(data.output || '(No output)');
