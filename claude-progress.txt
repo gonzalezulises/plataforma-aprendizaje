@@ -4019,3 +4019,60 @@ Console errors: None critical (only expected WebSocket reconnection attempts dur
 - Passing features: 69/248 (27.8%)
 
 [Testing] 2026-01-25 Feature #134 'Real-time updates via WebSocket' verified - PASSED
+[Testing] 2026-01-25 Feature #8 'User can access login page' verified - PASSED
+
+Verification Steps:
+1. Navigate to home page - PASS
+2. Click the login button - PASS (navigated to /login)
+3. Verify redirect to rizo.ma OAuth flow - PASS (OAuth button present, flow works)
+4. Verify return URL is properly configured - PASS (returned to /dashboard after login)
+
+Screenshots: feature-8-login-page.png, feature-8-oauth-login-success.png
+Console errors: Only expected 401s (unauthenticated /api/auth/me requests)
+
+[Testing] Session complete - Feature #8 verified, no regression found
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #147)
+
+### Completed Features
+- Feature #147: Deep link to specific quiz question - VERIFIED AND PASSING
+  - All 3 verification steps verified via browser automation:
+    1. Navigate to quiz with question index in URL - PASS
+       - When starting quiz at /quiz/1, URL automatically updates to /quiz/1?q=1
+       - Console log confirms: "[QuizPage] Deep link: navigating to question...URL"
+    2. Verify correct question is displayed - PASS
+       - URL ?q=5 correctly displays "Pregunta 5 de 10"
+       - Question content matches (string concatenation question)
+    3. Verify navigation between questions updates URL - PASS
+       - "Siguiente →" button: ?q=1 → ?q=2
+       - Question dot click: ?q=2 → ?q=5
+       - URL always reflects current question (1-based index)
+
+### Implementation Details
+- Added useSearchParams hook from react-router-dom to QuizPage.jsx
+- Added useEffect to sync URL to currentQuestion on mount (deep link support)
+- Added useEffect to sync currentQuestion to URL on state change
+- Modified handleStartQuiz to check URL param and navigate to specified question
+- Modified handleRetry to reset URL params
+- URL uses 1-based index for user-friendliness (?q=1 = question 1)
+
+### Technical Details
+- Deep linking works when quiz is already started and in progress
+- Sharing a URL with ?q=N will prompt to start quiz, then navigate to question N
+- Navigation between questions (Next, Previous, dot clicks) all update URL
+- URL updates use replace: true to avoid polluting browser history
+
+### Screenshots
+- feature-147-step3-url-updates-q5.png - Quiz at question 5 with URL ?q=5
+
+### Console Errors
+- Only expected errors (max attempts reached for test user - not related to feature)
+
+### Current Status
+- Feature #147 marked as PASSING
+- Commit: a222623
+
+[Testing] 2026-01-25 Feature #147 "Deep link to specific quiz question" verified - PASSED
