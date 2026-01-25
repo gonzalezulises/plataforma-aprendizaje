@@ -270,6 +270,21 @@ function CourseCatalog() {
     updateURLParams({ search: '' });
   };
 
+  // Handle resetting all filters (Feature #171)
+  const handleResetFilters = useCallback(() => {
+    // Clear all filter states
+    setCategoryFilter('');
+    setLevelFilter('');
+    setPriceFilter('');
+    setSearchInput('');
+    setSearchQuery('');
+    // Clear all URL parameters
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
+
+  // Check if any filters are applied (Feature #171)
+  const hasActiveFilters = categoryFilter || levelFilter || priceFilter || searchQuery;
+
   // No client-side filtering - API returns pre-filtered results
   // This ensures UI displays exactly what the API returns (Feature #119)
   const filteredCourses = courses;
@@ -368,6 +383,20 @@ function CourseCatalog() {
             <option value="free">Gratuitos</option>
             <option value="premium">Premium</option>
           </select>
+          {/* Reset Filters Button (Feature #171) */}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-medium rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center gap-2"
+              data-testid="reset-filters-button"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Restablecer filtros
+            </button>
+          )}
         </div>
 
         {/* Loading State */}

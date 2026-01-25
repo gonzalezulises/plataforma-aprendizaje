@@ -354,11 +354,17 @@ router.delete('/:id', (req, res) => {
     }
 
     // Delete webinar reminder notifications for this webinar (Feature #167)
+    // Use LIKE pattern to match webinar_id in JSON content since json_extract comparison
+    // can have type issues with sql.js. The pattern matches "webinar_id":N, or "webinar_id":N}
+    const webinarIdInt = parseInt(id);
     const deletedNotifications = run(`
       DELETE FROM notifications
       WHERE type = 'webinar_reminder'
-      AND json_extract(content, '$.webinar_id') = ?
-    `, [parseInt(id)]);
+      AND (
+        content LIKE '%"webinar_id":' || ? || ',%'
+        OR content LIKE '%"webinar_id":' || ? || '}'
+      )
+    `, [webinarIdInt, webinarIdInt]);
 
     console.log(`[Webinars] Deleted ${deletedNotifications.changes || 0} reminder notifications for webinar ${id}`);
 
@@ -458,12 +464,18 @@ router.delete('/:id/register', (req, res) => {
     run('DELETE FROM webinar_registrations WHERE webinar_id = ? AND user_id = ?', [id, userId]);
 
     // Also delete the user's reminder notification for this webinar (Feature #167)
+    // Use LIKE pattern to match webinar_id in JSON content since json_extract comparison
+    // can have type issues with sql.js
+    const webinarIdInt = parseInt(id);
     run(`
       DELETE FROM notifications
       WHERE user_id = ?
       AND type = 'webinar_reminder'
-      AND json_extract(content, '$.webinar_id') = ?
-    `, [userId, parseInt(id)]);
+      AND (
+        content LIKE '%"webinar_id":' || ? || ',%'
+        OR content LIKE '%"webinar_id":' || ? || '}'
+      )
+    `, [userId, webinarIdInt, webinarIdInt]);
 
     console.log(`[Webinars] User ${userId} unregistered from webinar ${id}, reminder notification removed`);
 
@@ -622,4 +634,4 @@ router.put('/:id/status', (req, res) => {
 });
 
 export default router;
-// trigger reload
+// trigger reload - fix for Feature #167 json_extract issue
