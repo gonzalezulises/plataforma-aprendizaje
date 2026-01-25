@@ -58,6 +58,9 @@ export default function CourseCreatorPage() {
   const [lessonForm, setLessonForm] = useState({ title: '', description: '', content_type: 'text', duration_minutes: 15 });
   const [contentForm, setContentForm] = useState({ type: 'text', content: { text: '' } });
 
+  // Field-level errors for unique validation (Feature #191)
+  const [fieldErrors, setFieldErrors] = useState({ title: '' });
+
   // AI Quiz Generator modal state
   const [showAIQuizModal, setShowAIQuizModal] = useState(false);
   const [aiQuizLessonId, setAIQuizLessonId] = useState(null);
@@ -151,7 +154,11 @@ export default function CourseCreatorPage() {
 
   // Save course details
   const saveCourse = async (overrideVersion = null) => {
+    // Clear field errors on submit attempt
+    setFieldErrors({ title: '' });
+
     if (!courseForm.title.trim()) {
+      setFieldErrors({ title: 'El titulo es obligatorio' });
       toast.error('El titulo es obligatorio');
       return null;
     }
@@ -174,12 +181,23 @@ export default function CourseCreatorPage() {
         body: JSON.stringify(bodyData)
       });
 
-      // Handle 409 Conflict - concurrent edit detected
+      // Handle 409 Conflict - could be concurrent edit OR unique constraint violation
       if (response.status === 409) {
         const conflictResponse = await response.json();
-        setConflictData(conflictResponse.conflict);
-        setShowConflictModal(true);
-        return null;
+
+        // Feature #191: Handle unique constraint violation (field-level error)
+        if (conflictResponse.field === 'title') {
+          setFieldErrors({ title: conflictResponse.message });
+          toast.error('Ya existe un curso con un titulo similar');
+          return null;
+        }
+
+        // Handle concurrent edit conflict
+        if (conflictResponse.conflict) {
+          setConflictData(conflictResponse.conflict);
+          setShowConflictModal(true);
+          return null;
+        }
       }
 
 
@@ -578,10 +596,28 @@ export default function CourseCreatorPage() {
                 <input
                   type="text"
                   value={courseForm.title}
-                  onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  onChange={(e) => {
+                    setCourseForm({ ...courseForm, title: e.target.value });
+                    // Clear error when user starts typing (Feature #191)
+                    if (fieldErrors.title) {
+                      setFieldErrors({ ...fieldErrors, title: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    fieldErrors.title
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   placeholder="Ej: Python desde Cero"
+                  aria-invalid={!!fieldErrors.title}
+                  aria-describedby={fieldErrors.title ? 'title-error' : undefined}
                 />
+                {fieldErrors.title && (
+                  <p id="title-error" className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-start gap-1">
+                    <span className="flex-shrink-0">⚠</span>
+                    <span>{fieldErrors.title}</span>
+                  </p>
+                )}
               </div>
 
               {/* Description */}

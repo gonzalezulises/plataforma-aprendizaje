@@ -2,9 +2,14 @@ import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 import { parseSearchQuery } from '../utils/searchUtils.js';
 
-console.log('Courses routes loading... (Feature #179 - 2026-01-25T20:41:53.023Z)');
+console.log('Courses routes loading... (Feature #191 - UNIQUE_VALIDATION - 2026-01-25T21:42:00.000Z)');
 
 const router = express.Router();
+
+// Feature #191 check endpoint - to verify code version
+router.get('/feature-check', (req, res) => {
+  res.json({ feature: 191, name: 'Unique value validation', active: true });
+});
 
 // Helper to generate slug from title
 function generateSlug(title) {
@@ -280,20 +285,34 @@ router.post('/', requireInstructor, (req, res) => {
     const now = new Date().toISOString();
     const instructorId = req.session.user.id;
 
-    // Check if slug already exists
-    const existing = queryOne('SELECT id FROM courses WHERE slug = ?', [slug]);
-    const finalSlug = existing ? `${slug}-${Date.now()}` : slug;
+    // Check if slug already exists (Feature #191 - unique validation)
+    const existing = queryOne('SELECT id, title FROM courses WHERE slug = ?', [slug]);
+    if (existing) {
+      return res.status(409).json({
+        error: 'Ya existe un curso con un titulo similar',
+        field: 'title',
+        message: `El titulo "${title}" genera un URL que ya esta en uso por el curso "${existing.title}". Por favor elige un titulo diferente.`,
+        existingSlug: slug,
+        existingCourseTitle: existing.title
+      });
+    }
 
-    console.log('Creating course with slug:', finalSlug);
+    console.log('Creating course with slug:', slug);
+
+    // Ensure all values are defined (sql.js doesn't accept undefined)
+    const safeDescription = description || null;
+    const safeCategory = category || 'Programacion';
+    const safeThumbnailUrl = thumbnail_url || null;
+    const safeDurationHours = duration_hours || 0;
 
     run(
       `INSERT INTO courses (title, slug, description, instructor_id, category, tags, level, is_premium, is_published, thumbnail_url, duration_hours, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-      [title, finalSlug, description, instructorId, category, JSON.stringify(tags), level, is_premium ? 1 : 0, thumbnail_url, duration_hours, now, now]
+      [title, slug, safeDescription, instructorId, safeCategory, JSON.stringify(tags), level, is_premium ? 1 : 0, safeThumbnailUrl, safeDurationHours, now, now]
     );
 
     // Fetch by slug since lastInsertRowid may not work reliably with sql.js
-    const course = queryOne('SELECT * FROM courses WHERE slug = ?', [finalSlug]);
+    const course = queryOne('SELECT * FROM courses WHERE slug = ?', [slug]);
     console.log('Fetched course after insert:', course);
     res.status(201).json({ course });
   } catch (error) {
@@ -1144,3 +1163,4 @@ export default router;
 // Trigger reload do., 25 de ene. de 2026 15:01:34
 
 // RELOAD_MARKER: 2026-01-25T21:16:00.000Z
+// Feature #191: Unique value validation - 2026-01-25T16:39:21-05:00
