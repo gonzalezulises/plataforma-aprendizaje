@@ -6180,3 +6180,57 @@ Backend (courses.js):
 ### Screenshots:
 - feature-110-deleted-lesson-404.png
 
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #177)
+
+### Feature #177: Whitespace-only search handled - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Enter only spaces in search - PASS
+   - Entered "     " (5 spaces) in search input
+   - Also tested with tabs and mixed whitespace
+2. Submit search - PASS
+   - Clicked Buscar button
+3. Verify treated as empty or shows all - PASS
+   - Before fix: 0 results, showed "No hay cursos disponibles"
+   - After fix: 11 results displayed (all courses)
+   - No "Resultados para:" message (correctly treated as empty)
+4. Verify no error occurs - PASS
+   - No JavaScript errors in console
+   - Only expected 401 from auth check (user not logged in)
+
+### Bug Fixed
+The original code passed whitespace-only input directly to the search API, which caused:
+- API received search param with spaces
+- Database LIKE query returned 0 results
+- User saw "No hay cursos disponibles"
+
+### Implementation
+Frontend (CourseCatalogPage.jsx):
+- Modified handleSearchSubmit() to use .trim() on search input
+- Whitespace-only searches are now treated as empty
+- Also updates input field to show trimmed value
+- Empty trimmed value clears the URL search param
+
+### Additional Testing
+- Tested with tabs and mixed whitespace - PASS
+- Tested search with leading/trailing whitespace ("   Python   ") - PASS
+  - Correctly trimmed to "Python" and returned 2 results
+
+### Screenshots
+- feature-177-whitespace-search-bug.png - Original bug showing 0 results
+- feature-177-whitespace-search-fixed.png - Fixed, showing all 11 courses
+- feature-177-search-with-content-trimmed.png - Valid search with trimmed whitespace
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to search functionality
+
+### Current Status
+- Feature #177 marked as PASSING
+- 98/248 features passing (39.5%)
+
+[Coding] 2026-01-25 Feature #177 'Whitespace-only search handled' verified - PASSED
+
