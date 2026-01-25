@@ -142,12 +142,11 @@ export default function CourseCreatorPage() {
       navigate('/login');
       return;
     }
-    // In development, allow any authenticated user to access course creator for testing
-    // In production, uncomment the role check below
-    // if (!authLoading && user && user.role !== 'instructor_admin') {
-    //   toast.error('Solo los instructores pueden crear cursos');
-    //   navigate('/dashboard');
-    // }
+    // Role-based access control: Only instructor_admin can create/edit courses
+    if (!authLoading && user && user.role !== 'instructor_admin') {
+      toast.error('Solo los instructores pueden crear cursos');
+      navigate('/dashboard');
+    }
   }, [authLoading, isAuthenticated, user, navigate]);
 
   // Save course details

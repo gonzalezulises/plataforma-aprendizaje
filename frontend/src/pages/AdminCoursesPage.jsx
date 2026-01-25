@@ -13,18 +13,17 @@ export default function AdminCoursesPage() {
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Redirect non-instructors (disabled in dev mode for testing)
+  // Redirect non-instructors - security check for admin access
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/login');
       return;
     }
-    // In development, allow any authenticated user to access admin pages for testing
-    // In production, uncomment the role check below
-    // if (!authLoading && user && user.role !== 'instructor_admin') {
-    //   toast.error('Solo los instructores pueden acceder a esta pagina');
-    //   navigate('/dashboard');
-    // }
+    // Role-based access control: Only instructor_admin can access admin pages
+    if (!authLoading && user && user.role !== 'instructor_admin') {
+      toast.error('Solo los instructores pueden acceder a esta pagina');
+      navigate('/dashboard');
+    }
   }, [authLoading, isAuthenticated, user, navigate]);
 
   // Load courses
