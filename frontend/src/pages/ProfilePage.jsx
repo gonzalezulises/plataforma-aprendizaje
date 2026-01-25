@@ -59,7 +59,7 @@ function ProfilePage() {
         }
 
         const data = await response.json();
-        setPreferences(data);
+        setPreferences(data.preferences || data);
       } catch (err) {
         console.error('Error fetching preferences:', err);
         setError(err.message);
@@ -87,7 +87,7 @@ function ProfilePage() {
       }
 
       const data = await response.json();
-      setPreferences(data);
+      setPreferences(data.preferences || data);
       toast.success('Preferencias de notificacion inicializadas');
     } catch (err) {
       console.error('Error initializing defaults:', err);
@@ -130,7 +130,7 @@ function ProfilePage() {
       }
 
       const data = await response.json();
-      setPreferences(data);
+      setPreferences(data.preferences || data);
       toast.success('Preferencias actualizadas');
     } catch (err) {
       console.error('Error saving preferences:', err);
