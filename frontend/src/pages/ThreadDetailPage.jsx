@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
+import useWebSocket from '../hooks/useWebSocket';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -15,6 +16,16 @@ function ThreadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [newReply, setNewReply] = useState('');
   const [course, setCourse] = useState(null);
+
+  // WebSocket for real-time updates
+  const ws = useWebSocket();
+  const [wsStatus, setWsStatus] = useState('disconnected');
+  const repliesRef = useRef(replies);
+
+  // Keep repliesRef in sync with replies state
+  useEffect(() => {
+    repliesRef.current = replies;
+  }, [replies]);
 
   // Network-aware form submission
   const {
@@ -46,6 +57,59 @@ function ThreadDetailPage() {
   useEffect(() => {
     fetchThread();
   }, [threadId]);
+
+  // WebSocket connection and subscription
+  useEffect(() => {
+    if (!threadId) return;
+
+    // Connect to WebSocket
+    ws.connect();
+
+    // Subscribe to thread updates when connected
+    const checkAndSubscribe = () => {
+      if (ws.isConnected) {
+        ws.subscribe(threadId);
+        setWsStatus('connected');
+      }
+    };
+
+    // Check connection status periodically until connected
+    const connectionCheck = setInterval(() => {
+      if (ws.isConnected) {
+        checkAndSubscribe();
+        clearInterval(connectionCheck);
+      }
+    }, 200);
+
+    // Set up message handler for new replies
+    const cleanup = ws.onMessage('new_reply', (data) => {
+      if (data.threadId === parseInt(threadId) && data.reply) {
+        // Check if we already have this reply (avoid duplicates from own posts)
+        const existingReply = repliesRef.current.find(r => r.id === data.reply.id);
+        if (!existingReply) {
+          setReplies(prev => [...prev, data.reply]);
+          setThread(prev => prev ? { ...prev, reply_count: (prev.reply_count || 0) + 1 } : prev);
+          toast.success('Nueva respuesta recibida', {
+            icon: '💬',
+            duration: 3000
+          });
+        }
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(connectionCheck);
+      ws.unsubscribe(threadId);
+      cleanup();
+      setWsStatus('disconnected');
+    };
+  }, [threadId, ws.isConnected]);
+
+  // Update status when connection changes
+  useEffect(() => {
+    setWsStatus(ws.isConnected ? 'connected' : 'disconnected');
+  }, [ws.isConnected]);
 
   useEffect(() => {
     if (thread?.course_id) {
@@ -314,9 +378,19 @@ function ThreadDetailPage() {
 
         {/* Replies Section */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {replies.length} {replies.length === 1 ? 'Respuesta' : 'Respuestas'}
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {replies.length} {replies.length === 1 ? 'Respuesta' : 'Respuestas'}
+            </h2>
+
+            {/* WebSocket connection status indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${wsStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className={`${wsStatus === 'connected' ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                {wsStatus === 'connected' ? 'En vivo' : 'Sin conexion'}
+              </span>
+            </div>
+          </div>
 
           {replies.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">

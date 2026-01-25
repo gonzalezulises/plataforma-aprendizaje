@@ -339,7 +339,30 @@ function broadcastToThread(threadId, message) {
   return sentCount;
 }
 
-// Export broadcast function for use in routes
+// Listen to the WebSocket event bus for thread broadcasts
+wsEventBus.on('broadcast:thread', ({ threadId, message }) => {
+  broadcastToThread(threadId, message);
+});
+
+// Listen for global broadcasts
+wsEventBus.on('broadcast:global', (message) => {
+  const messageStr = JSON.stringify(message);
+  let sentCount = 0;
+
+  for (const client of wss.clients) {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      try {
+        client.send(messageStr);
+        sentCount++;
+      } catch (e) {
+        console.error('[WebSocket] Error sending global broadcast:', e);
+      }
+    }
+  }
+  console.log(`[WebSocket] Global broadcast sent to ${sentCount} clients`);
+});
+
+// Export broadcast function for use in routes (deprecated - use wsEventBus instead)
 export { broadcastToThread };
 
 // Start server
@@ -359,3 +382,4 @@ export default app;
 // webinars routes added - feature #96
 // Trigger reload do., 25 de ene. de 2026  4:53:04
 
+// Reload trigger do., 25 de ene. de 2026  9:38:08
