@@ -1,24 +1,203 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
+
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
 
 function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const menuRef = useRef(null);
+  const notificationsRef = useRef(null);
 
   const navLinks = [
     { path: '/courses', label: 'Cursos' },
     { path: '/dashboard', label: 'Dashboard' },
   ];
 
-  // Close menu when clicking outside
+  // Fetch unread notification count
+  const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const response = await fetch(`${API_URL}/api/notifications/unread/count`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  }, [isAuthenticated]);
+
+  // Fetch all notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setLoadingNotifications(true);
+    try {
+      const response = await fetch(`${API_URL}/api/notifications`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [isAuthenticated]);
+
+  // Mark notification as read
+  const markAsRead = async (notificationId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setNotifications(prev =>
+          prev.map(n => n.id === notificationId ? { ...n, is_read: 1 } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/notifications/read-all`, {
+        method: 'PUT',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  // Get notification link based on type and content
+  const getNotificationLink = (notification) => {
+    const content = notification.content || {};
+    switch (notification.type) {
+      case 'feedback_received':
+        return content.submission_id ? `/feedback/${content.submission_id}` : '/dashboard';
+      case 'badge_earned':
+        return content.career_path_slug ? `/career-paths/${content.career_path_slug}` : '/career-paths';
+      case 'course_completed':
+        return '/certificates';
+      case 'new_comment':
+        return content.lesson_id ? `/course/${content.course_slug}/lesson/${content.lesson_id}` : '/dashboard';
+      case 'webinar_reminder':
+        return '/webinars';
+      case 'enrollment_confirmed':
+        return content.course_slug ? `/course/${content.course_slug}` : '/dashboard';
+      default:
+        return '/dashboard';
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = async (notification) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    setShowNotifications(false);
+    const link = getNotificationLink(notification);
+    navigate(link);
+  };
+
+  // Get notification icon based on type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'feedback_received':
+        return (
+          <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'badge_earned':
+        return (
+          <svg className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        );
+      case 'course_completed':
+        return (
+          <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+        );
+      case 'webinar_reminder':
+        return (
+          <svg className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        );
+    }
+  };
+
+  // Format relative time
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    if (diffHours < 24) return `Hace ${diffHours}h`;
+    if (diffDays < 7) return `Hace ${diffDays}d`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  };
+
+  // Fetch unread count on mount and when auth changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, fetchUnreadCount]);
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotifications();
+    }
+  }, [showNotifications, fetchNotifications]);
+
+  // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowUserMenu(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
       }
     }
 
@@ -114,14 +293,116 @@ function Navbar() {
             ))}
           </div>
 
-          {/* Right side - Login/Profile */}
+          {/* Right side - Notifications + Login/Profile */}
           <div className="flex items-center space-x-4">
             {isLoading ? (
               // Loading skeleton
               <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
             ) : isAuthenticated && user ? (
-              // Authenticated user menu
-              <div className="relative" ref={menuRef}>
+              <>
+                {/* Notifications Bell */}
+                <div className="relative" ref={notificationsRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg"
+                    aria-label="Notificaciones"
+                    aria-expanded={showNotifications}
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {/* Unread badge */}
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notifications Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[70vh] overflow-hidden flex flex-col">
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                          Notificaciones
+                        </h3>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllAsRead}
+                            className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                          >
+                            Marcar todo como leido
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Notifications List */}
+                      <div className="overflow-y-auto flex-1">
+                        {loadingNotifications ? (
+                          <div className="p-8 text-center">
+                            <div className="animate-spin h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full mx-auto" />
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                            <svg className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <p className="text-sm">No tienes notificaciones</p>
+                          </div>
+                        ) : (
+                          notifications.map((notification) => (
+                            <button
+                              key={notification.id}
+                              onClick={() => handleNotificationClick(notification)}
+                              className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left ${
+                                !notification.is_read ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                              }`}
+                            >
+                              <div className="flex-shrink-0 mt-0.5">
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm ${!notification.is_read ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                  {notification.title}
+                                </p>
+                                {notification.message && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                  {formatRelativeTime(notification.created_at)}
+                                </p>
+                              </div>
+                              {!notification.is_read && (
+                                <div className="flex-shrink-0 mt-1">
+                                  <span className="h-2 w-2 bg-primary-500 rounded-full inline-block" />
+                                </div>
+                              )}
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      {notifications.length > 0 && (
+                        <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+                          <Link
+                            to="/notifications"
+                            onClick={() => setShowNotifications(false)}
+                            className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                          >
+                            Ver todas las notificaciones
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Authenticated user menu */}
+                <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 rounded-full"
@@ -215,6 +496,7 @@ function Navbar() {
                   </div>
                 )}
               </div>
+              </>
             ) : (
               // Not authenticated - show login link
               <Link

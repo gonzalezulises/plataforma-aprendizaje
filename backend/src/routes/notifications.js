@@ -118,4 +118,67 @@ router.put('/read-all', (req, res) => {
   }
 });
 
+/**
+ * Create a new notification (for testing and internal use)
+ */
+router.post('/create', (req, res) => {
+  try {
+    const userId = req.session?.user?.id || 'test-user';
+    const { type, title, message, content } = req.body;
+
+    if (!type || !title) {
+      return res.status(400).json({ error: 'type and title are required' });
+    }
+
+    const result = run(
+      `INSERT INTO notifications (user_id, type, title, message, content, is_read, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, datetime('now'))`,
+      [userId, type, title, message || '', JSON.stringify(content || {})]
+    );
+
+    res.status(201).json({
+      success: true,
+      notification: {
+        id: result.lastInsertRowid,
+        user_id: userId,
+        type,
+        title,
+        message,
+        content: content || {},
+        is_read: 0
+      }
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    res.status(500).json({ error: 'Failed to create notification' });
+  }
+});
+
+/**
+ * Delete a notification
+ */
+router.delete('/:id', (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.session?.user?.id || 'test-user';
+
+    // Verify the notification belongs to this user
+    const notification = queryOne(
+      `SELECT * FROM notifications WHERE id = ? AND user_id = ?`,
+      [notificationId, userId]
+    );
+
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    run(`DELETE FROM notifications WHERE id = ?`, [notificationId]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
 export default router;
