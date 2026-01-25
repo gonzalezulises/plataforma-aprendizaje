@@ -1,6 +1,6 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
-import { detectInfiniteLoop, executeWithTimeout } from './challenges-timeout.js';
+import { detectInfiniteLoop, detectMemoryOveruse, executeWithTimeout } from './challenges-timeout.js';
 
 const router = express.Router();
 
@@ -426,9 +426,11 @@ router.post('/:id/run', async (req, res) => {
       error: result.error,
       timeout: result.timeout || false,
       timeout_message: result.timeout_message || null,
+      memory_exceeded: result.memory_exceeded || false,
+      memory_error_message: result.memory_error_message || null,
       container_cleaned: result.container_cleaned || false,
       execution_time_ms: result.execution_time_ms,
-      success: !result.error && !result.timeout
+      success: !result.error && !result.timeout && !result.memory_exceeded
     });
   } catch (error) {
     console.error('Error running code:', error);
@@ -628,6 +630,22 @@ async function executeCode(code, language, timeoutSeconds = 30) {
   // For development, simulate Python execution
   if (language === 'python') {
     try {
+      // Feature #116: Check for memory overuse patterns BEFORE execution
+      const memoryResult = detectMemoryOveruse(code);
+      if (memoryResult.isMemoryOveruse) {
+        // Simulate brief execution time before memory error (max 1 second)
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000, timeoutMs)));
+        return {
+          output: '',
+          error: null,
+          timeout: false,
+          memory_exceeded: true,
+          memory_error_message: memoryResult.message,
+          execution_time_ms: 1000,
+          container_cleaned: true
+        };
+      }
+
       // Check for infinite loop patterns BEFORE execution
       const infiniteLoopResult = detectInfiniteLoop(code);
       if (infiniteLoopResult.isInfiniteLoop) {

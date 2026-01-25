@@ -32,6 +32,7 @@ import ServerErrorPage from './pages/ServerErrorPage';
 import ErrorTestPage from './pages/ErrorTestPage';
 import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
 import FileUploadTestPage from './pages/FileUploadTestPage';
+import VideoTestPage from './pages/VideoTestPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -410,6 +411,7 @@ function App() {
             <Route path="/server-error" element={<ServerErrorPage />} />
             <Route path="/test-error" element={<ErrorTestPage />} />
             <Route path="/test-upload" element={<FileUploadTestPage />} />
+            <Route path="/test-video" element={<VideoTestPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

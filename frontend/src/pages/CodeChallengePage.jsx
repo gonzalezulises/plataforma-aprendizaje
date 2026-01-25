@@ -99,8 +99,11 @@ function CodeChallengePage() {
       });
 
       const data = await response.json();
+      // Feature #116: Handle memory limit exceeded
+      if (data.memory_exceeded) {
+        setOutput(`💾 ${data.memory_error_message}\n\n${data.container_cleaned ? '✅ Sandbox limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo sin problemas.' : ''}`);
       // Feature #108: Handle timeout from infinite loop or long-running code
-      if (data.timeout) {
+      } else if (data.timeout) {
         setOutput(`⏱️ ${data.timeout_message}\n\n${data.container_cleaned ? '✅ Contenedor limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo.' : ''}`);
       } else if (data.error) {
         setOutput(`Error: ${data.error}`);
