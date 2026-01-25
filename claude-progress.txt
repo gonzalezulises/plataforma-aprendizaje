@@ -1,3 +1,62 @@
+## Session: 2026-01-25 (Agent Session - Feature #157)
+
+### Completed Features
+- Feature #157: Vote button toggle idempotent - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Find a voteable item - PASS
+       - Navigated to forum thread /forum/thread/3 with 11 replies
+       - Each reply has an upvote button
+    2. Click upvote - PASS
+       - Clicked vote button on first reply
+       - Toast message: "Voto registrado"
+       - Vote count increased from 0 to 1
+    3. Verify vote count increases by 1 - PASS
+       - UI showed vote count of "1"
+       - Database confirmed votes: 1
+    4. Click upvote again - PASS
+       - Clicked same vote button again
+       - Toast message: "Voto removido"
+    5. Verify vote is toggled off or unchanged - PASS
+       - Vote count decreased from 1 to 0
+       - Database confirmed votes: 0
+
+### Technical Implementation (Already in Place)
+- **Backend (forum.js lines 252-306)**:
+  - POST /api/forum/reply/:replyId/vote endpoint handles voting
+  - Uses `reply_votes` table with UNIQUE(reply_id, user_id) constraint
+  - If user already voted with same type: removes vote (toggle off)
+  - If no existing vote: adds new vote
+  - Returns action: 'added' or 'removed' to frontend
+
+- **Frontend (ThreadDetailPage.jsx lines 205-235)**:
+  - handleVote function sends POST to vote endpoint
+  - Updates local state based on action (added/removed)
+  - Shows toast notification for feedback
+
+### Database Constraint Verification
+- UNIQUE(reply_id, user_id) constraint in reply_votes table prevents duplicate votes
+- Double-click test: Both clicks processed but database correctly shows 0 votes after toggle
+- The backend is truly idempotent - same user cannot have multiple votes on same reply
+
+### Screenshots
+- feature-157-step3-vote-added.png - Vote button showing count "1" after first click
+- feature-157-step5-vote-removed.png - Vote button showing count "0" after toggle
+- feature-157-after-refresh-correct-state.png - Page after refresh showing correct state
+- feature-157-final-verification.png - Final verification of toggle functionality
+
+### Console Errors
+- Only WebSocket reconnection errors (expected, recovers automatically)
+- No JavaScript errors related to voting
+
+### Current Status
+- Feature #157 marked as PASSING
+- Passing features: 79/248 (31.9%)
+
+[Testing] 2026-01-25 Feature #157 'Vote button toggle idempotent' verified - PASSED
+
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #144)
 
 ### Completed Features
