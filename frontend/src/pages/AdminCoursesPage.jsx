@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 
 // Use the base URL - env var already includes /api
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -12,6 +13,8 @@ export default function AdminCoursesPage() {
 
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, course: null });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Redirect non-instructors - security check for admin access
   useEffect(() => {
@@ -55,14 +58,25 @@ export default function AdminCoursesPage() {
     }
   }, [authLoading, user]);
 
-  // Delete course
-  const handleDelete = async (courseId) => {
-    if (!confirm('Esta seguro de eliminar este curso? Esta accion no se puede deshacer.')) {
-      return;
-    }
+  // Open delete confirmation modal
+  const openDeleteModal = (course) => {
+    setDeleteModal({ isOpen: true, course });
+  };
 
+  // Close delete confirmation modal
+  const closeDeleteModal = () => {
+    if (!isDeleting) {
+      setDeleteModal({ isOpen: false, course: null });
+    }
+  };
+
+  // Confirm and execute deletion
+  const confirmDelete = async () => {
+    if (!deleteModal.course) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}`, {
+      const response = await fetch(`${API_BASE}/courses/${deleteModal.course.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -71,11 +85,14 @@ export default function AdminCoursesPage() {
         throw new Error('Failed to delete course');
       }
 
-      setCourses(courses.filter(c => c.id !== courseId));
+      setCourses(courses.filter(c => c.id !== deleteModal.course.id));
       toast.success('Curso eliminado');
+      setDeleteModal({ isOpen: false, course: null });
     } catch (error) {
       console.error('Error deleting course:', error);
       toast.error('Error al eliminar el curso');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -209,9 +226,10 @@ export default function AdminCoursesPage() {
                         </Link>
                       )}
                       <button
-                        onClick={() => handleDelete(course.id)}
+                        onClick={() => openDeleteModal(course)}
                         className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                         title="Eliminar curso"
+                        data-testid={`delete-course-${course.id}`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -225,6 +243,16 @@ export default function AdminCoursesPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={deleteModal.isOpen}
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteModal}
+        title={deleteModal.course ? `"${deleteModal.course.title}"` : 'este curso'}
+        message={deleteModal.course ? `¿Estas seguro de que quieres eliminar el curso "${deleteModal.course.title}"? Todos los modulos, lecciones y el progreso de los estudiantes se perderan. Esta accion no se puede deshacer.` : undefined}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
