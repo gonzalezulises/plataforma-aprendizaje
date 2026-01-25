@@ -24,6 +24,9 @@ import WebinarsPage from './pages/WebinarsPage';
 import WebinarSchedulePage from './pages/WebinarSchedulePage';
 import CertificatesPage from './pages/CertificatesPage';
 import CertificateVerifyPage from './pages/CertificateVerifyPage';
+import UpgradePage from './pages/UpgradePage';
+import UpgradeSuccessPage from './pages/UpgradeSuccessPage';
+import UpgradeErrorPage from './pages/UpgradeErrorPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -194,6 +197,37 @@ function CourseCatalog() {
     }
   };
 
+  // Filter courses based on selected filters
+  const filteredCourses = courses.filter((course) => {
+    // Category filter
+    if (categoryFilter) {
+      const categoryMap = {
+        'programacion': 'Programacion',
+        'data-science': 'Data Science',
+        'ia-ml': 'IA / ML',
+        'web3': 'Web3',
+        'bases-datos': 'Bases de Datos'
+      };
+      if (course.category !== categoryMap[categoryFilter]) return false;
+    }
+
+    // Level filter
+    if (levelFilter) {
+      const levelMap = {
+        'principiante': 'Principiante',
+        'intermedio': 'Intermedio',
+        'avanzado': 'Avanzado'
+      };
+      if (course.level !== levelMap[levelFilter]) return false;
+    }
+
+    // Price filter
+    if (priceFilter === 'free' && course.isPremium) return false;
+    if (priceFilter === 'premium' && !course.isPremium) return false;
+
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -209,7 +243,11 @@ function CourseCatalog() {
 
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-4">
-          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="">Todas las categorias</option>
             <option value="programacion">Programacion</option>
             <option value="data-science">Data Science</option>
@@ -217,13 +255,21 @@ function CourseCatalog() {
             <option value="web3">Web3</option>
             <option value="bases-datos">Bases de Datos</option>
           </select>
-          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="">Todos los niveles</option>
             <option value="principiante">Principiante</option>
             <option value="intermedio">Intermedio</option>
             <option value="avanzado">Avanzado</option>
           </select>
-          <select className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <select
+            value={priceFilter}
+            onChange={(e) => setPriceFilter(e.target.value)}
+            className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
             <option value="">Todos</option>
             <option value="free">Gratuitos</option>
             <option value="premium">Premium</option>
@@ -232,7 +278,7 @@ function CourseCatalog() {
 
         {/* Course Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
+          {filteredCourses.map((course) => (
             <a
               key={course.id}
               href={`/course/${course.slug}`}
@@ -350,6 +396,9 @@ function App() {
             <Route path="/certificates" element={<CertificatesPage />} />
             <Route path="/certificate/verify/:code" element={<CertificateVerifyPage />} />
             <Route path="/certificate/verify" element={<CertificateVerifyPage />} />
+            <Route path="/upgrade" element={<UpgradePage />} />
+            <Route path="/upgrade/success" element={<UpgradeSuccessPage />} />
+            <Route path="/upgrade/error" element={<UpgradeErrorPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
