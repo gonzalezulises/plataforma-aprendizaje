@@ -1,3 +1,57 @@
+## Session: 2026-01-25 (Agent Session - Feature #140)
+
+### Completed Features
+- Feature #140: Unsaved changes warning - VERIFIED AND PASSING
+  - All 6 verification steps verified via browser automation:
+    1. Start editing content - PASS
+       - Navigated to /admin/courses/new
+       - Entered title: "TEST_140_UNSAVED_CHANGES - My Test Course"
+       - Entered description text
+    2. Attempt to navigate away - PASS
+       - Clicked on Dashboard link
+    3. Verify warning dialog appears - PASS
+       - Modal appeared with "Cambios sin guardar" heading
+       - Warning icon displayed
+       - Message: "Tienes cambios sin guardar en este curso. Si sales ahora, perderas los cambios."
+       - Two buttons: "Seguir editando" and "Salir sin guardar"
+    4. Cancel navigation - PASS
+       - Clicked "Seguir editando" button
+       - Modal closed, stayed on same page
+    5. Verify content is preserved - PASS
+       - Title field still showed "TEST_140_UNSAVED_CHANGES - My Test Course"
+       - Description field content intact
+    6. Save and navigate without warning - PASS
+       - Clicked "Guardar Borrador" button
+       - Toast "Curso creado" appeared
+       - Clicked Dashboard link - NO warning modal appeared
+       - Successfully navigated to /dashboard
+
+### Technical Implementation (New)
+- **useUnsavedChangesWarning hook (frontend/src/hooks/useUnsavedChangesWarning.js)**:
+  - Uses beforeunload event for browser close/refresh warnings
+  - Intercepts link clicks via document event listener (capture phase)
+  - Handles browser back/forward via popstate event
+  - Returns showModal, confirmNavigation, cancelNavigation
+
+- **UnsavedChangesModal component (frontend/src/components/UnsavedChangesModal.jsx)**:
+  - Styled warning dialog with warning icon
+  - "Seguir editando" (cancel) and "Salir sin guardar" (confirm) buttons
+  - Handles Escape key to cancel
+  - Prevents body scroll when open
+
+- **Integrated in 4 pages**:
+  - CourseCreatorPage.jsx - tracks courseForm changes vs original state
+  - ForumPage.jsx - tracks newThread title/content
+  - ProjectSubmissionPage.jsx - tracks content, githubUrl, uploadedFiles
+  - CodeChallengePage.jsx - tracks code changes vs original
+
+### Screenshots
+- feature-140-step3-warning-dialog.png - Modal showing unsaved changes warning
+- feature-140-step5-content-preserved.png - Content intact after canceling navigation
+- feature-140-step6-navigated-after-save.png - Dashboard page after saving and navigating
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #141)
 
 ### Completed Features
@@ -3589,3 +3643,25 @@ The feature works correctly because the existing codebase properly handles form 
 - feature-105-error-message.png - Error message displayed after invalid login
 
 [Testing] 2026-01-25 Feature #105 'Invalid login credentials show error' verified - PASSED
+[Testing] 2026-01-25 Feature #94 'Complete rubric feedback workflow' regression test - PASSED
+
+Verification Steps:
+1. Log in as instructor - PASS
+2. Navigate to /admin/submissions - PASS  
+3. Select pending submission - PASS
+4. View student work (Python code displayed) - PASS
+5. Fill rubric scores (22+24+20+18=84/100) - PASS
+6. Add text comments - PASS
+7. Add video feedback URL (optional) - PASS
+8. Submit feedback - PASS (toast: Retroalimentacion guardada exitosamente)
+9. Student notification received - PASS (Nueva Retroalimentacion: 84/100)
+
+Additional: Student can view full feedback at /feedback/{id}
+Console errors: None
+
+Screenshots:
+- feature-94-rubric-filled.png
+- feature-94-feedback-saved.png
+- feature-94-student-notification.png
+- feature-94-student-feedback-view.png
+
