@@ -1,0 +1,389 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
+// Strip trailing /api from VITE_API_URL to avoid double /api/api paths
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+
+function ThreadDetailPage() {
+  const { threadId } = useParams();
+  const navigate = useNavigate();
+  const [thread, setThread] = useState(null);
+  const [replies, setReplies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newReply, setNewReply] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [course, setCourse] = useState(null);
+
+  // Get user from session/localStorage
+  const getUser = () => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const user = getUser();
+  const isOwner = user && thread && (user.id === thread.user_id);
+  const isInstructor = user && user.role === 'instructor_admin';
+
+  useEffect(() => {
+    fetchThread();
+  }, [threadId]);
+
+  useEffect(() => {
+    if (thread?.course_id) {
+      fetchCourse(thread.course_id);
+    }
+  }, [thread?.course_id]);
+
+  const fetchThread = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`);
+      if (!res.ok) throw new Error('Thread not found');
+      const data = await res.json();
+      setThread(data.thread);
+      setReplies(data.replies || []);
+    } catch (error) {
+      console.error('Error fetching thread:', error);
+      toast.error('Error al cargar el hilo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCourse = async (courseId) => {
+    try {
+      // Get course by ID - we'll need to fetch all courses and find by ID
+      // For now, we'll construct a simple slug lookup
+      const res = await fetch(`${API_URL}/api/courses`);
+      if (res.ok) {
+        const data = await res.json();
+        const courses = data.courses || data;
+        const foundCourse = courses.find(c => c.id === courseId);
+        if (foundCourse) {
+          setCourse(foundCourse);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching course:', error);
+    }
+  };
+
+  const handleAddReply = async (e) => {
+    e.preventDefault();
+
+    if (!newReply.trim()) {
+      toast.error('Por favor escribe una respuesta');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          content: newReply,
+          userId: user?.id || 'dev-user',
+          userName: user?.name || 'Usuario de Prueba',
+          isInstructorAnswer: isInstructor
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to add reply');
+
+      const data = await res.json();
+      setReplies([...replies, data.reply]);
+      setNewReply('');
+      toast.success('Respuesta publicada');
+
+      // Update thread reply count
+      setThread({ ...thread, reply_count: (thread.reply_count || 0) + 1 });
+    } catch (error) {
+      console.error('Error adding reply:', error);
+      toast.error('Error al publicar la respuesta');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVote = async (replyId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: user?.id || 'dev-user',
+          voteType: 'upvote'
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to vote');
+
+      const data = await res.json();
+
+      // Update local state
+      setReplies(replies.map(r => {
+        if (r.id === replyId) {
+          const change = data.action === 'added' ? 1 : data.action === 'removed' ? -1 : 0;
+          return { ...r, votes: (r.votes || 0) + change };
+        }
+        return r;
+      }));
+
+      toast.success(data.action === 'added' ? 'Voto registrado' : 'Voto removido');
+    } catch (error) {
+      console.error('Error voting:', error);
+      toast.error('Error al votar');
+    }
+  };
+
+  const handleMarkResolved = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/resolve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ resolved: !thread.is_resolved })
+      });
+
+      if (!res.ok) throw new Error('Failed to update thread');
+
+      const data = await res.json();
+      setThread(data.thread);
+      toast.success(data.thread.is_resolved ? 'Hilo marcado como resuelto' : 'Hilo reabierto');
+    } catch (error) {
+      console.error('Error updating thread:', error);
+      toast.error('Error al actualizar el hilo');
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Ahora mismo';
+    if (minutes < 60) return `Hace ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
+    if (hours < 24) return `Hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    if (days < 7) return `Hace ${days} ${days === 1 ? 'dia' : 'dias'}`;
+
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!thread) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">404</div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Hilo no encontrado</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">El hilo que buscas no existe o fue eliminado.</p>
+          <Link to="/courses" className="text-primary-600 hover:underline">
+            Volver a cursos
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Breadcrumb */}
+        <nav className="mb-6">
+          <ol className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+            <li><Link to="/courses" className="hover:text-primary-600">Cursos</Link></li>
+            {course && (
+              <>
+                <li><span className="mx-2">/</span></li>
+                <li><Link to={`/course/${course.slug}`} className="hover:text-primary-600">{course.title}</Link></li>
+                <li><span className="mx-2">/</span></li>
+                <li><Link to={`/course/${course.slug}/forum`} className="hover:text-primary-600">Foro</Link></li>
+              </>
+            )}
+            <li><span className="mx-2">/</span></li>
+            <li className="text-gray-900 dark:text-white font-medium truncate max-w-xs">{thread.title}</li>
+          </ol>
+        </nav>
+
+        {/* Thread Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              {thread.is_resolved ? (
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Resuelto
+                </span>
+              ) : (
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Abierto
+                </span>
+              )}
+            </div>
+
+            {(isOwner || isInstructor) && (
+              <button
+                onClick={handleMarkResolved}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  thread.is_resolved
+                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800'
+                    : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800'
+                }`}
+              >
+                {thread.is_resolved ? 'Reabrir Hilo' : 'Marcar como Resuelto'}
+              </button>
+            )}
+          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {thread.title}
+          </h1>
+
+          <div className="prose dark:prose-invert max-w-none mb-4">
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {thread.content}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <span className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 font-medium">
+                {thread.user_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <span className="font-medium text-gray-700 dark:text-gray-300">{thread.user_name}</span>
+            </span>
+            <span>{formatDate(thread.created_at)}</span>
+          </div>
+        </div>
+
+        {/* Replies Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {replies.length} {replies.length === 1 ? 'Respuesta' : 'Respuestas'}
+          </h2>
+
+          {replies.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+              <div className="text-4xl mb-3">💬</div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Aun no hay respuestas. Se el primero en responder.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {replies.map((reply) => (
+                <div
+                  key={reply.id}
+                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 ${
+                    reply.is_instructor_answer ? 'ring-2 ring-primary-500' : ''
+                  }`}
+                >
+                  {reply.is_instructor_answer && (
+                    <div className="flex items-center gap-2 mb-3 text-primary-600 dark:text-primary-400">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm font-medium">Respuesta del Instructor</span>
+                    </div>
+                  )}
+
+                  <div className="prose dark:prose-invert max-w-none mb-4">
+                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                      {reply.content}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium">
+                          {reply.user_name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <span>{reply.user_name}</span>
+                      </span>
+                      <span>{formatDate(reply.created_at)}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleVote(reply.id)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      title="Marcar como util"
+                    >
+                      <svg className="w-5 h-5 text-gray-400 hover:text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      <span className={`font-medium ${reply.votes > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {reply.votes || 0}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add Reply Form */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Agregar Respuesta
+          </h3>
+          <form onSubmit={handleAddReply}>
+            <textarea
+              value={newReply}
+              onChange={(e) => setNewReply(e.target.value)}
+              placeholder="Escribe tu respuesta aqui..."
+              rows={5}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
+              disabled={submitting}
+            />
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submitting || !newReply.trim()}
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Publicando...' : 'Publicar Respuesta'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ThreadDetailPage;
