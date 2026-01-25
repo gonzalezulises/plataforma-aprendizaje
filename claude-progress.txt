@@ -6366,3 +6366,76 @@ Backend (courses.js):
 - 100/248 features passing (40.3%)
 
 [Coding] 2026-01-25 Feature #178 'Special characters in search handled' verified - PASSED
+[Testing] 2026-01-25 Feature #6 'Typography uses Inter font family' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Navigated to home page: http://localhost:5173/
+- H1 font-family: Inter, system-ui, sans-serif ✓
+- H2 font-family: Inter, system-ui, sans-serif ✓
+- H3 font-family: Inter, system-ui, sans-serif ✓
+- Paragraph font-family: Inter, system-ui, sans-serif ✓
+- Body font-family: Inter, system-ui, sans-serif ✓
+- Inter font loaded: true ✓
+
+### Console Errors: Only expected 401 from /api/auth/me (not logged in)
+
+### Screenshot: feature-6-typography-inter-font.png
+
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #180)
+
+### Feature #180: Very long search query handled - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+1. Enter 1000 character search query - PASS
+   - Entered 1000 characters of repeated 'a' characters
+   - Also tested with 2000+ character realistic text (Lorem ipsum)
+   - Search input accepted the full text without truncation
+
+2. Submit search - PASS
+   - Clicked "Buscar" button successfully
+   - API call completed without timeout
+   - Request properly URL-encoded the long query
+
+3. Verify no crash or timeout - PASS
+   - Page remained responsive throughout
+   - API responded quickly (~100ms)
+   - No JavaScript errors in console
+   - No memory issues or freezing
+
+4. Verify results or truncation message - PASS
+   - Shows "0 curso(s) encontrado(s)" (expected for nonsense query)
+   - Full search text displayed in "Resultados para:" section
+   - UI handles long text with proper text wrapping
+   - "Limpiar" button clears search and restores all results
+
+### Additional Testing
+- Tested with 2000+ character query containing:
+  - Apostrophes and special characters
+  - Mixed case text
+  - Multiple sentences and paragraphs
+- All handled correctly without issues
+
+### Implementation Analysis
+The existing search implementation handles long queries well:
+- Frontend: No character limit on search input
+- Backend: Parameterized SQL queries prevent injection
+- URL: Query params properly encoded by URLSearchParams API
+- Display: CSS handles long text with word-wrap
+
+### Screenshots
+- feature-180-1000char-search-handled.png - 1000 character search
+- feature-180-2000char-search-handled.png - 2000+ character search
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to search functionality
+
+### Current Status
+- Feature #180 marked as PASSING
+- 101/248 features passing (40.7%)
+
+[Coding] 2026-01-25 Feature #180 'Very long search query handled' verified - PASSED
