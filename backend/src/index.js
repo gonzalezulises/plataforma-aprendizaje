@@ -382,4 +382,4 @@ export default app;
 // webinars routes added - feature #96
 // Trigger reload do., 25 de ene. de 2026  4:53:04
 
-// Reload trigger do., 25 de ene. de 2026  9:38:08
+// Reload trigger do., 25 de ene. de 2026  10:35:00
