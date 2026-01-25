@@ -9,6 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
  * LessonPage - Displays lesson content including code blocks and videos
  * Supports video progress tracking - videos resume from where users left off
  * Tracks lesson completion and course progress
+ * Handles 404 errors for deleted or missing lessons
  */
 function LessonPage() {
   const { slug, lessonId } = useParams();
@@ -21,6 +22,12 @@ function LessonPage() {
   });
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [navigation, setNavigation] = useState({ previous: null, next: null });
+
+  // States for API-based lesson loading and error handling
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [apiLesson, setApiLesson] = useState(null);
 
   // Sample lesson data with multiple lessons for navigation testing
   const lessonsData = {
@@ -188,10 +195,87 @@ print(potencia(3, 3))   # 27 (3^3)`
   };
 
   const currentLessonId = parseInt(lessonId) || 1;
-  const lesson = lessonsData[currentLessonId] || lessonsData[1];
 
-  // Fetch lesson progress on mount
+  // Use API-fetched lesson or fall back to sample data
+  const sampleLesson = lessonsData[currentLessonId];
+  const lesson = apiLesson || sampleLesson;
+
+  // Fetch lesson from API on mount
   useEffect(() => {
+    let isMounted = true;
+    const hasSampleData = currentLessonId in lessonsData;
+
+    const fetchLesson = async () => {
+      setIsLoading(true);
+      setNotFound(false);
+      setLoadError(null);
+      setApiLesson(null);
+
+      try {
+        // First, try to fetch from API
+        const response = await fetch(
+          `${API_BASE_URL}/lessons/${currentLessonId}`,
+          { credentials: 'include' }
+        );
+
+        if (!isMounted) return;
+
+        if (response.status === 404) {
+          // Lesson not found in database - check if it's a sample lesson
+          if (!hasSampleData) {
+            setNotFound(true);
+          }
+          // If we have sample data, we'll use that (loading state ends, no API lesson)
+        } else if (!response.ok) {
+          throw new Error('Failed to load lesson');
+        } else {
+          // Successfully fetched from API
+          const data = await response.json();
+          if (data.lesson && isMounted) {
+            // Transform API data to match our component format
+            const transformedLesson = {
+              id: data.lesson.id,
+              title: data.lesson.title,
+              module: data.lesson.module_title || 'Modulo',
+              course: data.lesson.course_title || 'Curso',
+              courseSlug: data.lesson.course_slug || slug,
+              bloomLevel: data.lesson.bloom_level || 'Comprender',
+              duration: data.lesson.duration_minutes || 15,
+              description: data.lesson.description || '',
+              content: data.lesson.content?.map(c => ({
+                type: c.type,
+                ...c.content
+              })) || []
+            };
+            setApiLesson(transformedLesson);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching lesson:', error);
+        // If API fails but we have sample data, use that
+        if (!hasSampleData && isMounted) {
+          setLoadError(error.message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchLesson();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentLessonId, slug]);
+
+  // Fetch lesson progress and set up navigation when lesson is loaded
+  useEffect(() => {
+    if (isLoading || notFound || loadError) return;
+
+    let hasStartedLesson = false;
+
     const fetchProgress = async () => {
       try {
         const response = await fetch(
@@ -211,30 +295,31 @@ print(potencia(3, 3))   # 27 (3^3)`
       }
     };
 
+    const markLessonStarted = async () => {
+      if (hasStartedLesson) return;
+      hasStartedLesson = true;
+      try {
+        await fetch(`${API_BASE_URL}/lessons/${currentLessonId}/start`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (error) {
+        console.error('Error marking lesson as started:', error);
+      }
+    };
+
     fetchProgress();
-    // Mark lesson as started
     markLessonStarted();
 
-    // Set up navigation
+    // Set up navigation from sample data or API response
     const lessonIds = Object.keys(lessonsData).map(Number);
     const currentIndex = lessonIds.indexOf(currentLessonId);
     setNavigation({
       previous: currentIndex > 0 ? { id: lessonIds[currentIndex - 1], title: lessonsData[lessonIds[currentIndex - 1]]?.title } : null,
       next: currentIndex < lessonIds.length - 1 ? { id: lessonIds[currentIndex + 1], title: lessonsData[lessonIds[currentIndex + 1]]?.title } : null
     });
-  }, [currentLessonId]);
-
-  // Mark lesson as started
-  const markLessonStarted = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/lessons/${currentLessonId}/start`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Error marking lesson as started:', error);
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLessonId, isLoading, notFound, loadError]);
 
   // Handle video progress update
   const handleVideoProgress = useCallback((progressData) => {
@@ -309,6 +394,246 @@ Es estudiante: True
 <class 'float'>
 <class 'bool'>`);
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <svg className="animate-spin h-12 w-12 text-primary-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-gray-600 dark:text-gray-400">Cargando leccion...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 404 Not Found - Lesson deleted or doesn't exist
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+            {/* 404 Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-12 h-12 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"
+                />
+              </svg>
+            </div>
+
+            {/* Error Code */}
+            <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-2">
+              404
+            </h1>
+
+            {/* Error Title */}
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              Leccion No Encontrada
+            </h2>
+
+            {/* User-friendly description */}
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Esta leccion ya no esta disponible. Es posible que haya sido eliminada o movida a otra ubicacion.
+            </p>
+
+            {/* Suggestions */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 mb-8 text-left border border-amber-200 dark:border-amber-700">
+              <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Que puedes hacer
+              </h3>
+              <ul className="space-y-3 text-sm text-amber-800 dark:text-amber-200">
+                <li className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Volver al curso para ver las lecciones disponibles
+                </li>
+                <li className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Explorar el catalogo de cursos
+                </li>
+                <li className="flex items-start">
+                  <svg
+                    className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Actualizar tus marcadores si la URL ha cambiado
+                </li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Link
+                to={`/course/${slug}`}
+                className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 17l-5-5m0 0l5-5m-5 5h12"
+                  />
+                </svg>
+                Volver al Curso
+              </Link>
+
+              <div className="flex gap-3">
+                <Link
+                  to="/courses"
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-center"
+                >
+                  Ver Catalogo
+                </Link>
+                <Link
+                  to="/"
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    />
+                  </svg>
+                  Inicio
+                </Link>
+              </div>
+            </div>
+
+            {/* Lesson ID info for debugging */}
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Leccion ID: {currentLessonId} | Curso: {slug}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // General error state
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+            {/* Error Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-12 h-12 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              Error al Cargar la Leccion
+            </h2>
+
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Hubo un problema al cargar esta leccion. Por favor, intenta de nuevo.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-3 px-4 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Reintentar
+              </button>
+
+              <Link
+                to={`/course/${slug}`}
+                className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                Volver al Curso
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Safety check - if no lesson data available
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400">No hay contenido disponible para esta leccion.</p>
+          <Link
+            to={`/course/${slug}`}
+            className="mt-4 inline-block text-primary-600 hover:text-primary-700"
+          >
+            Volver al curso
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
