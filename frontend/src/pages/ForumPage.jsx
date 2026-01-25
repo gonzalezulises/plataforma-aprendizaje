@@ -153,13 +153,39 @@ function ForumPage() {
   // Clear field error when user starts typing (and meets minimum length)
   const handleFieldChange = (field, value) => {
     setNewThread({ ...newThread, [field]: value });
-    // Clear error for this field if user meets the requirements
-    if (fieldErrors[field]) {
-      const trimmedValue = value.trim();
-      if (field === 'title' && trimmedValue.length >= MIN_TITLE_LENGTH) {
-        setFieldErrors(prev => ({ ...prev, [field]: '' }));
-      } else if (field === 'content' && trimmedValue.length >= MIN_CONTENT_LENGTH) {
-        setFieldErrors(prev => ({ ...prev, [field]: '' }));
+
+    // Real-time validation - show errors as user types, clear when valid
+    const trimmedValue = value.trim();
+
+    if (field === 'title') {
+      if (trimmedValue.length === 0) {
+        // Only show "required" error if user has started typing and deleted all
+        if (value.length > 0 && trimmedValue.length === 0) {
+          setFieldErrors(prev => ({ ...prev, title: 'El titulo es requerido' }));
+        }
+      } else if (trimmedValue.length < MIN_TITLE_LENGTH) {
+        setFieldErrors(prev => ({
+          ...prev,
+          title: `El titulo debe tener al menos ${MIN_TITLE_LENGTH} caracteres (${trimmedValue.length}/${MIN_TITLE_LENGTH})`
+        }));
+      } else {
+        // Valid - clear error
+        setFieldErrors(prev => ({ ...prev, title: '' }));
+      }
+    } else if (field === 'content') {
+      if (trimmedValue.length === 0) {
+        // Only show "required" error if user has started typing and deleted all
+        if (value.length > 0 && trimmedValue.length === 0) {
+          setFieldErrors(prev => ({ ...prev, content: 'El contenido es requerido' }));
+        }
+      } else if (trimmedValue.length < MIN_CONTENT_LENGTH) {
+        setFieldErrors(prev => ({
+          ...prev,
+          content: `El contenido debe tener al menos ${MIN_CONTENT_LENGTH} caracteres (${trimmedValue.length}/${MIN_CONTENT_LENGTH})`
+        }));
+      } else {
+        // Valid - clear error
+        setFieldErrors(prev => ({ ...prev, content: '' }));
       }
     }
   };
@@ -209,7 +235,15 @@ function ForumPage() {
         })
       });
 
-      if (!res.ok) throw new Error('Failed to create thread');
+      // Handle server-side validation errors
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        // Throw structured error so it can be handled in onError
+        const error = new Error(errorData.error || 'Failed to create thread');
+        error.validationErrors = errorData.validationErrors;
+        error.status = res.status;
+        throw error;
+      }
       return res.json();
     };
 
@@ -227,7 +261,17 @@ function ForumPage() {
       },
       onError: (error) => {
         console.error('Error creating thread:', error);
-        toast.error('Error al crear el hilo');
+        // Handle server-side validation errors
+        if (error.validationErrors) {
+          // Display server validation errors on the form fields
+          setFieldErrors({
+            title: error.validationErrors.title || '',
+            content: error.validationErrors.content || ''
+          });
+          toast.error('Por favor corrige los errores en el formulario');
+        } else {
+          toast.error('Error al crear el hilo');
+        }
       },
       onNetworkError: (error) => {
         console.error('Network error creating thread:', error);

@@ -143,9 +143,24 @@ function WebinarSchedulePage() {
       ...prev,
       [name]: value
     }));
-    // Clear error for this field if user starts typing
-    if (value && fieldErrors[name]) {
-      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+
+    // Real-time validation feedback as user types
+    if (name === 'title') {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length === 0) {
+        // Show "required" error if user deleted all content
+        if (value.length > 0 && trimmedValue.length === 0) {
+          setFieldErrors(prev => ({ ...prev, title: 'El titulo es requerido' }));
+        }
+      } else {
+        // Valid - clear error
+        setFieldErrors(prev => ({ ...prev, title: '' }));
+      }
+    } else {
+      // For other fields, just clear error when valid
+      if (value && fieldErrors[name]) {
+        setFieldErrors(prev => ({ ...prev, [name]: '' }));
+      }
     }
   };
 
