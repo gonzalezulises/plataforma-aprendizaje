@@ -9,6 +9,9 @@ import HomePage from './pages/HomePage';
 import LessonPage from './pages/LessonPage';
 import NotebookPage from './pages/NotebookPage';
 import DashboardPage from './pages/DashboardPage';
+import CourseCreatorPage from './pages/CourseCreatorPage';
+import AdminCoursesPage from './pages/AdminCoursesPage';
+import CourseDetailPage from './pages/CourseDetailPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -310,12 +313,15 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/courses" element={<CourseCatalog />} />
-            <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
+            <Route path="/course/:slug" element={<CourseDetailPage />} />
             <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/notebook/:notebookId" element={<NotebookPage />} />
             <Route path="/notebook" element={<NotebookPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
+            <Route path="/admin" element={<AdminCoursesPage />} />
+            <Route path="/admin/courses" element={<AdminCoursesPage />} />
+            <Route path="/admin/courses/new" element={<CourseCreatorPage />} />
+            <Route path="/admin/courses/:courseId/edit" element={<CourseCreatorPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

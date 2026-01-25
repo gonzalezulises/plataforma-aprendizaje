@@ -36,11 +36,112 @@ export async function initDatabase() {
   // Create tables
   createTables();
 
+  // Seed sample data
+  seedSampleData();
+
   // Save database
   saveDatabase();
 
   console.log('Database initialized at:', DB_PATH);
   return db;
+}
+
+/**
+ * Seed sample data for development
+ */
+function seedSampleData() {
+  const sampleCourses = [
+    {
+      title: 'Python: Fundamentos',
+      slug: 'python-fundamentos',
+      description: 'Aprende Python desde cero con ejercicios practicos y proyectos reales.',
+      category: 'Programacion',
+      level: 'Principiante',
+      is_premium: 0,
+      is_published: 1,
+      duration_hours: 20
+    },
+    {
+      title: 'Data Science con Python',
+      slug: 'data-science-python',
+      description: 'Domina pandas, numpy y matplotlib para analisis de datos.',
+      category: 'Data Science',
+      level: 'Intermedio',
+      is_premium: 1,
+      is_published: 1,
+      duration_hours: 35
+    },
+    {
+      title: 'SQL desde Cero',
+      slug: 'sql-desde-cero',
+      description: 'Aprende a consultar y manipular bases de datos con SQL.',
+      category: 'Bases de Datos',
+      level: 'Principiante',
+      is_premium: 0,
+      is_published: 1,
+      duration_hours: 15
+    },
+    {
+      title: 'Machine Learning Basico',
+      slug: 'machine-learning-basico',
+      description: 'Introduccion a los algoritmos de aprendizaje automatico.',
+      category: 'IA / ML',
+      level: 'Avanzado',
+      is_premium: 1,
+      is_published: 1,
+      duration_hours: 40
+    },
+    {
+      title: 'R para Estadistica',
+      slug: 'r-estadistica',
+      description: 'Analisis estadistico y visualizacion de datos con R.',
+      category: 'Data Science',
+      level: 'Intermedio',
+      is_premium: 0,
+      is_published: 1,
+      duration_hours: 25
+    },
+    {
+      title: 'Web3 y Solidity',
+      slug: 'web3-solidity',
+      description: 'Desarrolla smart contracts y aplicaciones descentralizadas.',
+      category: 'Web3',
+      level: 'Avanzado',
+      is_premium: 1,
+      is_published: 1,
+      duration_hours: 30
+    }
+  ];
+
+  const now = new Date().toISOString();
+
+  for (const course of sampleCourses) {
+    // Check if course already exists
+    const stmt = db.prepare('SELECT id FROM courses WHERE slug = ?');
+    stmt.bind([course.slug]);
+    const exists = stmt.step();
+    stmt.free();
+
+    if (!exists) {
+      db.run(`
+        INSERT INTO courses (title, slug, description, category, level, is_premium, is_published, duration_hours, tags, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        course.title,
+        course.slug,
+        course.description,
+        course.category,
+        course.level,
+        course.is_premium,
+        course.is_published,
+        course.duration_hours,
+        '[]',
+        now,
+        now
+      ]);
+      console.log(`Created sample course: ${course.title}`);
+    }
+  }
 }
 
 /**
@@ -167,6 +268,64 @@ function createTables() {
   // Create indexes for enrollments
   db.run(`CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id)`);
+
+  // Modules table - course sections
+  db.run(`
+    CREATE TABLE IF NOT EXISTS modules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      course_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      bloom_objective TEXT,
+      project_milestone TEXT,
+      duration_hours REAL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for modules
+  db.run(`CREATE INDEX IF NOT EXISTS idx_modules_course ON modules(course_id)`);
+
+  // Lessons table - individual lessons within modules
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lessons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      order_index INTEGER NOT NULL DEFAULT 0,
+      bloom_level TEXT,
+      structure_4c TEXT DEFAULT '{}',
+      content_type TEXT DEFAULT 'text',
+      duration_minutes INTEGER DEFAULT 15,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for lessons
+  db.run(`CREATE INDEX IF NOT EXISTS idx_lessons_module ON lessons(module_id)`);
+
+  // Lesson content table - content blocks within lessons
+  db.run(`
+    CREATE TABLE IF NOT EXISTS lesson_content (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lesson_id INTEGER NOT NULL,
+      type TEXT NOT NULL DEFAULT 'text',
+      content TEXT NOT NULL DEFAULT '{}',
+      order_index INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for lesson content
+  db.run(`CREATE INDEX IF NOT EXISTS idx_lesson_content_lesson ON lesson_content(lesson_id)`);
 }
 
 /**
