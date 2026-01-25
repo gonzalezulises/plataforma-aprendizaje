@@ -12,6 +12,8 @@ import authRoutes from './routes/auth.js';
 import videoProgressRoutes from './routes/video-progress.js';
 import notebooksRoutes from './routes/notebooks.js';
 import enrollmentsRoutes from './routes/enrollments.js';
+import coursesRoutes from './routes/courses.js';
+import lessonsRoutes from './routes/lessons.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -87,6 +89,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/video-progress', videoProgressRoutes);
 app.use('/api/notebooks', notebooksRoutes);
 app.use('/api/enrollments', enrollmentsRoutes);
+app.use('/api/courses', coursesRoutes);
+app.use('/api/lessons', lessonsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -167,3 +171,4 @@ server.listen(PORT, () => {
 });
 
 export default app;
+// nodemon restart trigger - sab., 25 de ene. de 2026  01:20:00
