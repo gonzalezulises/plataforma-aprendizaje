@@ -143,9 +143,7 @@ router.get('/', (req, res) => {
 
     // Feature #179: Handle quoted phrase search
     if (search) {
-      console.log('[DEBUG #179] Raw search query:', JSON.stringify(search));
       const { exactPhrases, words } = parseSearchQuery(search);
-      console.log('[DEBUG #179] Parsed:', { exactPhrases, words });
 
       // Build search conditions
       const searchConditions = [];
@@ -1145,4 +1143,4 @@ export default router;
 // Trigger reload do., 25 de ene. de 2026 11:58:54
 // Trigger reload do., 25 de ene. de 2026 15:01:34
 
-// RELOAD_MARKER: 2026-01-25T20:42:42.010Z
+// RELOAD_MARKER: 2026-01-25T21:16:00.000Z
