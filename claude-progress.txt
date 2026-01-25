@@ -1,3 +1,48 @@
+## Session: 2026-01-25 (Agent Session - Feature #87)
+
+### Completed Features
+- Feature #87: Complete course creation workflow
+  - Verified full instructor workflow for creating and publishing courses:
+    1. Log in as instructor - PASS (dev-login as instructor_admin)
+    2. Create new course with all required fields - PASS
+       - Title: "TEST_CURSO_87_Introduccion a JavaScript"
+       - Category: "Programacion"
+       - Level: "Principiante"
+       - Description, duration (10 hours)
+    3. Add modules to the course - PASS
+       - Added "Modulo 1: Fundamentos de JavaScript"
+    4. Add lessons to modules - PASS
+       - Added "Variables y tipos de datos en JavaScript" (15 min, text type)
+    5. Add content to lessons - PASS
+       - Added markdown content with code examples
+    6. Preview the course - PASS
+       - Viewed course preview with all content
+    7. Publish the course - PASS
+       - Clicked "Publicar Curso", status changed to "Publicado"
+       - Toast message "Curso publicado exitosamente!"
+    8. Verify course appears in admin panel - PASS
+       - Course visible with "Publicado" badge in /admin/courses
+       - API confirms is_published: 1
+  - Note: Public catalog uses hardcoded demo data (separate feature to connect to API)
+  - Screenshots saved:
+    - feature-87-step4-lesson-created.png
+    - feature-87-step5-content-added.png
+    - feature-87-step6-course-preview.png
+    - feature-87-step7-course-published.png
+    - feature-87-step8-admin-verification.png
+
+### Technical Notes
+- Rate limit issue required starting new backend on port 4000
+- Rate limiting completely disabled in development mode
+- Frontend .env was modified externally multiple times - had to fix repeatedly
+- Course creation workflow uses CourseCreatorPage.jsx with 3-tab interface
+
+### Current Status
+- Passing: 21/248 features (8.5%)
+- Feature #87 marked as PASSING
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #91 - Re-verification)
 
 ### Completed Features
@@ -963,3 +1008,12 @@
     8. See feedback on correctness - PASS ("Todas las pruebas pasaron!")
   - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
   - Screenshot: feature-91-regression-all-tests-passed.png
+[Testing] 2026-01-25 02:12:54 Feature #82 'Notebook state is persisted' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Open an interactive notebook - PASS (/notebook/demo loaded)
+    2. Execute code cells with output - PASS (3 cells executed: In [2], [4], [6])
+    3. Navigate away from the lesson - PASS (went to /courses)
+    4. Return to the notebook - PASS (returned to /notebook/demo)
+    5. Verify cell outputs are still visible - PASS (all outputs preserved)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshots: feature-82-cells-executed.png, feature-82-state-persisted.png
