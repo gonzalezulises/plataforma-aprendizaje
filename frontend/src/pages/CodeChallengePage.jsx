@@ -11,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
  * - Run code to see output
  * - Submit for automatic test evaluation
  * - View test results and feedback
+ * - Network error handling with retry functionality
  */
 function CodeChallengePage() {
   const { challengeId } = useParams();
@@ -28,6 +29,31 @@ function CodeChallengePage() {
   const [solution, setSolution] = useState(null);
   const [attempts, setAttempts] = useState([]);
   const [activeTab, setActiveTab] = useState('instructions'); // instructions, output, tests
+  const [networkError, setNetworkError] = useState(null); // Track network errors for retry
+
+  // Helper to detect network errors
+  const isNetworkError = (err) => {
+    return err.name === 'TypeError' ||
+           err.message?.includes('Failed to fetch') ||
+           err.message?.includes('Network') ||
+           err.message?.includes('fetch') ||
+           !navigator.onLine;
+  };
+
+  // Retry the failed network operation
+  const handleRetry = () => {
+    if (networkError?.type === 'run') {
+      handleRunCode();
+    } else if (networkError?.type === 'submit') {
+      handleSubmit();
+    }
+    setNetworkError(null);
+  };
+
+  // Dismiss the network error banner
+  const dismissNetworkError = () => {
+    setNetworkError(null);
+  };
 
   // Fetch challenge details
   useEffect(() => {
@@ -61,6 +87,7 @@ function CodeChallengePage() {
     setIsRunning(true);
     setOutput('');
     setError(null);
+    setNetworkError(null);
     setActiveTab('output');
 
     try {
@@ -79,7 +106,17 @@ function CodeChallengePage() {
       }
     } catch (err) {
       console.error('Error running code:', err);
-      setOutput('Error: Failed to execute code');
+      if (isNetworkError(err)) {
+        setNetworkError({
+          type: 'run',
+          message: 'Error de conexion: No se pudo conectar con el servidor para ejecutar el codigo.',
+          details: navigator.onLine
+            ? 'El servidor no responde. Por favor, verifica que el servidor este funcionando e intenta de nuevo.'
+            : 'Parece que no tienes conexion a internet. Verifica tu conexion e intenta de nuevo.'
+        });
+      } else {
+        setOutput('Error: Fallo al ejecutar el codigo. Intenta de nuevo.');
+      }
     } finally {
       setIsRunning(false);
     }
@@ -91,6 +128,7 @@ function CodeChallengePage() {
     setTestResults(null);
     setFeedback('');
     setError(null);
+    setNetworkError(null);
     setActiveTab('tests');
 
     try {
@@ -119,7 +157,17 @@ function CodeChallengePage() {
 
     } catch (err) {
       console.error('Error submitting solution:', err);
-      setFeedback('Error: Failed to submit solution');
+      if (isNetworkError(err)) {
+        setNetworkError({
+          type: 'submit',
+          message: 'Error de conexion: No se pudo enviar tu solucion al servidor.',
+          details: navigator.onLine
+            ? 'El servidor no responde. Por favor, verifica que el servidor este funcionando e intenta de nuevo.'
+            : 'Parece que no tienes conexion a internet. Verifica tu conexion e intenta de nuevo.'
+        });
+      } else {
+        setFeedback('Error: Fallo al enviar la solucion. Intenta de nuevo.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -156,6 +204,7 @@ function CodeChallengePage() {
       setOutput('');
       setTestResults(null);
       setFeedback('');
+      setNetworkError(null);
     }
   };
 
@@ -186,8 +235,45 @@ function CodeChallengePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Network Error Banner */}
+      {networkError && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-orange-50 dark:bg-orange-900/30 border-b border-orange-200 dark:border-orange-800 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-start gap-4">
+              <svg className="w-8 h-8 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200">{networkError.message}</h3>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">{networkError.details}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRetry}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reintentar
+                </button>
+                <button
+                  onClick={dismissNetworkError}
+                  className="p-2 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200 transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className={`bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 ${networkError ? 'mt-24' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
