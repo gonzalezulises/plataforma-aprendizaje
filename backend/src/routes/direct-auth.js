@@ -50,6 +50,24 @@ function ensurePasswordColumns() {
         ['testuser@example.com', 'Test User', 'student_free', hash, salt]);
       console.log('[DirectAuth] Created test user: testuser@example.com / password123');
     }
+
+    // Create an instructor test user for development testing
+    const instructorUser = queryOne('SELECT id FROM users WHERE email = ?', ['instructor@test.com']);
+    if (!instructorUser) {
+      const { hash, salt } = hashPassword('password123');
+      run('INSERT INTO users (email, name, role, password_hash, password_salt) VALUES (?, ?, ?, ?, ?)',
+        ['instructor@test.com', 'Test Instructor', 'instructor_admin', hash, salt]);
+      console.log('[DirectAuth] Created instructor user: instructor@test.com / password123');
+    } else {
+      // Ensure existing instructor user has password set
+      const existing = queryOne('SELECT password_hash FROM users WHERE email = ?', ['instructor@test.com']);
+      if (!existing?.password_hash) {
+        const { hash, salt } = hashPassword('password123');
+        run('UPDATE users SET password_hash = ?, password_salt = ? WHERE email = ?',
+          [hash, salt, 'instructor@test.com']);
+        console.log('[DirectAuth] Updated instructor user with password');
+      }
+    }
   } catch (err) {
     console.error('[DirectAuth] Error ensuring password columns:', err.message);
   }
