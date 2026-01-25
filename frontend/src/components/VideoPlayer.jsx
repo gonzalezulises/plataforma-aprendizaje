@@ -55,17 +55,37 @@ function VideoPlayer({
     const video = videoRef.current;
     if (!video || savedTime === null || hasRestored) return;
 
-    const handleLoadedMetadata = () => {
+    const restorePosition = () => {
       if (savedTime > 0 && savedTime < video.duration - 5) {
-        video.currentTime = savedTime;
-        setHasRestored(true);
+        // Use requestAnimationFrame to ensure we set position after browser's restore
+        requestAnimationFrame(() => {
+          video.currentTime = savedTime;
+          setHasRestored(true);
+        });
       }
     };
 
-    // If metadata is already loaded
-    if (video.readyState >= 1) {
-      handleLoadedMetadata();
+    // If video has enough data loaded
+    if (video.readyState >= 2) {
+      // Video has enough data - restore position
+      restorePosition();
+    } else if (video.readyState >= 1) {
+      // Metadata loaded but not enough data - wait for canplay
+      const handleCanPlay = () => {
+        restorePosition();
+        video.removeEventListener('canplay', handleCanPlay);
+      };
+      video.addEventListener('canplay', handleCanPlay);
+      return () => video.removeEventListener('canplay', handleCanPlay);
     } else {
+      // No metadata yet - wait for loadedmetadata then canplay
+      const handleLoadedMetadata = () => {
+        const handleCanPlay = () => {
+          restorePosition();
+          video.removeEventListener('canplay', handleCanPlay);
+        };
+        video.addEventListener('canplay', handleCanPlay);
+      };
       video.addEventListener('loadedmetadata', handleLoadedMetadata);
       return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
     }
