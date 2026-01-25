@@ -1,3 +1,38 @@
+
+## Session: 2026-01-25 (Agent Session - Feature #8)
+
+### Completed Features
+- Feature #8: User can access login page
+  - Created LoginPage component at frontend/src/pages/LoginPage.jsx
+  - Created backend auth routes at backend/src/routes/auth.js
+    - GET /api/auth/login - Returns OAuth authorization URL
+    - GET /api/auth/callback - Handles OAuth callback
+    - POST /api/auth/logout - Logs out user
+    - GET /api/auth/me - Returns current user
+  - OAuth flow correctly redirects to rizo.ma authorization endpoint
+  - Return URL (redirect_uri) properly configured in OAuth parameters
+  - CSRF protection via state parameter implemented
+  - Verified all 4 test steps:
+    1. Navigate to home page - PASS
+    2. Click the login button - PASS (navigates to /login)
+    3. Verify redirect to rizo.ma OAuth - PASS (redirects to https://rizo.ma/oauth/authorize)
+    4. Verify return URL configured - PASS (redirect_uri=http://localhost:3001/api/auth/callback)
+  - Screenshots saved: step1-home-page.png, step2-login-page.png, step3-oauth-redirect.png
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #41)
+
+### Completed Features
+- Feature #41: Logo click navigates to home page
+  - Verified: Clicking logo ("Plataforma") from /courses returns to home (/)
+  - Verified: Clicking logo from /dashboard returns to home (/)
+  - URL correctly changes to "/" after clicking logo
+  - No console errors observed
+  - Screenshots saved: feature-41-home-after-logo-click.png, feature-41-verified.png
+
+---
+
 # Plataforma de Aprendizaje - Progress Notes
 
 ## Session: 2025-01-25
@@ -31,3 +66,11 @@
 - Port 5173 was in use, frontend using 5174
 - No console errors observed
 - All navigation links working (Cursos, Dashboard, Login)
+[Testing] 2026-01-25 00:12:48 Feature #42 'Course catalog link works' verified - PASSED
+[Testing] 2026-01-25 00:14:42 Feature #1 'App loads without errors' verified - PASSED (regression test)
+[Testing] 2026-01-25 05:15:00 Feature #8 'User can access login page' verified - PASSED
+
+### Current Status
+- Passing: 4/248 features (1.6%)
+- Backend running on port 3001
+- Frontend running on port 5173
