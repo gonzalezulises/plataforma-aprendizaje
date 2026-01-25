@@ -6113,3 +6113,57 @@ Frontend (CourseCatalogPage.jsx):
 - feature-138-back-button-verified.png
 
 ### Console Errors: None related to feature (only expected WebSocket reconnection logs)
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #176)
+
+### Feature #176: Empty search shows all results - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Clear search field - PASS
+   - Navigated to /courses
+   - Applied search filter "Python" (2 results)
+   - Cleared search input to empty
+2. Submit empty search - PASS
+   - Clicked "Buscar" button with empty input
+   - API call: /api/courses?page=1&limit=6 (no search param)
+3. Verify all items are displayed - PASS
+   - Before: 2 courses (filtered by "Python")
+   - After: 11 courses displayed (2 pages, 6 per page)
+   - Pagination shows "Página 1 de 2 (11 resultados)"
+4. Verify appropriate message if needed - PASS
+   - "Resultados para:" message disappears when search is empty
+   - Clean UI without search result text
+
+### Additional Testing
+- Tested "Limpiar" (Clear) button as alternative - PASS
+  - Applied "JavaScript" search (2 results)
+  - Clicked "Limpiar" button
+  - All 11 courses returned
+
+### Implementation Details (Already in place)
+Frontend (CourseCatalogPage.jsx):
+- handleClearSearch() clears searchInput and searchQuery
+- Empty search sends no 'search' param to API
+- Backend only applies LIKE filter when search is non-empty
+
+Backend (courses.js):
+- Line 143: if (search) { ... } - only filters when search has value
+- Empty/null search returns all courses
+
+### Screenshots
+- feature-176-step0-all-courses-initial.png - Initial page with all courses
+- feature-176-step1-search-python-filtered.png - Filtered to 2 Python courses
+- feature-176-step2-empty-search-all-results.png - All courses after empty search
+- feature-176-step3-clear-button-all-results.png - All courses after Clear button
+
+### Console Errors
+- Only expected 401 Unauthorized from /api/auth/me (not logged in)
+- No JavaScript errors related to search functionality
+
+### Current Status
+- Feature #176 marked as PASSING
+- 97/248 features passing (39.1%)
+
+[Coding] 2026-01-25 Feature #176 'Empty search shows all results' verified - PASSED
