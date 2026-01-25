@@ -33,6 +33,7 @@ import ErrorTestPage from './pages/ErrorTestPage';
 import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
 import FileUploadTestPage from './pages/FileUploadTestPage';
 import VideoTestPage from './pages/VideoTestPage';
+import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -468,6 +469,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/admin" element={<AdminCoursesPage />} />
             <Route path="/admin/courses" element={<AdminCoursesPage />} />
+            <Route path="/admin/analytics" element={<AnalyticsDashboardPage />} />
             <Route path="/admin/courses/new" element={<CourseCreatorPage />} />
             <Route path="/admin/courses/:courseId/edit" element={<CourseCreatorPage />} />
             <Route path="/admin/submissions" element={<SubmissionsReviewPage />} />

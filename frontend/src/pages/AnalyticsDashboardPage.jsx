@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../store/AuthContext';
 
 /**
  * AnalyticsDashboardPage - Instructor dashboard showing student activity analytics
@@ -12,13 +12,18 @@ import { useAuth } from '../contexts/AuthContext';
  * - Course completion stats
  */
 function AnalyticsDashboardPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Wait for auth to finish loading before making decisions
+    if (authLoading) {
+      return;
+    }
+
     // Redirect if not authenticated or not an instructor
     if (!isAuthenticated) {
       navigate('/login');
@@ -31,7 +36,7 @@ function AnalyticsDashboardPage() {
     }
 
     fetchAnalytics();
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, authLoading]);
 
   const fetchAnalytics = async () => {
     try {

@@ -2928,3 +2928,73 @@
   - Screenshots: feature-126-test1-output-294.png, feature-126-test2-output-579.png
 [Testing] Session complete - Feature #126 verified, still passing
 [Testing] 2026-01-25 Feature #129 Notification count from database verified - PASSED
+[Testing] 2026-01-25 Feature #107 'Video load failure shows fallback' regression test - PASSED
+  - Verified all 5 steps via browser automation at /test-video:
+    1. Navigate to video lesson - PASS (accessed /test-video page)
+    2. Simulate video load failure - PASS (Test 1 uses invalid video URL)
+    3. Verify error message is shown - PASS
+       - 'Error al cargar el video' heading displayed
+       - 'El formato de video no es compatible.' error message shown
+       - After retry: 'El video no pudo cargarse. Tiempo de espera agotado.'
+    4. Verify retry option is available - PASS
+       - 'Reintentar' button with refresh icon
+       - Clicking shows retry count 'Reintentar (1)'
+       - Retry attempts to reload the video
+    5. Verify alternative content suggestion - PASS
+       - 'Ver contenido alternativo' button shown
+       - Clicking shows 'Contenido alternativo' panel with text
+       - Panel includes close button to dismiss
+  - Console errors: Only expected errors (invalid video URL, API 401 for unauthenticated)
+  - Screenshots: feature-107-video-error-fallback.png, feature-107-alternative-content.png
+[Testing] Session complete - Feature #107 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #132)
+
+### Completed Features
+- Feature #132: Webinar list from database - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Check database for scheduled webinars - PASS
+       - API /api/webinars returns 6 webinars from database
+       - Mix of completed and scheduled webinars
+    2. Navigate to webinar section - PASS
+       - http://localhost:5173/webinars loads correctly
+       - Page shows "Webinars" title with filters and view toggles
+    3. Verify webinars match database - PASS
+       - All 6 webinars displayed in UI match API response exactly
+       - Titles, descriptions, registered counts all correct
+       - List view and calendar view both show same data
+    4. Verify dates and times are correct - PASS
+       - Dates correctly formatted in Spanish locale
+       - Times correctly converted from UTC to local time
+       - Duration minutes displayed correctly (60, 90, 120 min)
+
+### Technical Details (Already Implemented)
+- backend/src/routes/webinars.js:
+  - GET /api/webinars - Lists all webinars with course info and registered count
+  - Supports filters: course_id, status, upcoming
+  - Returns data from webinars table joined with courses
+  - Seed data created on initialization
+
+- frontend/src/pages/WebinarsPage.jsx:
+  - Fetches webinars from API on mount via useEffect
+  - State initialized as empty array: useState([])
+  - Populates from API: setWebinars(data)
+  - No hardcoded/mock data - all from database
+  - Supports list and calendar views
+  - Filters: Todos, Proximos, Finalizados
+
+### Screenshots
+- feature-132-step2-webinars-page.png - Webinars list view with 6 webinars
+- feature-132-step3-calendar-view.png - Calendar view grouped by date
+- feature-132-step4-finalizados-filter.png - Completed webinars filter
+
+### Console Errors
+- Only expected 401 Unauthorized for /api/auth/me (unauthenticated user)
+
+### Current Status
+- Feature #132 marked as PASSING
+- Passing features: 54/248 (21.8%)
+
+[Testing] 2026-01-25 Feature #132 "Webinar list from database" verified - PASSED

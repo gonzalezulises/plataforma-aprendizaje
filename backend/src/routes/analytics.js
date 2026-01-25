@@ -105,15 +105,20 @@ router.post('/lesson-complete', requireAuth, (req, res) => {
     // Update enrollment progress if courseId provided
     if (courseId) {
       // Get total lessons and completed lessons for the course
+      // Note: lessons -> modules -> courses (lessons don't have course_id directly)
       const totalLessons = queryOne(`
-        SELECT COUNT(*) as count FROM lessons WHERE course_id = ?
+        SELECT COUNT(*) as count
+        FROM lessons l
+        JOIN modules m ON l.module_id = m.id
+        WHERE m.course_id = ?
       `, [courseId]);
 
       const completedLessons = queryOne(`
         SELECT COUNT(*) as count
         FROM lesson_progress lp
         JOIN lessons l ON lp.lesson_id = l.id
-        WHERE lp.user_id = ? AND l.course_id = ? AND lp.status = 'completed'
+        JOIN modules m ON l.module_id = m.id
+        WHERE lp.user_id = ? AND m.course_id = ? AND lp.status = 'completed'
       `, [userId, courseId]);
 
       if (totalLessons && totalLessons.count > 0) {
