@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import useWebSocket from '../hooks/useWebSocket';
+import { useAuth } from '../store/AuthContext';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -37,21 +38,9 @@ function ThreadDetailPage() {
     clearError,
   } = useNetworkAwareSubmit();
 
-  // Get user from session/localStorage
-  const getUser = () => {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  };
-
-  const user = getUser();
-  const isOwner = user && thread && (user.id === thread.user_id);
+  // Get user from AuthContext
+  const { user } = useAuth();
+  const isOwner = user && thread && (String(user.id) === String(thread.user_id));
   const isInstructor = user && user.role === 'instructor_admin';
 
   useEffect(() => {
