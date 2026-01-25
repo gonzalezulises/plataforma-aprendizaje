@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import { ServerErrorBanner } from '../components/ServerErrorBanner';
+import { isServerError, formatApiError } from '../utils/apiErrorHandler';
 
 function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -8,6 +10,8 @@ function DashboardPage() {
   const [enrollments, setEnrollments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [serverError, setServerError] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     // Redirect to login if not authenticated
@@ -38,6 +42,17 @@ function DashboardPage() {
             setEnrollments([]);
             return;
           }
+          // Handle 500 server errors specially
+          if (response.status >= 500) {
+            const errorData = await response.json().catch(() => ({}));
+            const serverErr = {
+              status: response.status,
+              message: 'Internal Server Error',
+              id: errorData.id,
+            };
+            setServerError(formatApiError(serverErr));
+            return;
+          }
           throw new Error('Failed to fetch enrollments');
         }
 
@@ -63,6 +78,57 @@ function DashboardPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">Cargando tu dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Retry function for server errors
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    setServerError(null);
+    setError(null);
+
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_BASE}/enrollments`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        if (response.status >= 500) {
+          const errorData = await response.json().catch(() => ({}));
+          setServerError(formatApiError({ status: response.status, id: errorData.id }));
+          return;
+        }
+        throw new Error('Failed to fetch enrollments');
+      }
+
+      const data = await response.json();
+      setEnrollments(data.enrollments || []);
+    } catch (err) {
+      console.error('Error retrying:', err);
+      if (isServerError(err)) {
+        setServerError(formatApiError(err));
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  // Server error state (500 errors)
+  if (serverError) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+        <div className="max-w-lg mx-auto">
+          <ServerErrorBanner
+            error={serverError}
+            onRetry={handleRetry}
+            onDismiss={() => setServerError(null)}
+            isRetrying={isRetrying}
+          />
         </div>
       </div>
     );

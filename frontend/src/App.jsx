@@ -28,6 +28,8 @@ import UpgradePage from './pages/UpgradePage';
 import UpgradeSuccessPage from './pages/UpgradeSuccessPage';
 import UpgradeErrorPage from './pages/UpgradeErrorPage';
 import CareerPathsPage from './pages/CareerPathsPage';
+import ServerErrorPage from './pages/ServerErrorPage';
+import ErrorTestPage from './pages/ErrorTestPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -402,6 +404,8 @@ function App() {
             <Route path="/upgrade/error" element={<UpgradeErrorPage />} />
             <Route path="/career-paths" element={<CareerPathsPage />} />
             <Route path="/career-paths/:slug" element={<CareerPathsPage />} />
+            <Route path="/server-error" element={<ServerErrorPage />} />
+            <Route path="/test-error" element={<ErrorTestPage />} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

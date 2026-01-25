@@ -121,6 +121,32 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint for simulating server errors (DEV ONLY)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/test/error-500', (req, res) => {
+    // Simulate an internal server error without exposing stack trace
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Something went wrong',
+      id: `ERR_${Date.now().toString(36).toUpperCase()}`
+    });
+  });
+
+  app.post('/api/test/error-500', (req, res) => {
+    // Simulate an internal server error on POST
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'Something went wrong',
+      id: `ERR_${Date.now().toString(36).toUpperCase()}`
+    });
+  });
+
+  app.get('/api/test/error-500-crash', (req, res, next) => {
+    // Simulate an unexpected crash that goes through error handler
+    next(new Error('Simulated server crash for testing'));
+  });
+}
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/video-progress', videoProgressRoutes);
