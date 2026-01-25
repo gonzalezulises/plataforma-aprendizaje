@@ -20,6 +20,7 @@ function ForumPage() {
   const [filter, setFilter] = useState('all'); // all, resolved, unresolved
   const [sort, setSort] = useState('newest');
   const [formRestored, setFormRestored] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ title: '', content: '' });
 
   // Network-aware form submission
   const {
@@ -145,11 +146,35 @@ function ForumPage() {
     }
   };
 
+  // Clear field error when user starts typing
+  const handleFieldChange = (field, value) => {
+    setNewThread({ ...newThread, [field]: value });
+    // Clear error for this field if user starts typing
+    if (value.trim() && fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   const handleCreateThread = async (e) => {
     e.preventDefault();
 
-    if (!newThread.title.trim() || !newThread.content.trim()) {
-      toast.error('Por favor completa el titulo y contenido');
+    // Validate required fields and set field-level errors
+    const errors = { title: '', content: '' };
+    let hasErrors = false;
+
+    if (!newThread.title.trim()) {
+      errors.title = 'El titulo es requerido';
+      hasErrors = true;
+    }
+    if (!newThread.content.trim()) {
+      errors.content = 'El contenido es requerido';
+      hasErrors = true;
+    }
+
+    setFieldErrors(errors);
+
+    if (hasErrors) {
+      toast.error('Por favor completa los campos requeridos');
       return;
     }
 
@@ -177,6 +202,7 @@ function ForumPage() {
         clearSavedFormData();
         toast.success('Hilo creado exitosamente');
         setNewThread({ title: '', content: '' });
+        setFieldErrors({ title: '', content: '' });
         setShowNewThread(false);
         // Navigate to the new thread
         navigate(`/forum/thread/${data.thread.id}`);
@@ -315,29 +341,57 @@ function ForumPage() {
             <form onSubmit={handleCreateThread}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Titulo
+                  Titulo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={newThread.title}
-                  onChange={(e) => setNewThread({ ...newThread, title: e.target.value })}
+                  onChange={(e) => handleFieldChange('title', e.target.value)}
                   placeholder="Escribe un titulo descriptivo para tu pregunta..."
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    fieldErrors.title
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   disabled={creating}
+                  aria-invalid={!!fieldErrors.title}
+                  aria-describedby={fieldErrors.title ? 'title-error' : undefined}
                 />
+                {fieldErrors.title && (
+                  <p id="title-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {fieldErrors.title}
+                  </p>
+                )}
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Contenido
+                  Contenido <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={newThread.content}
-                  onChange={(e) => setNewThread({ ...newThread, content: e.target.value })}
+                  onChange={(e) => handleFieldChange('content', e.target.value)}
                   placeholder="Describe tu pregunta con detalle. Incluye codigo si es relevante..."
                   rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono ${
+                    fieldErrors.content
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   disabled={creating}
+                  aria-invalid={!!fieldErrors.content}
+                  aria-describedby={fieldErrors.content ? 'content-error' : undefined}
                 />
+                {fieldErrors.content && (
+                  <p id="content-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {fieldErrors.content}
+                  </p>
+                )}
               </div>
               <div className="flex gap-3">
                 <button
@@ -352,6 +406,7 @@ function ForumPage() {
                   onClick={() => {
                     setShowNewThread(false);
                     setNewThread({ title: '', content: '' });
+                    setFieldErrors({ title: '', content: '' });
                     clearSavedFormData();
                   }}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"

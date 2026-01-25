@@ -1,4 +1,5 @@
 import express from 'express';
+// Feature #144 - Added userId parameter to dev-login for enrollment testing
 
 const router = express.Router();
 
@@ -174,6 +175,7 @@ router.get('/me', (req, res) => {
  * - role: 'student_free', 'student_premium', or 'instructor_admin'
  * - name: Custom name for the user
  * - email: Custom email for the user
+ * - userId: Custom user ID for testing (e.g., enrollment verification tests)
  */
 router.post('/dev-login', (req, res) => {
   // Only allow in development mode
@@ -183,15 +185,19 @@ router.post('/dev-login', (req, res) => {
 
   console.log('[Auth] Development login triggered');
 
-  const { role = 'student_free', name, email } = req.body || {};
+  const { role = 'student_free', name, email, userId } = req.body || {};
 
   // Validate role
   const validRoles = ['student_free', 'student_premium', 'instructor_admin'];
   const userRole = validRoles.includes(role) ? role : 'student_free';
 
+  // Determine user ID: custom userId > role-based default
+  const defaultId = userRole === 'instructor_admin' ? 99 : 1;
+  const finalUserId = userId && Number.isInteger(userId) && userId > 0 ? userId : defaultId;
+
   // Simulate successful login with test user
   req.session.user = {
-    id: userRole === 'instructor_admin' ? 99 : 1,
+    id: finalUserId,
     email: email || (userRole === 'instructor_admin' ? 'instructor@rizo.ma' : 'test@rizo.ma'),
     name: name || (userRole === 'instructor_admin' ? 'Instructor Admin' : 'Usuario de Prueba'),
     role: userRole,

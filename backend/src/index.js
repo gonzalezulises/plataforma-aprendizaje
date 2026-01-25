@@ -1,3 +1,4 @@
+// Last reload: 2026-01-25T20:40:10.361Z
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -389,3 +390,5 @@ export default app;
 
 // Reload trigger do., 25 de ene. de 2026  10:35:00
 // restart trigger do., 25 de ene. de 2026 14:34:42
+
+// RELOAD_MARKER: 2026-01-25T20:42:42.010Z

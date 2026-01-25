@@ -2,7 +2,7 @@ import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 import { parseSearchQuery } from '../utils/searchUtils.js';
 
-console.log('Courses routes loading... (updated 2026-01-25 - Feature #179 quoted search)');
+console.log('Courses routes loading... (Feature #179 - 2026-01-25T20:41:53.023Z)');
 
 const router = express.Router();
 
@@ -1144,3 +1144,5 @@ router.delete('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId
 export default router;
 // Trigger reload do., 25 de ene. de 2026 11:58:54
 // Trigger reload do., 25 de ene. de 2026 15:01:34
+
+// RELOAD_MARKER: 2026-01-25T20:42:42.010Z
