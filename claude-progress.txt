@@ -6708,3 +6708,66 @@ Frontend (CourseCatalogPage.jsx):
 - 104/248 features passing (41.9%)
 
 [Coding] 2026-01-25 Feature #184 'Filter persistence across sessions' verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #185)
+
+### Feature #185: Required fields show error when empty - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. Leave required field empty - PASS
+   - Started with empty form on ForumPage
+   - Both Title and Content fields empty
+
+2. Submit form - PASS
+   - Clicked "Publicar Pregunta" button
+   - Form submission was prevented
+
+3. Verify error message on field - PASS
+   - Both fields showed red borders
+   - "El titulo es requerido" displayed below title field
+   - "El contenido es requerido" displayed below content field
+   - Error icon (⚠) shown next to each error message
+   - Asterisk (*) shows required fields in labels
+
+4. Fill field - PASS
+   - Typed "TEST_185_VALIDATION" in title field
+   - Typed content in content field
+
+5. Verify error clears - PASS
+   - Title error cleared immediately when text was entered
+   - Content error cleared immediately when text was entered
+   - Red borders reverted to normal gray borders
+
+### Implementation Details
+
+ForumPage.jsx changes:
+- Added `fieldErrors` state: `{ title: '', content: '' }`
+- Added `handleFieldChange()` function that clears error when typing
+- Updated `handleCreateThread()` to set field-level errors
+- Updated form inputs with conditional red border styling
+- Added error message display with icon below each field
+- Added aria-invalid and aria-describedby for accessibility
+
+WebinarSchedulePage.jsx changes:
+- Added same pattern for Title, Date, and Time fields
+- Field errors: `{ title: '', scheduled_date: '', scheduled_time: '' }`
+- Updated reset form to clear errors
+
+### Screenshots
+- feature-185-current-toast-only.png - Before: only toast notification
+- feature-185-step3-error-messages-on-fields.png - After: field-level errors
+- feature-185-step5-title-error-cleared.png - Title error cleared
+- feature-185-step5-all-errors-cleared.png - All errors cleared
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to form validation
+
+### Current Status
+- Feature #185 marked as PASSING
+- 105/248 features passing (42.3%)
+
+[Coding] 2026-01-25 Feature #185 'Required fields show error when empty' verified - PASSED
