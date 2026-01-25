@@ -4516,3 +4516,77 @@ Console errors: None (only pre-login 401s which are expected)
 
 [Testing] 2026-01-25 Feature #154 'Delete confirmation prevents accidental delete' verified - PASSED
 
+
+[Testing] 2026-01-25 Feature #116 'Memory limit exceeded in code execution' verified - PASSED
+
+Verification Steps:
+1. Write code that allocates massive memory - PASS
+   - Tested: list(range(100000000)) and [0] * 100000000
+2. Run the code - PASS (clicked Ejecutar button)
+3. Verify memory limit error message - PASS
+   - Message: 'MemoryError: Se intento crear una lista desde range(100.000.000). Limite de memoria: 256MB.'
+4. Verify sandbox is cleaned up - PASS
+   - Message: 'Sandbox limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo sin problemas.'
+5. Verify next execution works normally - PASS
+   - Normal print('Hola Mundo') executed successfully after memory error
+
+Screenshots:
+- feature-116-memory-limit-error.png - Shows memory error with cleanup message
+- feature-116-normal-execution-after-memory-error.png - Shows successful execution after error
+
+Console errors: None
+
+[Testing] Session complete - Feature #116 verified, no regression found
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #156)
+
+### Completed Features
+- Feature #156: Back and resubmit prevention - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Submit a form - PASS
+       - Created thread "TEST_156_BACK_RESUBMIT - Testing back button resubmit prevention"
+       - Navigated to /forum/thread/12
+       - Success toast: "Hilo creado exitosamente"
+    2. Click browser back - PASS
+       - Used browser back navigation
+       - Returned to forum page
+       - Form NOT shown with pre-filled data
+       - Thread list shows only ONE TEST_156 entry
+    3. Click forward or resubmit - PASS
+       - Used browser forward navigation
+       - Returned to thread detail page
+       - No duplicate submission occurred
+    4. Verify no duplicate entry - PASS
+       - API confirmed only 1 thread with TEST_156_BACK_RESUBMIT
+       - Thread count: 12 total, only 1 with TEST_156 prefix
+       - Forum list shows single entry
+    5. Verify appropriate message if attempted - PASS
+       - Form opens empty (no pre-filled data)
+       - No "resubmit" browser prompt (SPA architecture)
+       - User would need to manually re-enter all data
+
+### Technical Implementation
+- App uses React/SPA architecture - form submissions are API calls (fetch), NOT traditional HTML form POSTs
+- React Router navigation via navigate() after submission
+- Form state cleared after successful submission via React state management
+- No browser "resubmit form data" prompt because no actual form POST occurs
+
+### Screenshots
+- feature-156-step1-form-submitted.png - Thread created successfully
+- feature-156-step2-after-back-button.png - Forum page after back navigation
+- feature-156-step4-no-duplicate.png - Only one TEST_156 entry visible
+- feature-156-step5-form-empty-after-back.png - Form is empty, no pre-filled data
+
+### Console Errors
+- Only WebSocket reconnection errors (expected during page navigation)
+- No critical JavaScript errors
+
+### Current Status
+- Feature #156 marked as PASSING
+- Passing features: 78/248 (31.5%)
+
+[Testing] 2026-01-25 Feature #156 'Back and resubmit prevention' verified - PASSED
+
