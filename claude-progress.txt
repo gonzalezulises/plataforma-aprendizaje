@@ -2833,3 +2833,35 @@
   - Console errors: Only expected 401 for unauthenticated /api/auth/me
   - Screenshots: feature-119-search-python-results.png, feature-119-search-sql-results.png
 [Testing] Session complete - Feature #119 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #123)
+
+### Completed Features
+- Feature #123: Progress percentage matches database - VERIFIED AND PASSING
+  - All 6 verification steps verified via browser automation:
+    1. Check database for lesson_progress entries - PASS
+       - Lesson 6 (Python): status "completed"
+       - Lesson 4 (JavaScript): status "completed"
+    2. Navigate to dashboard - PASS
+       - Dashboard shows enrolled courses with progress percentages
+    3. Calculate expected percentage - PASS
+       - Python: 1 completed / 1 total = 100%
+       - JavaScript (course 17): 1 completed / 1 total = 100%
+    4. Verify displayed percentage matches calculation - PASS
+       - Python: 100% completado with "Completado" badge
+       - JavaScript: 100% completado with "Completado" badge
+       - SQL: 0% completado
+    5. Complete a lesson - PASS
+       - Completed lesson 4 (Variables con let y const)
+       - Clicked "Marcar como completada" button
+    6. Verify both UI and database update - PASS
+       - Database: progress_percent: 100, completed_at updated
+       - Dashboard UI: 100% completado with Completado badge
+
+### Current Status
+- Feature #123 marked as PASSING
+- Passing: 51/248 features (20.6%)
+
+[Testing] 2026-01-25 Feature #123 "Progress percentage matches database" verified - PASSED
