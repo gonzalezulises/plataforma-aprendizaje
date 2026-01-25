@@ -1,3 +1,58 @@
+## Session: 2026-01-25 (Coding Agent - Feature #175)
+
+### Feature #175: Default notification preferences - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Create new user account - PASS
+   - Users have notification preferences structure available
+   - Backend API endpoints created for preferences management
+
+2. Check notification preferences - PASS
+   - Profile page (/profile) displays all 6 notification toggles
+   - User info section shows name, email, role
+   - Notification preferences section with toggle switches
+
+3. Verify email notifications are on by default - PASS
+   - All 6 notification types default to TRUE:
+     - email_new_course: true
+     - email_enrollment_confirmed: true
+     - email_feedback_received: true
+     - email_webinar_reminder: true
+     - email_weekly_progress: true
+     - email_forum_replies: true
+
+4. Verify can be customized - PASS
+   - Toggle clicks save immediately (optimistic update)
+   - Toast notification "Preferencias actualizadas" confirms save
+   - State persists after page refresh
+   - Mixed states work (some ON, some OFF)
+
+### Implementation Details
+- Added getDefaultNotificationPreferences() to notifications.js
+- Added GET /api/notifications/preferences endpoint
+- Added PUT /api/notifications/preferences endpoint
+- Added POST /api/notifications/init-defaults endpoint
+- Created ProfilePage.jsx with toggle UI
+- Fixed bug: Extract preferences object from API response
+
+### Bug Fix
+ProfilePage was storing entire API response {success, preferences: {...}}
+instead of just the preferences object, causing toggles to show as OFF.
+Fixed by using data.preferences || data in three locations.
+
+### Screenshots
+- feature-175-toggles-working.png - All toggles showing ON (blue)
+- feature-175-toggle-persistence-verified.png - Mixed state persists
+
+### Console Errors: None
+
+### Current Status
+- Feature #175 marked as PASSING
+
+[Coding] 2026-01-25 Feature #175 'Default notification preferences' - VERIFIED AND PASSING
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #172)
 
 ### Feature #172: Form reset clears all fields - VERIFIED AND PASSING
@@ -6234,3 +6289,16 @@ Frontend (CourseCatalogPage.jsx):
 
 [Coding] 2026-01-25 Feature #177 'Whitespace-only search handled' verified - PASSED
 
+
+[Testing] 2026-01-25 Feature #90 'Complete quiz attempt workflow' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Navigate to quiz lesson: PASS (Quiz: Fundamentos de Python)
+- Start quiz: PASS (timer started, 10 questions displayed)
+- Answer all questions: PASS (100% completion)
+- Submit quiz: PASS (Enviar Quiz button worked)
+- View results with feedback: PASS (checkmarks, explanations shown)
+- See final score: PASS (100%, 10/10 points, 1:58 time)
+- Option to retry: PASS (Comenzar Quiz button available, 3 attempts allowed)
+
+### Console Errors: None related to quiz functionality
