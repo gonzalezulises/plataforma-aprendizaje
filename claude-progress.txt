@@ -2067,3 +2067,67 @@
   - Feature #107: VERIFIED (via code review - database lessons don't have video content for live testing)
 [Testing] Session complete - Feature #107 regression fixed and verified
 
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #111)
+
+### Completed Features
+- Feature #111: File upload error shows message - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Attempt to upload a file - PASS
+       - File selector works correctly
+       - Selected file shows name (test-upload-file.txt) and size (60 Bytes)
+    2. Simulate upload failure - PASS
+       - Network error: Used invalid URL (localhost:9999) to simulate network failure
+       - Server error: Backend returned 500 error
+    3. Verify error message is shown - PASS
+       - Network error displays: "Error de Conexion" + "Error de red: No se pudo conectar con el servidor"
+       - Server error displays: "Error al Subir Archivo" + "Error al guardar el registro del archivo"
+    4. Verify file can be re-selected - PASS
+       - Upload area remains clickable after error
+       - File chooser opens when clicking upload area
+    5. Verify retry is possible - PASS
+       - "Reintentar" button available for network errors
+       - Retry count increments (shows "Reintentar (1)" after first retry)
+       - "Cancelar" button to dismiss error
+
+### Technical Implementation
+- frontend/src/components/FileUpload.jsx:
+  - Complete file upload component with:
+    - File type validation (accepts .pdf, .doc, .docx, .txt, .py, .js, .ts, .zip, .png, .jpg, .jpeg, etc.)
+    - File size validation (10MB max)
+    - Drag and drop support
+    - Upload progress bar
+    - Network error detection with retry functionality
+    - Server error display
+    - File re-selection after errors
+    - Retry count tracking
+
+- backend/src/routes/uploads.js:
+  - File upload API endpoint using multer
+  - File type filtering
+  - Size limiting (10MB)
+  - Database storage for upload records
+  - Error handling for various failure modes
+
+- frontend/src/pages/FileUploadTestPage.jsx:
+  - Test page for file upload error scenarios
+  - Two upload areas: one working, one with invalid URL for testing
+  - Displays last error details as JSON
+
+### Screenshots
+- feature-111-step1-file-upload-test-page.png - Test page with upload areas
+- feature-111-step2-network-error-displayed.png - Network error banner with retry button
+- feature-111-step3-retry-count-incremented.png - Retry button showing "(1)" after retry
+- feature-111-step4-server-error-displayed.png - Server error banner
+
+### Console Errors
+- Only expected errors from testing (500 error from file upload test)
+
+### Current Status
+- Feature #111 marked as PASSING
+- Passing features: 35/248 (14.1%)
+- Commit: 4f5c357
+
+[Testing] 2026-01-25 Feature #111 "File upload error shows message" verified - PASSED
