@@ -181,6 +181,15 @@ function CourseDetailPage() {
 
           // Merge API data with sample data for additional fields (modules, etc.)
           const sampleCourse = SAMPLE_COURSES[slug];
+
+          // Use API modules if available
+          // IMPORTANT: Only use sample modules for DISPLAY purposes, never for navigation
+          // because sample lesson IDs don't match real database IDs
+          const hasApiModules = apiCourse.modules && apiCourse.modules.length > 0;
+          const modulesToUse = hasApiModules
+            ? apiCourse.modules
+            : sampleCourse?.modules || [];
+
           const mergedCourse = {
             ...sampleCourse,
             id: apiCourse.id, // Use actual database ID!
@@ -190,6 +199,8 @@ function CourseDetailPage() {
             level: apiCourse.level,
             isPremium: !!apiCourse.is_premium,
             duration: `${apiCourse.duration_hours || 0} horas`,
+            modules: modulesToUse, // For display purposes
+            _hasRealLessons: hasApiModules, // Flag to indicate if navigation is safe
           };
 
           setCourse(mergedCourse);
@@ -269,13 +280,15 @@ function CourseDetailPage() {
         setIsEnrolled(true);
         setShowEnrollModal(false);
 
-        // Redirect to first lesson
-        if (course.modules?.[0]?.lessons?.[0]) {
+        // Redirect to first lesson only if we have real lessons from API
+        // Sample data lesson IDs don't match real database IDs
+        if (course._hasRealLessons && course.modules?.[0]?.lessons?.[0]) {
           const firstLesson = course.modules[0].lessons[0];
           navigate(`/course/${slug}/lesson/${firstLesson.id}`);
         }
+        // If no real lessons, user stays on course page (already enrolled)
       } else if (response.status === 409) {
-        toast.info('Ya estas inscrito en este curso');
+        toast('Ya estas inscrito en este curso', { icon: 'ℹ️' });
         setIsEnrolled(true);
         setShowEnrollModal(false);
       } else {
@@ -291,9 +304,14 @@ function CourseDetailPage() {
   };
 
   const handleGoToCourse = () => {
-    if (course.modules?.[0]?.lessons?.[0]) {
+    // Only navigate if we have real lessons from the API (not sample data)
+    // Sample data lesson IDs don't match real database IDs
+    if (course._hasRealLessons && course.modules?.[0]?.lessons?.[0]) {
       const firstLesson = course.modules[0].lessons[0];
       navigate(`/course/${slug}/lesson/${firstLesson.id}`);
+    } else {
+      // If no real lessons available, stay on course page and show message
+      toast('Este curso aun no tiene lecciones disponibles', { icon: 'ℹ️' });
     }
   };
 
