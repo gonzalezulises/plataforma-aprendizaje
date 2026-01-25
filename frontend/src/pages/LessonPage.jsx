@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import CodeBlock from '../components/CodeBlock';
+import VideoPlayer from '../components/VideoPlayer';
 
 /**
- * LessonPage - Displays lesson content including code blocks
- * This page demonstrates the use of JetBrains Mono font for code
+ * LessonPage - Displays lesson content including code blocks and videos
+ * Supports video progress tracking - videos resume from where users left off
  */
 function LessonPage() {
   const { slug, lessonId } = useParams();
@@ -20,6 +21,15 @@ function LessonPage() {
     duration: 15,
     description: 'En esta leccion aprenderemos los conceptos basicos de variables y tipos de datos en Python.',
     content: [
+      {
+        type: 'video',
+        id: 'intro-video',
+        title: 'Video: Introduccion a Variables en Python',
+        // Using a sample video from the public domain for testing
+        // In production, this would be a Cloudflare R2 or YouTube URL
+        src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        poster: null
+      },
       {
         type: 'text',
         content: `## Variables en Python
@@ -242,6 +252,19 @@ Es estudiante: True
                       Resetear
                     </button>
                   </div>
+                </div>
+              );
+            }
+            if (block.type === 'video') {
+              return (
+                <div key={index} className="mb-8">
+                  <VideoPlayer
+                    src={block.src}
+                    title={block.title}
+                    lessonId={lesson.id}
+                    videoId={block.id || `video-${index}`}
+                    poster={block.poster}
+                  />
                 </div>
               );
             }

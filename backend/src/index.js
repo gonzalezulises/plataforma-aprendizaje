@@ -9,9 +9,20 @@ import dotenv from 'dotenv';
 
 // Import routes
 import authRoutes from './routes/auth.js';
+import videoProgressRoutes from './routes/video-progress.js';
+import notebooksRoutes from './routes/notebooks.js';
+
+// Import database
+import { initDatabase } from './config/database.js';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize database
+initDatabase().catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -72,6 +83,8 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/video-progress', videoProgressRoutes);
+app.use('/api/notebooks', notebooksRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -84,6 +97,7 @@ app.get('/api', (req, res) => {
       courses: '/api/courses/*',
       modules: '/api/modules/*',
       lessons: '/api/lessons/*',
+      notebooks: '/api/notebooks/*',
       execute: '/api/execute',
       quizzes: '/api/quizzes/*',
       projects: '/api/projects/*',
