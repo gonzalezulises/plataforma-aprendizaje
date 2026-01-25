@@ -1,3 +1,73 @@
+## Session: 2026-01-25 (Agent Session - Feature #104)
+
+### Completed Features
+- Feature #104: Network error during form submission shows message
+  - Full workflow verified via browser automation:
+    1. Start filling out a form - PASS
+       - Navigated to /course/python-fundamentos/forum
+       - Clicked "Nueva Pregunta" button
+       - Filled title: "TEST_104_Network Error Test Question"
+       - Filled content: "This is a test question to verify network error handling..."
+    2. Simulate network disconnection - PASS
+       - Used JavaScript to override fetch and throw TypeError("Failed to fetch")
+       - Network error simulation targeted forum API endpoints
+    3. Submit the form - PASS
+       - Clicked "Publicar Pregunta" button
+       - Form submission attempted with simulated network failure
+    4. Verify error message appears - PASS
+       - NetworkErrorBanner component displayed
+       - Shows "Error de Conexion" heading
+       - Shows "No se pudo conectar con el servidor. Verifica tu conexion a internet."
+       - Shows connection status indicator ("Conectado" with green dot)
+       - Shows "Tus datos no se han perdido" message
+       - Toast notification also shown
+    5. Verify form data is not lost - PASS
+       - Title field still contains "TEST_104_Network Error Test Question"
+       - Content field still contains full test message
+       - Form inputs remain editable
+    6. Reconnect and verify retry works - PASS
+       - Restored original fetch function
+       - Clicked "Reintentar" button
+       - Toast "Reintentando..." shown
+       - Thread created successfully
+       - Thread appears in forum list with full content preserved
+
+### Implementation Details
+- Created frontend/src/hooks/useNetworkAwareSubmit.js:
+  - Detects network errors (Failed to fetch, NetworkError, ECONNREFUSED, etc.)
+  - Preserves form data in lastSubmission state for retry
+  - Provides submit(), retry(), and clearError() functions
+  - Returns isSubmitting, networkError, hasPendingRetry state
+
+- Created frontend/src/components/NetworkErrorBanner.jsx:
+  - Displays error banner when networkError is set
+  - Shows connection status (online/offline) with real-time updates
+  - Provides "Reintentar" button for retry
+  - Provides "Descartar" button to dismiss error
+  - Accessible with role="alert" and aria-live="polite"
+
+- Updated forms to use network error handling:
+  - ForumPage.jsx - Create thread form
+  - ThreadDetailPage.jsx - Reply form
+  - WebinarSchedulePage.jsx - Schedule webinar form
+  - ProjectSubmissionPage.jsx - Project submission form
+
+### Screenshots
+- feature-104-step4-network-error-shown.png - Network error banner displayed
+- feature-104-step6-retry-successful.png - Thread created after retry
+
+### Console Errors
+- Only expected 401 for /api/auth/me (unauthenticated context)
+- No JavaScript errors
+
+### Current Status
+- Feature #104 marked as PASSING
+- Commit: 18e1160
+
+[Testing] 2026-01-25 Feature #104 "Network error during form submission shows message" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #100)
 
 ### Completed Features
