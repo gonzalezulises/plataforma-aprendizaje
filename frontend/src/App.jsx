@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
 import AuthCallback from './pages/AuthCallback';
 import HomePage from './pages/HomePage';
+import LessonPage from './pages/LessonPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -322,7 +323,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/courses" element={<CourseCatalog />} />
             <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
-            <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
+            <Route path="/course/:slug/lesson/:lessonId" element={<LessonPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
             <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
