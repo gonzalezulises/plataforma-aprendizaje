@@ -36,6 +36,57 @@ function requireInstructor(req, res, next) {
 }
 
 /**
+ * Helper: Recalculate course progress for a user after lesson deletion
+ * This is used when lessons are deleted to update the enrollment progress
+ */
+function recalculateCourseProgressOnDelete(userId, courseId) {
+  try {
+    // Count total lessons in course
+    const totalLessons = queryOne(`
+      SELECT COUNT(*) as count
+      FROM lessons l
+      JOIN modules m ON l.module_id = m.id
+      WHERE m.course_id = ?
+    `, [courseId]);
+
+    // Count completed lessons (only those with existing lessons - orphaned progress already deleted)
+    const completedLessons = queryOne(`
+      SELECT COUNT(*) as count
+      FROM lesson_progress lp
+      JOIN lessons l ON lp.lesson_id = l.id
+      JOIN modules m ON l.module_id = m.id
+      WHERE lp.user_id = ? AND m.course_id = ? AND lp.status = 'completed'
+    `, [userId, courseId]);
+
+    if (totalLessons && totalLessons.count > 0) {
+      const progressPercent = Math.round((completedLessons.count / totalLessons.count) * 100);
+      const now = new Date().toISOString();
+      const completedAt = progressPercent >= 100 ? now : null;
+
+      // Update enrollment progress
+      run(`
+        UPDATE enrollments
+        SET progress_percent = ?, last_accessed_at = ?, completed_at = COALESCE(?, completed_at)
+        WHERE user_id = ? AND course_id = ?
+      `, [progressPercent, now, completedAt, userId, courseId]);
+
+      console.log(`Recalculated progress for user ${userId} on course ${courseId}: ${progressPercent}%`);
+    } else if (totalLessons && totalLessons.count === 0) {
+      // If no lessons left, reset progress to 0
+      run(`
+        UPDATE enrollments
+        SET progress_percent = 0, last_accessed_at = ?
+        WHERE user_id = ? AND course_id = ?
+      `, [new Date().toISOString(), userId, courseId]);
+
+      console.log(`Reset progress for user ${userId} on course ${courseId}: 0% (no lessons left)`);
+    }
+  } catch (error) {
+    console.error('Error recalculating course progress:', error);
+  }
+}
+
+/**
  * GET /api/courses/categories - Get all distinct categories from courses
  */
 router.get('/categories', (req, res) => {
@@ -390,7 +441,7 @@ router.delete('/:id', requireInstructor, (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:09:40.409Z
+    // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:27:02.157Z
     // 1. Delete enrollments for this course
     run('DELETE FROM enrollments WHERE course_id = ?', [id]);
 
@@ -800,9 +851,29 @@ router.delete('/:courseId/modules/:moduleId/lessons/:lessonId', requireInstructo
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
+    // Get all users who have progress on this lesson before deletion
+    const affectedUsers = queryAll(
+      'SELECT DISTINCT user_id FROM lesson_progress WHERE lesson_id = ?',
+      [lessonId]
+    );
+
+    // Delete lesson_progress entries (cascade)
+    const deletedProgressCount = run('DELETE FROM lesson_progress WHERE lesson_id = ?', [lessonId]);
+    console.log(`Deleted ${deletedProgressCount?.changes || 0} lesson_progress entries for lesson ${lessonId}`);
+
+    // Delete the lesson
     run('DELETE FROM lessons WHERE id = ?', [lessonId]);
 
-    res.json({ message: 'Lesson deleted successfully' });
+    // Recalculate progress for all affected enrollments
+    for (const user of affectedUsers) {
+      recalculateCourseProgressOnDelete(user.user_id, courseId);
+    }
+
+    res.json({
+      message: 'Lesson deleted successfully',
+      progressEntriesRemoved: deletedProgressCount?.changes || 0,
+      affectedUsers: affectedUsers.length
+    });
   } catch (error) {
     console.error('Error deleting lesson:', error);
     res.status(500).json({ error: 'Failed to delete lesson' });

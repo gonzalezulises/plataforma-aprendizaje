@@ -4953,3 +4953,204 @@ All 5 verification steps passed:
 
 [Testing] 2026-01-25 Feature #151 'Double-click submit creates only one submission' regression test - PASSED (no regression found)
 
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #103 Regression Test)
+
+### Feature #103: Network error during code execution shows message - REGRESSION TEST PASSED
+
+All 6 verification steps passed:
+1. Navigate to code challenge - PASS
+   - Navigated to /challenge/1 (Hola Mundo en Python)
+2. Write valid code - PASS
+   - Wrote: print("Hola Mundo")
+3. Simulate network disconnection - PASS
+   - Intercepted window.fetch to reject with TypeError('Failed to fetch')
+   - Only affected /run endpoint
+4. Click run - PASS
+   - Clicked 'Ejecutar' button
+5. Verify user-friendly error message - PASS
+   - Orange banner appeared at top of page
+   - Heading: 'Error de conexion: No se pudo conectar con el servidor para ejecutar el codigo.'
+   - Details: 'El servidor no responde. Por favor, verifica que el servidor este funcionando e intenta de nuevo.'
+6. Verify option to retry - PASS
+   - 'Reintentar' button displayed prominently
+   - Clicking retry after restoring fetch successfully executed code
+   - Output showed 'Hola Mundo' after retry
+
+### Screenshots
+- feature-103-network-error-message.png - Error banner with retry option
+- feature-103-retry-success.png - Successful output after retry
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- Simulated network error was properly caught and handled
+
+[Testing] 2026-01-25 Feature #103 'Network error during code execution shows message' regression test - PASSED (no regression found)
+
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #116 Regression Test)
+
+### Feature #116: Memory limit exceeded in code execution - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Write code that allocates massive memory - PASS
+   - Tested: `[0] * 100000000` (large list multiplication)
+   - Tested: `list(range(100000000))` (large list from range)
+2. Run the code - PASS
+   - Clicked 'Ejecutar' button
+3. Verify memory limit error message - PASS
+   - Error displayed: 'MemoryError: Se intento crear una lista demasiado grande (100.000.000 elementos). Limite de memoria: 256MB.'
+   - Also tested: 'MemoryError: Se intento crear una lista desde range(100.000.000). Limite de memoria: 256MB.'
+4. Verify sandbox is cleaned up - PASS
+   - Message: 'Sandbox limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo sin problemas.'
+5. Verify next execution works normally - PASS
+   - Successfully executed `print("Hola Mundo")` after memory error
+   - Output: 'Hola Mundo'
+
+### Screenshots
+- feature-116-memory-limit-error.png - Memory error message with sandbox cleanup notice
+- feature-116-normal-execution-after-memory-error.png - Successful execution after error
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors
+
+[Testing] 2026-01-25 Feature #116 'Memory limit exceeded in code execution' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #121 Regression Test)
+
+### Feature #121: Level filter options from database - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Check database for distinct levels - PASS
+   - API returns 3 distinct levels: Principiante, Intermedio, Avanzado
+2. Navigate to catalog - PASS
+   - Navigated to /courses page successfully
+3. Verify level filter shows same options - PASS
+   - Dropdown options match database levels exactly
+   - Console log confirms levels fetched from database
+4. Filter by level and verify API is called - PASS
+   - Intermedio: GET /api/courses?level=Intermedio => 200 OK
+   - Avanzado: GET /api/courses?level=Avanzado => 200 OK
+5. Verify results match filtered criteria - PASS
+   - Intermedio: 4 courses, all with Intermedio badge
+   - Avanzado: 2 courses, all with Avanzado badge
+
+### Screenshots
+- feature-121-step2-catalog-page.png
+- feature-121-step4-filtered-by-intermedio.png
+- feature-121-step5-filtered-by-avanzado.png
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+
+[Testing] 2026-01-25 Feature #121 'Level filter options from database' regression test - PASSED (no regression found)
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #116 Regression Test)
+
+### Feature #116: Memory limit exceeded in code execution - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Write code that allocates massive memory - PASS
+   - Tested: `[0] * 100000000` (100 million element list)
+2. Run the code - PASS
+   - Clicked 'Ejecutar' button
+3. Verify memory limit error message - PASS
+   - Error displayed: '💾 MemoryError: Se intento crear una lista demasiado grande (100.000.000 elementos). Limite de memoria: 256MB.'
+4. Verify sandbox is cleaned up - PASS
+   - Message: '✅ Sandbox limpiado correctamente. Puedes escribir nuevo codigo y ejecutarlo sin problemas.'
+5. Verify next execution works normally - PASS
+   - Successfully executed `print("Hola Mundo")` after memory error
+   - Output: 'Hola Mundo'
+
+### Screenshots
+- feature-116-regression-test-passed.png - Successful execution after memory error recovery
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to the feature
+
+[Testing] 2026-01-25 Feature #116 'Memory limit exceeded in code execution' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #119 Regression Test)
+
+### Feature #119: Search results match API response - REGRESSION TEST PASSED
+
+All 4 verification steps passed:
+1. Search for a specific term - PASS
+   - Python search: 2 results
+   - SQL search: 1 result
+   - pandas (description) search: 1 result
+2. Inspect network request to search API - PASS
+   - GET /api/courses?search=Python => 200 OK
+   - GET /api/courses?search=SQL => 200 OK
+   - GET /api/courses?search=pandas => 200 OK
+3. Verify UI displays same results as API response - PASS
+   - Python: API=2, UI='2 curso(s) encontrado(s)' - MATCH
+   - SQL: API=1, UI='1 curso(s) encontrado(s)' - MATCH
+   - pandas: API=1, UI='1 curso(s) encontrado(s)' - MATCH
+4. Verify no client-side filtering alters results - PASS
+   - Results count matches exactly between API and UI
+   - Description search works correctly (pandas in description)
+   - No additional filtering in console logs
+
+### Screenshots
+- feature-119-step1-python-search-results.png - Python search showing 2 results
+- feature-119-step2-sql-search-results.png - SQL search showing 1 result
+- feature-119-step3-description-search-pandas.png - Description search (pandas) showing 1 result
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors
+
+[Testing] 2026-01-25 Feature #119 'Search results match API response' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #158 Regression Test)
+
+### Feature #158: Mark complete idempotent - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Navigate to a lesson - PASS
+   - Navigated to /course/test-120-curso-de-testing/lesson/8 (Leccion 1: Que es el testing)
+2. Click mark complete - PASS
+   - Clicked 'Marcar como completada' button
+   - UI showed 'Completada' badge and 'Leccion completada' success message
+3. Click mark complete again - PASS
+   - Button replaced with static 'Leccion completada' message after first click
+   - Prevents duplicate clicks (proper idempotent UI design)
+4. Verify lesson marked complete once - PASS
+   - After page refresh, lesson still shows 'Completada' state
+   - No duplicate records created
+5. Verify progress accurate - PASS
+   - Course progress updated from 50% to 100% on dashboard
+   - Shows 'Completado' badge correctly
+
+### Backend Code Review
+- analytics.js properly implements idempotency (lines 76-97)
+- Checks if record exists before insert/update
+- Updates existing record instead of creating duplicates
+
+### Screenshots
+- feature-158-step1-before-click.png - Lesson page before marking complete
+- feature-158-verified-progress-accurate.png - Dashboard showing 100% completion
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #158 'Mark complete idempotent' regression test - PASSED (no regression found)
