@@ -1,3 +1,49 @@
+## Session: 2026-01-25 (Agent Session - Feature #119)
+
+### Completed Features
+- Feature #119: Search results match API response - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Search for a specific term - PASS
+       - Searched for "python" - returned 2 courses
+       - Searched for "SQL" - returned 1 course
+       - Searched for nonexistent term - returned 0 courses
+    2. Inspect network request to search API - PASS
+       - Network tab shows: GET http://localhost:3001/api/courses?search=python => [200] OK
+       - Console logs show: [Search] Fetching courses from: http://localhost:3001/api/courses?search=python
+    3. Verify UI displays same results as API response - PASS
+       - API returns {courses: Array(2)} for "python" → UI shows "2 curso(s) encontrado(s)"
+       - API returns {courses: Array(1)} for "SQL" → UI shows "1 curso(s) encontrado(s)"
+       - API returns {courses: Array(0)} for nonexistent → UI shows "0 curso(s) encontrado(s)"
+    4. Verify no client-side filtering alters results - PASS
+       - Code shows: const filteredCourses = courses; (line 191)
+       - Comment confirms: "No client-side filtering - API returns pre-filtered results"
+       - UI renders exactly what API returns
+
+### Technical Implementation
+- frontend/src/App.jsx (CourseCatalog component):
+  - Added searchQuery and searchInput state variables
+  - Added search form with input, submit button, and clear button
+  - Search sends ?search= query parameter to API
+  - API URL updated to use correct port (3001)
+  - Removed client-side filtering - UI displays API results directly
+  - Added console logging for debugging/verification
+
+### Screenshots
+- feature-119-step1-search-python.png - Search "python" returns 2 courses
+- feature-119-step2-search-sql.png - Search "SQL" returns 1 course
+- feature-119-step3-no-results.png - Nonexistent term returns 0 courses
+
+### Console Errors
+- Only expected 401 Unauthorized for /api/auth/me (unauthenticated user)
+
+### Current Status
+- Feature #119 marked as PASSING
+- Commit: dafbeb4
+
+[Testing] 2026-01-25 Feature #119 "Search results match API response" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #100 Re-verification)
 
 ### Completed Features
