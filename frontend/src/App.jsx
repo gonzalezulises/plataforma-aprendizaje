@@ -1,8 +1,11 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './store/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
+import AuthCallback from './pages/AuthCallback';
+import HomePage from './pages/HomePage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -41,7 +44,7 @@ function FeatureCard({ title, description, icon }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center mb-4">
-        <span className="text-2xl">{icon === 'code' ? '💻' : icon === 'brain' ? '🧠' : '🚀'}</span>
+        <span className="text-2xl">{icon === 'code' ? '\uD83D\uDCBB' : icon === 'brain' ? '\uD83E\uDDE0' : '\uD83D\uDE80'}</span>
       </div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
       <p className="text-gray-600 dark:text-gray-300">{description}</p>
@@ -216,11 +219,11 @@ function CourseCatalog() {
               {/* Thumbnail placeholder */}
               <div className="h-40 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
                 <span className="text-6xl opacity-50">
-                  {course.category === 'Programacion' ? '💻' :
-                   course.category === 'Data Science' ? '📊' :
-                   course.category === 'IA / ML' ? '🤖' :
-                   course.category === 'Web3' ? '🔗' :
-                   course.category === 'Bases de Datos' ? '🗃️' : '📚'}
+                  {course.category === 'Programacion' ? '\uD83D\uDCBB' :
+                   course.category === 'Data Science' ? '\uD83D\uDCCA' :
+                   course.category === 'IA / ML' ? '\uD83E\uDD16' :
+                   course.category === 'Web3' ? '\uD83D\uDD17' :
+                   course.category === 'Bases de Datos' ? '\uD83D\uDDC3\uFE0F' : '\uD83D\uDCDA'}
                 </span>
               </div>
 
@@ -256,9 +259,9 @@ function CourseCatalog() {
                     {course.instructor}
                   </span>
                   <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span className="text-yellow-500">★</span>
+                    <span className="text-yellow-500">\u2605</span>
                     <span>{course.rating}</span>
-                    <span className="mx-1">·</span>
+                    <span className="mx-1">\u00B7</span>
                     <span>{course.studentsCount.toLocaleString()} estudiantes</span>
                   </div>
                 </div>
@@ -271,47 +274,66 @@ function CourseCatalog() {
   );
 }
 
+// Dashboard page with user info
+function Dashboard() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Student Dashboard</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <p className="text-gray-600 dark:text-gray-400">
+            Bienvenido a tu panel de estudiante. Aqui podras ver tu progreso en los cursos.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+    <AuthProvider>
+      <div className="flex flex-col min-h-screen">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
             },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <Navbar />
-      <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/courses" element={<CourseCatalog />} />
-          <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
-          <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
-          <Route path="/dashboard" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Dashboard</h1></div>} />
-          <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
-          <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <Navbar />
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/courses" element={<CourseCatalog />} />
+            <Route path="/course/:slug" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Course Detail</h1></div>} />
+            <Route path="/course/:slug/lesson/:lessonId" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson Player</h1></div>} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Panel</h1></div>} />
+            <Route path="/profile" element={<div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8"><h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Profile</h1></div>} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </AuthProvider>
   );
 }
 
