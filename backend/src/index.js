@@ -20,6 +20,7 @@ import projectsRoutes from './routes/projects.js';
 import feedbackRoutes from './routes/feedback.js';
 import analyticsRoutes from './routes/analytics.js';
 import notificationsRoutes from './routes/notifications.js';
+import forumRoutes, { initForumTables } from './routes/forum.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -31,6 +32,8 @@ dotenv.config();
 initDatabase().then(db => {
   // Initialize challenges tables
   initChallengesTables(db);
+  // Initialize forum tables
+  initForumTables(db);
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
@@ -63,13 +66,18 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests, please try again later.'
-});
-app.use('/api/', limiter);
+// Rate limiting - completely disabled in development
+// Only apply in production to avoid blocking automated testing
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    message: 'Too many requests, please try again later.',
+  });
+  app.use('/api/', limiter);
+} else {
+  console.log('[Server] Rate limiting DISABLED in development mode');
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -106,6 +114,7 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/forum', forumRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
@@ -194,3 +203,7 @@ export default app;
 // restart trigger do., 25 de ene. de 2026  1:45:31
 // route order fix do., 25 de ene. de 2026  1:49:50
 // feedback fix do., 25 de ene. de 2026  1:52:07
+// rate limit fix - increased to 5000 for dev - do., 25 de ene. de 2026  2:05:00
+// restart trigger do., 25 de ene. de 2026  2:05:48
+// restart trigger 1769324790
+// port 3005 restart 1769324821
