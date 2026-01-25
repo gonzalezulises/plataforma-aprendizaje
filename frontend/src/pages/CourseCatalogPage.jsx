@@ -201,11 +201,14 @@ export default function CourseCatalogPage() {
     }
   };
 
-  // Handle search form submission (Feature #142 + Feature #174: reset pagination)
+  // Handle search form submission (Feature #142 + Feature #174: reset pagination + Feature #177: whitespace handling)
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setSearchQuery(searchInput);
-    updateURLParams({ search: searchInput });
+    // Feature #177: Trim whitespace and treat whitespace-only as empty search
+    const trimmedSearch = searchInput.trim();
+    setSearchInput(trimmedSearch); // Also update the input to show trimmed value
+    setSearchQuery(trimmedSearch);
+    updateURLParams({ search: trimmedSearch || '' }); // Empty string removes param
     resetPaginationOnFilterChange(); // Feature #174: reset to page 1
   };
 

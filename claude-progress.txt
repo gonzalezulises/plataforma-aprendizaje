@@ -6167,3 +6167,16 @@ Backend (courses.js):
 - 97/248 features passing (39.1%)
 
 [Coding] 2026-01-25 Feature #176 'Empty search shows all results' verified - PASSED
+[Testing] 2026-01-25 Feature #110 '404 for deleted lesson shows error' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Navigated to non-existent lesson URL: /course/python-fundamentos/lesson/99999
+- Verified 404 page displays with 'Leccion No Encontrada' heading
+- Verified helpful suggestions section present
+- Verified 'Volver al Curso' button works and links to course page
+- Tested with completely non-existent course/lesson: /course/non-existent-course/lesson/12345
+- No JavaScript errors in console (only expected 404 and 401 responses)
+
+### Screenshots:
+- feature-110-deleted-lesson-404.png
+
