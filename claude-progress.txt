@@ -1880,3 +1880,54 @@
 - Commit: dc6e072
 
 [Testing] 2026-01-25 Feature #106 "Quiz submission timeout shows error" verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #107)
+
+### Completed Features
+- Feature #107: Video load failure shows fallback - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to video lesson - PASS (http://localhost:5173/course/python-fundamentos/lesson/4)
+    2. Simulate video load failure - PASS (using invalid video URL)
+    3. Verify error message is shown - PASS ("Error al cargar el video" + specific error messages)
+    4. Verify retry option is available - PASS ("Reintentar" button with retry count)
+    5. Verify alternative content suggestion if any - PASS ("Ver contenido alternativo" button expands to show lesson summary)
+
+### Technical Implementation
+- frontend/src/components/VideoPlayer.jsx:
+  - Added hasError, errorMessage, retryCount, showAlternative states
+  - handleVideoError callback detects video errors and shows specific messages:
+    - MEDIA_ERR_ABORTED: "La reproduccion del video fue cancelada"
+    - MEDIA_ERR_NETWORK: "Error de red. Verifica tu conexion a internet"
+    - MEDIA_ERR_DECODE: "El video no pudo ser decodificado"
+    - MEDIA_ERR_SRC_NOT_SUPPORTED: "El formato de video no es compatible"
+  - handleRetry function with 15-second timeout fallback
+  - Error UI with red warning icon, error message, Reintentar button (shows retry count), and Ver contenido alternativo button
+  - Alternative content panel that expands below video area
+  - Added onError, alternativeContent props to component
+
+- frontend/src/pages/LessonPage.jsx:
+  - Added alternativeContent to all video blocks in lesson data
+  - Added test lesson #4 with invalid video URL for testing error handling
+  - Passes alternativeContent prop to VideoPlayer component
+
+### Screenshots
+- feature-107-step1-video-error-shown.png - Initial error state with error message and buttons
+- feature-107-step2-alternative-content-shown.png - Same view (UI captures)
+- feature-107-step3-alternative-content-panel.png - Alternative content panel expanded
+- feature-107-step4-retry-attempted.png - Loading spinner during retry
+- feature-107-step7-after-retry-click.png - Error state after retry with "Reintentar (1)" showing retry count
+
+### Console Errors
+- Only expected errors:
+  - 401 Unauthorized for /api/auth/me (unauthenticated)
+  - ERR_NAME_NOT_RESOLVED for invalid test video URL (expected)
+  - Video error logs (expected behavior)
+
+### Current Status
+- Feature #107 marked as PASSING
+- Passing features: 33/248 (13.3%)
+- Commit: d40a5d9
+
+[Testing] 2026-01-25 Feature #107 "Video load failure shows fallback" verified - PASSED
