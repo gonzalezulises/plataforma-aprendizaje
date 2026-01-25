@@ -1,3 +1,42 @@
+## Session: 2026-01-25 (Coding Agent - Feature #170)
+
+### Feature #170: Date picker defaults to sensible date - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Open a date picker for scheduling - PASS
+   - Navigated to /webinars/schedule as instructor
+   - Date picker field present with type="date"
+2. Verify default date is today or empty - PASS
+   - Default value is empty string (scheduled_date: '')
+   - Shows "dd/mm/aaaa" placeholder (Spanish locale)
+3. Verify no future limitation unless required - PASS
+   - max attribute is empty (no maximum date restriction)
+   - Can schedule webinars for any future date
+4. Verify format is correct - PASS
+   - Format: dd/mm/aaaa (day/month/year)
+   - Standard HTML5 date input
+
+### Implementation Details
+- Frontend: WebinarSchedulePage.jsx
+  - Line 30: scheduled_date defaults to '' (empty string)
+  - Line 307: min={new Date().toISOString().split('T')[0]} (today's date)
+- min: 2026-01-25 (today) - Cannot schedule past webinars
+- max: "" (empty) - No future date restriction
+
+### Screenshots
+- feature-170-step1-date-picker-form.png - Date picker form with empty default
+- feature-170-step2-date-picker-open.png - Date picker activated
+
+### Console Errors: None
+
+### Current Status
+- Feature #170 marked as PASSING
+- 91/248 features passing (36.7%)
+
+[Coding] 2026-01-25 Feature #170 'Date picker defaults to sensible date' - VERIFIED AND PASSING
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #165)
 
 ### Feature #165: Deleted item removed from search index - VERIFIED AND PASSING
