@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -12,8 +14,17 @@ function ThreadDetailPage() {
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newReply, setNewReply] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [course, setCourse] = useState(null);
+
+  // Network-aware form submission
+  const {
+    isSubmitting: submitting,
+    networkError,
+    hasPendingRetry,
+    submit,
+    retry,
+    clearError,
+  } = useNetworkAwareSubmit();
 
   // Get user from session/localStorage
   const getUser = () => {
@@ -84,8 +95,7 @@ function ThreadDetailPage() {
       return;
     }
 
-    setSubmitting(true);
-    try {
+    const performSubmit = async () => {
       const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,20 +109,27 @@ function ThreadDetailPage() {
       });
 
       if (!res.ok) throw new Error('Failed to add reply');
+      return res.json();
+    };
 
-      const data = await res.json();
-      setReplies([...replies, data.reply]);
-      setNewReply('');
-      toast.success('Respuesta publicada');
-
-      // Update thread reply count
-      setThread({ ...thread, reply_count: (thread.reply_count || 0) + 1 });
-    } catch (error) {
-      console.error('Error adding reply:', error);
-      toast.error('Error al publicar la respuesta');
-    } finally {
-      setSubmitting(false);
-    }
+    await submit(performSubmit, {
+      preserveData: { content: newReply },
+      onSuccess: (data) => {
+        setReplies([...replies, data.reply]);
+        setNewReply('');
+        toast.success('Respuesta publicada');
+        // Update thread reply count
+        setThread({ ...thread, reply_count: (thread.reply_count || 0) + 1 });
+      },
+      onError: (error) => {
+        console.error('Error adding reply:', error);
+        toast.error('Error al publicar la respuesta');
+      },
+      onNetworkError: (error) => {
+        console.error('Network error adding reply:', error);
+        // Form data is preserved, network error banner will show
+      },
+    });
   };
 
   const handleVote = async (replyId) => {
@@ -361,6 +378,15 @@ function ThreadDetailPage() {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Agregar Respuesta
           </h3>
+
+          {/* Network Error Banner */}
+          <NetworkErrorBanner
+            networkError={networkError}
+            onRetry={retry}
+            onDismiss={clearError}
+            isRetrying={submitting}
+          />
+
           <form onSubmit={handleAddReply}>
             <textarea
               value={newReply}

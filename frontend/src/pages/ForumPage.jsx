@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -13,9 +15,18 @@ function ForumPage() {
   const [loading, setLoading] = useState(true);
   const [showNewThread, setShowNewThread] = useState(false);
   const [newThread, setNewThread] = useState({ title: '', content: '' });
-  const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState('all'); // all, resolved, unresolved
   const [sort, setSort] = useState('newest');
+
+  // Network-aware form submission
+  const {
+    isSubmitting: creating,
+    networkError,
+    hasPendingRetry,
+    submit,
+    retry,
+    clearError,
+  } = useNetworkAwareSubmit();
 
   // Get user from session/localStorage
   const getUser = () => {
@@ -83,8 +94,7 @@ function ForumPage() {
       return;
     }
 
-    setCreating(true);
-    try {
+    const performSubmit = async () => {
       const res = await fetch(`${API_URL}/api/forum/course/${course.id}/thread`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,20 +108,27 @@ function ForumPage() {
       });
 
       if (!res.ok) throw new Error('Failed to create thread');
+      return res.json();
+    };
 
-      const data = await res.json();
-      toast.success('Hilo creado exitosamente');
-      setNewThread({ title: '', content: '' });
-      setShowNewThread(false);
-
-      // Navigate to the new thread
-      navigate(`/forum/thread/${data.thread.id}`);
-    } catch (error) {
-      console.error('Error creating thread:', error);
-      toast.error('Error al crear el hilo');
-    } finally {
-      setCreating(false);
-    }
+    const result = await submit(performSubmit, {
+      preserveData: { title: newThread.title, content: newThread.content },
+      onSuccess: (data) => {
+        toast.success('Hilo creado exitosamente');
+        setNewThread({ title: '', content: '' });
+        setShowNewThread(false);
+        // Navigate to the new thread
+        navigate(`/forum/thread/${data.thread.id}`);
+      },
+      onError: (error) => {
+        console.error('Error creating thread:', error);
+        toast.error('Error al crear el hilo');
+      },
+      onNetworkError: (error) => {
+        console.error('Network error creating thread:', error);
+        // Form data is preserved, network error banner will show
+      },
+    });
   };
 
   const formatDate = (dateStr) => {
@@ -204,6 +221,15 @@ function ForumPage() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Crear Nueva Pregunta
             </h2>
+
+            {/* Network Error Banner */}
+            <NetworkErrorBanner
+              networkError={networkError}
+              onRetry={retry}
+              onDismiss={clearError}
+              isRetrying={creating}
+            />
+
             <form onSubmit={handleCreateThread}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

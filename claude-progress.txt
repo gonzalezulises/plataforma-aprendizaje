@@ -1626,3 +1626,16 @@
 - Commit: f09189d
 
 [Testing] 2026-01-25 Feature #102 "Complete notification lifecycle" verified - PASSED
+[Testing] 2026-01-25 09:35 Feature #96 'Complete webinar workflow' regression test - PASSED
+  - All 7 verification steps verified:
+    1. Log in as instructor - PASS (logged in as Instructor Admin)
+    2. Schedule a new webinar - PASS (clicked Programar Webinar)
+    3. Add title, description, date - PASS (filled form with test data)
+    4. Save webinar - PASS (toast 'Webinar programado exitosamente', webinar appears in list)
+    5. As student, view webinar in calendar - PASS (calendar view shows scheduled webinar)
+    6. Join webinar at scheduled time - PASS (registration successful, shows '1 registrados')
+    7. After webinar, access recording - PASS ('Ver Grabacion' button opens recording link)
+  - Test webinar created: TEST_96_Regression - Introduccion a APIs REST (2026-01-28 15:00)
+  - Console errors: None (only expected React Router warnings)
+  - Screenshots: feature-96-step1-webinars-page-as-instructor.png through feature-96-step7-recording-available.png
+[Testing] Session complete - Feature #96 verified, still passing

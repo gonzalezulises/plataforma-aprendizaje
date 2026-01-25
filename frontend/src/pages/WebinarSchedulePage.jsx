@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -9,8 +11,17 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replac
 function WebinarSchedulePage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState([]);
+
+  // Network-aware form submission
+  const {
+    isSubmitting: loading,
+    networkError,
+    hasPendingRetry,
+    submit,
+    retry,
+    clearError,
+  } = useNetworkAwareSubmit();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -61,9 +72,7 @@ function WebinarSchedulePage() {
       return;
     }
 
-    setLoading(true);
-
-    try {
+    const performSubmit = async () => {
       // Combine date and time
       const scheduled_at = new Date(`${formData.scheduled_date}T${formData.scheduled_time}`).toISOString();
 
@@ -84,19 +93,29 @@ function WebinarSchedulePage() {
         })
       });
 
-      if (response.ok) {
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al programar el webinar');
+      }
+
+      return response.json();
+    };
+
+    await submit(performSubmit, {
+      preserveData: { ...formData },
+      onSuccess: () => {
         toast.success('Webinar programado exitosamente');
         navigate('/webinars');
-      } else {
-        const data = await response.json();
-        toast.error(data.error || 'Error al programar el webinar');
-      }
-    } catch (error) {
-      console.error('Error scheduling webinar:', error);
-      toast.error('Error al programar el webinar');
-    } finally {
-      setLoading(false);
-    }
+      },
+      onError: (error) => {
+        console.error('Error scheduling webinar:', error);
+        toast.error(error.message || 'Error al programar el webinar');
+      },
+      onNetworkError: (error) => {
+        console.error('Network error scheduling webinar:', error);
+        // Form data is preserved, network error banner will show
+      },
+    });
   };
 
   // Generate a random Meet link for demo purposes
@@ -138,6 +157,14 @@ function WebinarSchedulePage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* Network Error Banner */}
+          <NetworkErrorBanner
+            networkError={networkError}
+            onRetry={retry}
+            onDismiss={clearError}
+            isRetrying={loading}
+          />
+
           {/* Title */}
           <div className="mb-6">
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

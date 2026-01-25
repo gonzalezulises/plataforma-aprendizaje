@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
+import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -10,9 +12,18 @@ export default function ProjectSubmissionPage() {
   const [project, setProject] = useState(null);
   const [content, setContent] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Network-aware form submission
+  const {
+    isSubmitting,
+    networkError,
+    hasPendingRetry,
+    submit,
+    retry,
+    clearError,
+  } = useNetworkAwareSubmit();
 
   useEffect(() => {
     fetchProject();
@@ -39,9 +50,8 @@ export default function ProjectSubmissionPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    try {
+    const performSubmit = async () => {
       const response = await fetch(`${API_URL}/api/projects/${projectId}/submit`, {
         method: 'POST',
         headers: {
@@ -54,20 +64,29 @@ export default function ProjectSubmissionPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success('Project submitted successfully!');
-        navigate(`/project/submission/${data.submission.id}`);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Failed to submit project');
+        throw new Error(errorData.error || 'Failed to submit project');
       }
-    } catch (err) {
-      console.error('Error submitting project:', err);
-      toast.error('Failed to submit project');
-    } finally {
-      setIsSubmitting(false);
-    }
+
+      return response.json();
+    };
+
+    await submit(performSubmit, {
+      preserveData: { content, githubUrl },
+      onSuccess: (data) => {
+        toast.success('Proyecto enviado exitosamente!');
+        navigate(`/project/submission/${data.submission.id}`);
+      },
+      onError: (err) => {
+        console.error('Error submitting project:', err);
+        toast.error(err.message || 'Error al enviar el proyecto');
+      },
+      onNetworkError: (err) => {
+        console.error('Network error submitting project:', err);
+        // Form data is preserved, network error banner will show
+      },
+    });
   };
 
   if (loading) {
@@ -147,8 +166,16 @@ export default function ProjectSubmissionPage() {
         {/* Submission Form */}
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Your Submission
+            Tu Entrega
           </h2>
+
+          {/* Network Error Banner */}
+          <NetworkErrorBanner
+            networkError={networkError}
+            onRetry={retry}
+            onDismiss={clearError}
+            isRetrying={isSubmitting}
+          />
 
           <div className="mb-6">
             <label
