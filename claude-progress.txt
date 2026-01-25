@@ -4242,3 +4242,63 @@ Console errors: Only expected 404 for enrollment check before enrollment
 - Passing features: 72/248 (29.0%)
 
 [Testing] 2026-01-25 Feature #150 'Forum thread direct link works' verified - PASSED
+
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #151)
+
+### Completed Features
+- Feature #151: Double-click submit creates only one submission - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Navigate to form - PASS
+       - Navigated to forum page /course/python-fundamentos/forum
+       - Clicked "Nueva Pregunta" to open new thread form
+    2. Fill out form - PASS
+       - Title: "TEST_151_DOUBLE_CLICK - Testing double-click prevention"
+       - Content: "This is a test to verify that double-clicking the submit button..."
+    3. Double-click submit button rapidly - PASS
+       - Used Playwright dblclick() on "Publicar Pregunta" button
+       - Button fires submission on first click, disabled immediately
+    4. Verify only one submission created - PASS
+       - Only ONE thread created (ID 9)
+       - Forum list shows single TEST_151 thread
+       - No duplicate entries
+    5. Check database for duplicates - PASS
+       - API confirmed only 1 thread with TEST_151 prefix
+       - Thread has reply_count: 1 (tested reply form too)
+
+### Additional Testing - Reply Form
+- Navigated to thread detail page
+- Typed reply: "TEST_151_REPLY - This is a test reply..."
+- Double-clicked "Publicar Respuesta" button
+- Result: Only ONE reply created (verified via API: reply_count: 1)
+
+### Technical Implementation
+- useNetworkAwareSubmit hook provides isSubmitting state
+- Button has disabled={isSubmitting || ...} attribute
+- On first click: isSubmitting becomes true immediately
+- On second click (double-click): button is already disabled, no duplicate submission
+
+### Forms Verified to Have Double-Click Protection
+- ForumPage.jsx (new thread form) - disabled={creating}
+- ThreadDetailPage.jsx (reply form) - disabled={submitting || \!newReply.trim()}
+- LoginPage.jsx (login form) - disabled={isLoading}
+- ProjectSubmissionPage.jsx - disabled={isSubmitting}
+- CodeChallengePage.jsx - disabled={isSubmitting}
+
+### Screenshots
+- feature-151-only-one-submission.png - Forum list showing single TEST_151 thread
+- feature-151-reply-double-click-protection.png - Thread with single reply
+- feature-151-final-verification.png - Complete thread detail view
+
+### Console Errors
+- Only WebSocket reconnection errors (expected behavior)
+- No JavaScript runtime errors
+
+### Current Status
+- Feature #151 marked as PASSING
+- Passing features: 74/248 (29.8%)
+
+[Testing] 2026-01-25 Feature #151 'Double-click submit creates only one submission' verified - PASSED
