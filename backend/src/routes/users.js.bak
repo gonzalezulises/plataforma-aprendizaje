@@ -39,42 +39,6 @@ router.delete('/:id', (req, res) => {
     deletedData.deletedRecords.code_submissions = subResult.changes;
     console.log('[Users] Deleted ' + subResult.changes + ' code submissions for user ' + userId);
 
-    // Delete quiz_attempts - Feature #162
-    try {
-      const quizResult = run('DELETE FROM quiz_attempts WHERE user_id = ?', [String(userId)]);
-      deletedData.deletedRecords.quiz_attempts = quizResult.changes;
-      console.log('[Users] Deleted ' + quizResult.changes + ' quiz attempts for user ' + userId);
-    } catch (e) {
-      deletedData.deletedRecords.quiz_attempts = 0;
-    }
-
-    // Delete project_submissions - Feature #162
-    try {
-      const projResult = run('DELETE FROM project_submissions WHERE user_id = ?', [String(userId)]);
-      deletedData.deletedRecords.project_submissions = projResult.changes;
-      console.log('[Users] Deleted ' + projResult.changes + ' project submissions for user ' + userId);
-    } catch (e) {
-      deletedData.deletedRecords.project_submissions = 0;
-    }
-
-    // Delete forum_replies first (child table) - Feature #162
-    try {
-      const repliesResult = run('DELETE FROM forum_replies WHERE user_id = ?', [String(userId)]);
-      deletedData.deletedRecords.forum_replies = repliesResult.changes;
-      console.log('[Users] Deleted ' + repliesResult.changes + ' forum replies for user ' + userId);
-    } catch (e) {
-      deletedData.deletedRecords.forum_replies = 0;
-    }
-
-    // Delete forum_threads (parent table) - Feature #162
-    try {
-      const threadsResult = run('DELETE FROM forum_threads WHERE user_id = ?', [String(userId)]);
-      deletedData.deletedRecords.forum_threads = threadsResult.changes;
-      console.log('[Users] Deleted ' + threadsResult.changes + ' forum threads for user ' + userId);
-    } catch (e) {
-      deletedData.deletedRecords.forum_threads = 0;
-    }
-
     // Delete enrollments
     deletedData.deletedRecords.enrollments = run('DELETE FROM enrollments WHERE user_id = ?', [userId]).changes;
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 
-console.log('Courses routes loading...');
+console.log('Courses routes loading... (updated 2026-01-25 - Feature #163 career path cascade)');
 
 const router = express.Router();
 
@@ -430,6 +430,83 @@ router.post('/:id/unpublish', requireInstructor, (req, res) => {
 });
 
 /**
+ * Helper: Update career paths when a course is deleted
+ * Removes the course from all career paths and recalculates user progress
+ */
+function handleCourseDeletedFromCareerPaths(courseId) {
+  try {
+    // 1. Get all career paths that include this course
+    const careerPaths = queryAll('SELECT * FROM career_paths');
+
+    for (const careerPath of careerPaths) {
+      const courseIds = JSON.parse(careerPath.course_ids || '[]');
+      const courseIdInt = parseInt(courseId);
+
+      if (courseIds.includes(courseIdInt)) {
+        // Remove the deleted course from the array
+        const updatedCourseIds = courseIds.filter(id => id !== courseIdInt);
+
+        // Update the career path
+        run(`
+          UPDATE career_paths
+          SET course_ids = ?, updated_at = ?
+          WHERE id = ?
+        `, [JSON.stringify(updatedCourseIds), new Date().toISOString(), careerPath.id]);
+
+        console.log(`Removed course ${courseId} from career path "${careerPath.name}" (id: ${careerPath.id})`);
+
+        // 2. Recalculate progress for all users enrolled in this career path
+        const userProgresses = queryAll('SELECT * FROM user_career_progress WHERE career_path_id = ?', [careerPath.id]);
+
+        for (const progress of userProgresses) {
+          const coursesCompleted = JSON.parse(progress.courses_completed || '[]');
+
+          // Remove the deleted course from completed courses
+          const updatedCoursesCompleted = coursesCompleted.filter(id => id !== courseIdInt);
+
+          // Recalculate progress percentage
+          const newProgressPercent = updatedCourseIds.length > 0
+            ? (updatedCoursesCompleted.length / updatedCourseIds.length) * 100
+            : 0;
+
+          // Find new current course index
+          let currentCourseIndex = 0;
+          for (let i = 0; i < updatedCourseIds.length; i++) {
+            if (!updatedCoursesCompleted.includes(updatedCourseIds[i])) {
+              currentCourseIndex = i;
+              break;
+            }
+            currentCourseIndex = i + 1;
+          }
+
+          const now = new Date().toISOString();
+          const isComplete = updatedCoursesCompleted.length === updatedCourseIds.length && updatedCourseIds.length > 0;
+
+          run(`
+            UPDATE user_career_progress
+            SET courses_completed = ?, progress_percent = ?, current_course_index = ?,
+                completed_at = ?, updated_at = ?
+            WHERE id = ?
+          `, [
+            JSON.stringify(updatedCoursesCompleted),
+            newProgressPercent,
+            currentCourseIndex,
+            isComplete ? progress.completed_at || now : null,
+            now,
+            progress.id
+          ]);
+
+          console.log(`Updated career path progress for user ${progress.user_id} on path ${careerPath.id}: ${newProgressPercent.toFixed(1)}%`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling course deletion from career paths:', error);
+    // Don't throw - this is a best-effort cleanup
+  }
+}
+
+/**
  * DELETE /api/courses/:id - Delete a course (instructor only)
  */
 router.delete('/:id', requireInstructor, (req, res) => {
@@ -441,7 +518,7 @@ router.delete('/:id', requireInstructor, (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:27:02.157Z
+    // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:56:44.797Z
     // 1. Delete enrollments for this course
     run('DELETE FROM enrollments WHERE course_id = ?', [id]);
 
@@ -461,7 +538,10 @@ router.delete('/:id', requireInstructor, (req, res) => {
     // 3. Delete forum threads for this course (if they exist)
     run('DELETE FROM forum_threads WHERE course_id = ?', [id]);
 
-    // 4. Delete course (cascades to modules, lessons, content via foreign keys)
+    // 4. Update career paths that include this course (remove course and recalculate progress)
+    handleCourseDeletedFromCareerPaths(id);
+
+    // 5. Delete course (cascades to modules, lessons, content via foreign keys)
     run('DELETE FROM courses WHERE id = ?', [id]);
 
     res.json({ message: 'Course deleted successfully' });
@@ -1017,3 +1097,4 @@ router.delete('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId
 });
 
 export default router;
+// Trigger reload do., 25 de ene. de 2026 11:58:54

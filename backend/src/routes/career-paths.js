@@ -595,4 +595,42 @@ router.get('/user/badges', async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/career-paths/:slug/update-courses
+ * Admin endpoint to update courses in a career path (for testing)
+ */
+router.put('/:slug/update-courses', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { course_ids } = req.body;
+
+    if (!course_ids || !Array.isArray(course_ids)) {
+      return res.status(400).json({ error: 'course_ids array is required' });
+    }
+
+    const careerPath = queryOne('SELECT * FROM career_paths WHERE slug = ?', [slug]);
+    if (!careerPath) {
+      return res.status(404).json({ error: 'Career path not found' });
+    }
+
+    const now = new Date().toISOString();
+    run(`
+      UPDATE career_paths
+      SET course_ids = ?, updated_at = ?
+      WHERE slug = ?
+    `, [JSON.stringify(course_ids), now, slug]);
+
+    const updated = queryOne('SELECT * FROM career_paths WHERE slug = ?', [slug]);
+    const enriched = await enrichCareerPath(updated);
+
+    res.json({
+      message: 'Career path courses updated',
+      career_path: enriched
+    });
+  } catch (error) {
+    console.error('Error updating career path courses:', error);
+    res.status(500).json({ error: 'Failed to update career path courses' });
+  }
+});
+
 export default router;
