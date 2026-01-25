@@ -2517,3 +2517,65 @@
   - Console errors: Only expected (404 for non-existent lesson, 401 for unauthenticated user)
   - Screenshot: feature-110-404-lesson-not-found.png
 [Testing] Session complete - Feature #110 verified, still passing
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #122)
+
+### Completed Features
+- Feature #122: Enrollment status reflects database - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Check database for user enrollment - PASS
+       - Dashboard showed existing enrollments (2 courses: Python Fundamentos, JavaScript Moderno)
+    2. Navigate to course as that user - PASS  
+       - Navigated to SQL desde Cero course
+       - Page showed "Inscribirse Gratis" button (not enrolled state)
+    3. Verify enrollment status matches database - PASS
+       - Not enrolled: Shows "Inscribirse Gratis" button
+       - Enrolled: Shows "Continuar Curso" + "Cancelar inscripcion" buttons
+    4. Enroll or unenroll - PASS
+       - Enrollment: Clicked "Inscribirse Gratis" → Confirmation modal → "Confirmar Inscripcion"
+       - Success toast: "Te has inscrito exitosamente!"
+       - Redirected to first lesson
+       - Unenrollment: Clicked "Cancelar inscripcion" → Confirmation modal → Confirmed
+       - Success: Course removed from enrolled list
+    5. Verify database is updated - PASS
+       - After enrollment: Dashboard showed "Mis Cursos (3)" with SQL course
+       - After unenrollment: Dashboard showed "Mis Cursos (2)" without SQL course
+       - Persistence verified across page refreshes and re-login
+
+### Technical Details (Already Implemented)
+- backend/src/routes/enrollments.js:
+  - GET /api/enrollments - Get all user enrollments with course details
+  - GET /api/enrollments/:courseId - Check specific enrollment (404 if not enrolled)
+  - POST /api/enrollments - Create enrollment (409 if already enrolled)
+  - DELETE /api/enrollments/:courseId - Unenroll from course
+  - PATCH /api/enrollments/:courseId/progress - Update progress
+
+- frontend/src/pages/CourseDetailPage.jsx:
+  - checkEnrollmentStatus() - Checks enrollment on page load
+  - handleConfirmEnroll() - Creates enrollment via API
+  - handleConfirmUnenroll() - Deletes enrollment via API
+  - UI reflects enrollment state: "Inscribirse" vs "Continuar Curso"
+
+- frontend/src/pages/DashboardPage.jsx:
+  - Fetches enrollments from /api/enrollments
+  - Displays enrolled courses with progress
+
+### Screenshots
+- feature-122-step1-not-enrolled.png - SQL course showing "Inscribirse Gratis"
+- feature-122-step2-enroll-confirmation-modal.png - Enrollment confirmation modal
+- feature-122-step3-enrolled-status.png - Course showing "Continuar Curso" after enrollment
+- feature-122-step4-dashboard-shows-enrollment.png - Dashboard with 3 courses including SQL
+- feature-122-step5-unenroll-confirmation.png - Unenrollment confirmation modal
+- feature-122-step6-dashboard-after-unenroll.png - Dashboard with 2 courses (SQL removed)
+- feature-122-step7-not-enrolled-after-unenroll.png - SQL course back to "Inscribirse Gratis"
+
+### Console Errors
+- Only expected 404 for /api/enrollments/:courseId when user is not enrolled (correct API behavior)
+
+### Current Status
+- Feature #122 marked as PASSING
+- Passing features: 46/248 (18.5%)
+
+[Testing] 2026-01-25 Feature #122 "Enrollment status reflects database" verified - PASSED
