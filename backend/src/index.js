@@ -1,0 +1,129 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import session from 'express-session';
+import rateLimit from 'express-rate-limit';
+import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Security middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests, please try again later.'
+});
+app.use('/api/', limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API Routes placeholder - to be implemented
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'Plataforma de Aprendizaje API',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth/*',
+      users: '/api/users/*',
+      courses: '/api/courses/*',
+      modules: '/api/modules/*',
+      lessons: '/api/lessons/*',
+      execute: '/api/execute',
+      quizzes: '/api/quizzes/*',
+      projects: '/api/projects/*',
+      forum: '/api/forum/*',
+      notifications: '/api/notifications/*',
+      analytics: '/api/analytics/*',
+      ai: '/api/ai/*'
+    }
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found', path: req.path });
+});
+
+// Create HTTP server and WebSocket server
+const server = createServer(app);
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  console.log('New WebSocket connection');
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('Received:', data);
+
+      // Echo back for now - to be replaced with actual handlers
+      ws.send(JSON.stringify({ type: 'ack', received: data }));
+    } catch (e) {
+      console.error('Invalid WebSocket message:', e);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('WebSocket connection closed');
+  });
+
+  // Send welcome message
+  ws.send(JSON.stringify({ type: 'connected', message: 'Welcome to Plataforma de Aprendizaje' }));
+});
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`
+  ======================================
+    Plataforma de Aprendizaje API
+  ======================================
+    Server running on port ${PORT}
+    Environment: ${process.env.NODE_ENV || 'development'}
+    WebSocket: ws://localhost:${PORT}/ws
+  ======================================
+  `);
+});
+
+export default app;
