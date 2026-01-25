@@ -4150,3 +4150,53 @@ Console errors: Only expected 404 for enrollment check before enrollment
 
 [Testing] Session complete - Feature #88 verified, no regression found
 
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #148)
+
+### Completed Features
+- Feature #148: Direct access to deleted content handled - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. Save URL to a course - PASS
+       - Created test course "TEST_148_DELETED_COURSE"
+       - Published course at URL: /course/test-148-deleted-course
+       - Verified course was accessible
+    2. Delete the course - PASS
+       - Navigated to /admin/courses
+       - Clicked "Eliminar curso" button
+       - Confirmed deletion in dialog
+       - Course removed from list
+    3. Navigate to saved URL - PASS
+       - Navigated directly to /course/test-148-deleted-course
+       - API returned 404 (expected)
+    4. Verify appropriate error message - PASS
+       - Heading: "Curso no encontrado"
+       - Message: "El curso que buscas no existe o ha sido eliminado."
+       - Clear, user-friendly error messaging
+    5. Verify suggestion to return to catalog - PASS
+       - "Ver Catalogo" button displayed prominently
+       - Button links to /courses
+       - Clicking redirects to course catalog successfully
+
+### Technical Details
+- CourseDetailPage.jsx handles 404 responses properly
+- When API returns 404, course state is set to null
+- Fallback UI renders with error message and catalog link
+- No JavaScript errors during the flow
+
+### Screenshots
+- feature-148-step1-course-exists.png - Course page before deletion
+- feature-148-step4-error-message.png - Error page after deletion
+- feature-148-step5-catalog-redirect.png - Catalog page after redirect
+
+### Console Errors
+- Only expected 404 errors from API (course not found)
+- No JavaScript runtime errors
+
+### Current Status
+- Feature #148 marked as PASSING
+- Passing features: 72/248 (29.0%)
+- Commit: 41c0a11
+
+[Testing] 2026-01-25 Feature #148 "Direct access to deleted content handled" verified - PASSED
+
