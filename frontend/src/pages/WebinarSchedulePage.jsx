@@ -40,6 +40,12 @@ function WebinarSchedulePage() {
     max_attendees: ''
   });
 
+  // Date range validation constants
+  const today = new Date().toISOString().split('T')[0];
+  const maxDate = new Date();
+  maxDate.setFullYear(maxDate.getFullYear() + 1);
+  const maxDateStr = maxDate.toISOString().split('T')[0];
+
   // localStorage key for webinar form persistence
   const formDataKey = 'webinar_schedule_form';
 
@@ -143,6 +149,53 @@ function WebinarSchedulePage() {
     }
   };
 
+  // Handle date field changes with validation
+  const handleDateChange = (e) => {
+    const { name, value } = e.target;
+
+    // Update form data first
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Allow empty value (will be validated on submit as required)
+    if (!value) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+      return;
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(value)) {
+      setFieldErrors(prev => ({ ...prev, [name]: 'Formato de fecha invalido (YYYY-MM-DD)' }));
+      return;
+    }
+
+    // Parse the date
+    const inputDate = new Date(value);
+    const todayDate = new Date(today);
+    const maxAllowedDate = new Date(maxDateStr);
+
+    // Check if it's a valid date (not NaN)
+    if (isNaN(inputDate.getTime())) {
+      setFieldErrors(prev => ({ ...prev, [name]: 'Fecha invalida' }));
+      return;
+    }
+
+    // Check if date is in the past
+    if (inputDate < todayDate) {
+      setFieldErrors(prev => ({ ...prev, [name]: 'La fecha no puede ser en el pasado' }));
+      return;
+    }
+
+    // Check if date is too far in the future (more than 1 year)
+    if (inputDate > maxAllowedDate) {
+      setFieldErrors(prev => ({ ...prev, [name]: 'La fecha no puede ser mas de 1 año en el futuro' }));
+      return;
+    }
+
+    // Valid date - clear error
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
   // Handle numeric field changes with validation
   const handleNumericChange = (e) => {
     const { name, value } = e.target;
@@ -194,6 +247,28 @@ function WebinarSchedulePage() {
     if (!formData.scheduled_date) {
       errors.scheduled_date = 'La fecha es requerida';
       hasErrors = true;
+    } else {
+      // Validate date format and range
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.scheduled_date)) {
+        errors.scheduled_date = 'Formato de fecha invalido (YYYY-MM-DD)';
+        hasErrors = true;
+      } else {
+        const inputDate = new Date(formData.scheduled_date);
+        const todayDate = new Date(today);
+        const maxAllowedDate = new Date(maxDateStr);
+
+        if (isNaN(inputDate.getTime())) {
+          errors.scheduled_date = 'Fecha invalida';
+          hasErrors = true;
+        } else if (inputDate < todayDate) {
+          errors.scheduled_date = 'La fecha no puede ser en el pasado';
+          hasErrors = true;
+        } else if (inputDate > maxAllowedDate) {
+          errors.scheduled_date = 'La fecha no puede ser mas de 1 año en el futuro';
+          hasErrors = true;
+        }
+      }
     }
     if (!formData.scheduled_time) {
       errors.scheduled_time = 'La hora es requerida';
@@ -415,9 +490,10 @@ function WebinarSchedulePage() {
                 id="scheduled_date"
                 name="scheduled_date"
                 value={formData.scheduled_date}
-                onChange={handleChange}
+                onChange={handleDateChange}
                 required
-                min={new Date().toISOString().split('T')[0]}
+                min={today}
+                max={maxDateStr}
                 className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                   fieldErrors.scheduled_date
                     ? 'border-red-500 dark:border-red-500'
