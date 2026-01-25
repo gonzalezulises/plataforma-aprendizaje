@@ -328,3 +328,96 @@
 - Frontend running on port 5174
 [Testing] 2026-01-25 Feature #82 "Notebook state is persisted" verified - PASSED
 
+[Testing] 2026-01-25 00:44:28 Feature #9 'OAuth callback handles successful login' regression test - PASSED (all 5 verification steps verified)
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #81)
+
+### Completed Features
+- Feature #81: Video progress is saved
+  - Created VideoPlayer component (frontend/src/components/VideoPlayer.jsx)
+    - Fetches saved progress from backend on mount
+    - Saves progress on pause, timeupdate (every 5 seconds), and beforeunload
+    - Uses navigator.sendBeacon for reliable saving during page navigation
+    - Automatically restores video position when metadata loads
+  - Created video-progress API routes (backend/src/routes/video-progress.js)
+    - GET /api/video-progress/:lessonId/:videoId - Retrieve saved progress
+    - POST /api/video-progress/:lessonId/:videoId - Save progress (upsert)
+    - GET /api/video-progress/:lessonId - Get all video progress for a lesson
+  - Integrated VideoPlayer into LessonPage with sample video
+  - All 5 test steps verified via browser automation:
+    1. Start watching a video - PASS (video loaded and played)
+    2. Pause at a specific timestamp - PASS (paused at 23.5 seconds)
+    3. Navigate away - PASS (navigated to /courses)
+    4. Return to the lesson - PASS (navigated back to lesson page)
+    5. Verify video resumes from saved position - PASS (currentTime: 23.498594 seconds)
+  - Backend API verified: GET /api/video-progress/1/intro-video returns saved position
+
+### Current Status
+- Passing: 12/248 features (4.8%)
+[Testing] 2026-01-25 Feature #81 "Video progress is saved" verified - PASSED
+[Testing] 2026-01-25 00:47:30 Feature #7 'Code blocks use JetBrains Mono font' regression test - PASSED
+  - All 4 verification steps verified:
+    1. Navigate to lesson with code content - PASS (/course/python-fundamentos/lesson/1)
+    2. Inspect code block elements - PASS (found code, pre, .font-mono elements)
+    3. Verify font-family is JetBrains Mono - PASS (computed: "JetBrains Mono", monospace)
+    4. Check Monaco editor uses monospace styling - PASS
+  - document.fonts.check('16px JetBrains Mono') = true
+  - Console errors: CORS only (unrelated to font feature)
+  - Screenshots: feature-7-lesson-page.png, feature-7-code-blocks.png
+[Testing] 2026-01-25 00:52:50 Feature #42 'Course catalog link works' regression test - PASSED (all 4 verification steps verified)
+[Testing] 2026-01-25 05:53:45 Feature #3 'Homepage renders correctly' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to home page - PASS (http://localhost:5173/)
+    2. Hero section displayed - PASS (H1 'Aprende Haciendo' + description + CTAs)
+    3. Featured courses section - PASS (3 courses: Python, Data Science, SQL)
+    4. Categories listed - PASS (6 categories with course counts)
+    5. CTA buttons present - PASS (Explorar Cursos, Comenzar Gratis, Ver Cursos, Registrarse)
+  - Console errors: Only 401 for /api/auth/me (expected for unauthenticated)
+  - Screenshot: feature-3-homepage-regression-test.png
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #85)
+
+### Completed Features
+- Feature #85: Empty state shows when no courses enrolled
+  - Created DashboardPage component (frontend/src/pages/DashboardPage.jsx)
+    - Displays personalized greeting with user name
+    - Shows empty state when user has no enrollments
+    - Empty state includes:
+      - Book icon illustration
+      - "Aun no estas inscrito en ningun curso" message
+      - "Explorar Cursos" CTA button linking to /courses
+      - "Sugerencias para empezar" 3-step onboarding guide
+    - Shows enrolled courses grid when user has enrollments
+    - Progress bars on course cards
+  - Added enrollments table to database (backend/src/config/database.js)
+    - users table for user data from OAuth
+    - courses table for course information
+    - enrollments table with user_id, course_id, progress_percent
+  - Created enrollments API routes (backend/src/routes/enrollments.js)
+    - GET /api/enrollments - List user's enrollments
+    - POST /api/enrollments - Enroll in course
+    - DELETE /api/enrollments/:courseId - Unenroll
+    - PATCH /api/enrollments/:courseId/progress - Update progress
+  - All 4 test steps verified via browser automation:
+    1. Log in as new user with no enrollments - PASS (dev-login as "Usuario de Prueba")
+    2. Navigate to dashboard - PASS (/dashboard loaded)
+    3. Verify empty state message is shown - PASS ("Aun no estas inscrito en ningun curso")
+    4. Verify suggestion to browse courses is present - PASS ("Explorar Cursos" link to /courses)
+  - Screenshots saved: feature-85-step1-empty-state.png, feature-85-final-verification.png
+
+### Technical Changes
+- frontend/src/pages/DashboardPage.jsx - New dashboard page with empty state
+- frontend/src/App.jsx - Updated to use new DashboardPage component
+- backend/src/config/database.js - Added users, courses, enrollments tables
+- backend/src/routes/enrollments.js - New enrollments API routes
+- backend/src/index.js - Added enrollments routes
+
+### Current Status
+- Passing: 13/248 features (5.2%)
+- Backend running on port 3001
+- Frontend running on port 5173
+[Testing] 2026-01-25 Feature #85 "Empty state shows when no courses enrolled" verified - PASSED
