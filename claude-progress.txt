@@ -1752,3 +1752,73 @@
 - Shows different messages for offline vs server issues
 - Verified with browser automation - working correctly
 - Committed: 2872c9f
+
+[Testing] 2026-01-25 Feature #95 'Complete forum thread workflow' REGRESSION FIXED
+  - Found regression: TypeError when submitting forum replies
+  - Error: Cannot read properties of null (reading 'is_instructor_answer')
+  - Root cause: Backend run() function returning null for lastInsertRowid
+  - Fix applied:
+    1. Frontend: Handle null reply in onSuccess callback by refetching thread
+    2. Backend: Updated run() to use db.prepare for reliable last_insert_rowid
+  - Verified all 6 workflow steps:
+    1. Navigate to course forum - PASS
+    2. Create new thread with question - PASS  
+    3. Add a reply - PASS (no longer crashes)
+    4. Mark reply as helpful (upvote) - PASS
+    5. Mark thread as resolved - PASS
+    6. Verify thread shows resolved status - PASS
+  - Console errors: None (only expected 401 for unauthenticated /api/auth/me)
+  - Screenshots: feature-95-thread-page-logged-in.png, feature-95-resolved-thread.png
+  - Commit: 4ff3c32
+[Testing] Session complete - Feature #95 regression fixed and verified
+
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #95 Verification)
+
+### Completed Features
+- Feature #95: Complete forum thread workflow - VERIFIED AND PASSING
+  - All 6 verification steps verified via browser automation:
+    1. Navigate to course forum - PASS (http://localhost:5173/course/python-fundamentos/forum)
+    2. Create new thread with question - PASS (TEST_95_VERIFY - Como usar listas por comprension en Python?)
+    3. Wait for or add a reply - PASS (detailed explanation of list comprehensions)
+    4. Mark reply as helpful (upvote) - PASS (vote count increased from 0 to 1)
+    5. Mark thread as resolved - PASS (toast "Hilo marcado como resuelto")
+    6. Verify thread shows resolved status - PASS (green checkmark and "Resuelto" badge in listing)
+  
+  - Technical Notes:
+    - Forum thread API creates threads correctly (thread_id 4 for test)
+    - Reply API adds replies with proper user attribution
+    - Vote API correctly increments/decrements vote count
+    - Resolve API toggles is_resolved flag and UI updates accordingly
+    - User stored in localStorage is needed for owner verification (id must be string to match DB)
+  
+  - Screenshots saved:
+    - feature-95-step1-forum-page.png
+    - feature-95-step2-create-thread-form.png
+    - feature-95-step2-thread-created.png
+    - feature-95-step3-reply-added.png
+    - feature-95-step4-upvoted.png
+    - feature-95-step5-marked-resolved.png
+    - feature-95-step6-resolved-in-listing.png
+  
+  - Console errors: Only expected 401 for /api/auth/me (unauthenticated initial load)
+
+### Current Status
+- Feature #95 marked as PASSING
+- Passing features: 29/248 (11.7%)
+- Backend running on port 4000
+- Frontend running on port 5173
+
+[Testing] 2026-01-25 Feature #95 "Complete forum thread workflow" verified - PASSED
+[Testing] 2026-01-25 04:58 Feature #3 'Homepage renders correctly' regression test - PASSED
+  - All 5 verification steps verified:
+    1. Navigate to the home page - PASS (http://localhost:5173)
+    2. Verify hero section is displayed - PASS ('Aprende Haciendo' heading with description)
+    3. Verify featured courses section shows courses - PASS (3 courses: Python, Data Science, SQL)
+    4. Verify categories are listed - PASS (6 categories with course counts)
+    5. Verify call-to-action buttons are present - PASS (Explorar Cursos, Comenzar Gratis, Ver Cursos, etc.)
+  - Console errors: None (only expected 401 for /api/auth/me when unauthenticated)
+  - Screenshots: feature-3-step1-homepage-loaded.png
+[Testing] Session complete - Feature #3 verified, still passing
