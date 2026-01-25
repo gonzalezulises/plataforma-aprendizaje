@@ -210,6 +210,7 @@ router.get('/dashboard', requireInstructor, (req, res) => {
     const totalHours = Math.round((totalTimeSpent?.total || 0) / 3600 * 10) / 10;
 
     // Get recent lesson completions
+    // Note: lesson_progress.user_id is TEXT, users.id is INTEGER - CAST for proper join
     const recentCompletions = queryAll(`
       SELECT
         lp.lesson_id,
@@ -218,7 +219,7 @@ router.get('/dashboard', requireInstructor, (req, res) => {
         u.name as student_name,
         u.email as student_email
       FROM lesson_progress lp
-      JOIN users u ON lp.user_id = u.id
+      JOIN users u ON CAST(lp.user_id AS INTEGER) = u.id
       WHERE lp.status = 'completed' AND lp.completed_at IS NOT NULL
       ORDER BY lp.completed_at DESC
       LIMIT 20
@@ -240,15 +241,21 @@ router.get('/dashboard', requireInstructor, (req, res) => {
     `);
 
     // Get student activity by day (last 7 days)
-    const dailyActivity = queryAll(`
-      SELECT
-        DATE(created_at) as date,
-        COUNT(*) as event_count
-      FROM analytics_events
-      WHERE created_at >= DATE('now', '-7 days')
-      GROUP BY DATE(created_at)
-      ORDER BY date DESC
-    `);
+    // Use try-catch in case analytics_events table doesn't exist yet
+    let dailyActivity = [];
+    try {
+      dailyActivity = queryAll(`
+        SELECT
+          DATE(created_at) as date,
+          COUNT(*) as event_count
+        FROM analytics_events
+        WHERE created_at >= DATE('now', '-7 days')
+        GROUP BY DATE(created_at)
+        ORDER BY date DESC
+      `);
+    } catch (e) {
+      console.log('analytics_events table not ready, skipping daily activity');
+    }
 
     // Get lesson completion rates
     const lessonStats = queryAll(`

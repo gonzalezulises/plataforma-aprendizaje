@@ -1,5 +1,6 @@
 import express from 'express';
 import { getDatabase, saveDatabase, queryAll, queryOne, run } from '../config/database.js';
+import { emitThreadBroadcast } from '../utils/websocket-events.js';
 
 const router = express.Router();
 
@@ -221,6 +222,18 @@ router.post('/thread/:threadId/reply', async (req, res) => {
 
     // Get the created reply
     const reply = queryOne(`SELECT * FROM forum_replies WHERE id = ?`, [result.lastInsertRowid]);
+
+    // Broadcast real-time update to all clients subscribed to this thread
+    try {
+      emitThreadBroadcast(threadId, {
+        type: 'new_reply',
+        threadId: parseInt(threadId),
+        reply: reply
+      });
+    } catch (broadcastError) {
+      console.error('WebSocket broadcast error:', broadcastError);
+      // Don't fail the request if broadcast fails
+    }
 
     res.status(201).json({
       success: true,

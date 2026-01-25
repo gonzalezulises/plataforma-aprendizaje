@@ -33,6 +33,9 @@ import uploadsRoutes, { initUploadsTables } from './routes/uploads.js';
 // Import database
 import { initDatabase } from './config/database.js';
 
+// Import WebSocket event bus
+import { wsEventBus } from './utils/websocket-events.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -217,29 +220,127 @@ app.use((req, res) => {
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+// Store subscriptions: Map of threadId -> Set of WebSocket clients
+const threadSubscriptions = new Map();
+
 // WebSocket connection handling
 wss.on('connection', (ws, req) => {
-  console.log('New WebSocket connection');
+  console.log('[WebSocket] New connection');
+
+  // Track which threads this client is subscribed to
+  ws.subscribedThreads = new Set();
 
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      console.log('Received:', data);
+      console.log('[WebSocket] Received:', data);
 
-      // Echo back for now - to be replaced with actual handlers
-      ws.send(JSON.stringify({ type: 'ack', received: data }));
+      // Handle subscription to thread updates
+      if (data.type === 'subscribe' && data.threadId) {
+        const threadId = String(data.threadId);
+
+        // Add to thread subscriptions
+        if (!threadSubscriptions.has(threadId)) {
+          threadSubscriptions.set(threadId, new Set());
+        }
+        threadSubscriptions.get(threadId).add(ws);
+        ws.subscribedThreads.add(threadId);
+
+        console.log(`[WebSocket] Client subscribed to thread ${threadId}`);
+        ws.send(JSON.stringify({
+          type: 'subscribed',
+          threadId,
+          message: `Subscribed to thread ${threadId} updates`
+        }));
+      }
+      // Handle unsubscription
+      else if (data.type === 'unsubscribe' && data.threadId) {
+        const threadId = String(data.threadId);
+
+        if (threadSubscriptions.has(threadId)) {
+          threadSubscriptions.get(threadId).delete(ws);
+          if (threadSubscriptions.get(threadId).size === 0) {
+            threadSubscriptions.delete(threadId);
+          }
+        }
+        ws.subscribedThreads.delete(threadId);
+
+        console.log(`[WebSocket] Client unsubscribed from thread ${threadId}`);
+        ws.send(JSON.stringify({
+          type: 'unsubscribed',
+          threadId,
+          message: `Unsubscribed from thread ${threadId}`
+        }));
+      }
+      // Ping/pong for keep-alive
+      else if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+      }
+      // Echo back other messages
+      else {
+        ws.send(JSON.stringify({ type: 'ack', received: data }));
+      }
     } catch (e) {
-      console.error('Invalid WebSocket message:', e);
+      console.error('[WebSocket] Invalid message:', e);
     }
   });
 
   ws.on('close', () => {
-    console.log('WebSocket connection closed');
+    console.log('[WebSocket] Connection closed');
+
+    // Clean up subscriptions for this client
+    for (const threadId of ws.subscribedThreads) {
+      if (threadSubscriptions.has(threadId)) {
+        threadSubscriptions.get(threadId).delete(ws);
+        if (threadSubscriptions.get(threadId).size === 0) {
+          threadSubscriptions.delete(threadId);
+        }
+      }
+    }
+  });
+
+  ws.on('error', (error) => {
+    console.error('[WebSocket] Error:', error);
   });
 
   // Send welcome message
-  ws.send(JSON.stringify({ type: 'connected', message: 'Welcome to Plataforma de Aprendizaje' }));
+  ws.send(JSON.stringify({
+    type: 'connected',
+    message: 'Connected to Plataforma de Aprendizaje real-time updates',
+    timestamp: Date.now()
+  }));
 });
+
+// Broadcast function to send updates to all clients subscribed to a thread
+function broadcastToThread(threadId, message) {
+  const threadIdStr = String(threadId);
+  const clients = threadSubscriptions.get(threadIdStr);
+
+  if (!clients || clients.size === 0) {
+    console.log(`[WebSocket] No subscribers for thread ${threadId}`);
+    return 0;
+  }
+
+  let sentCount = 0;
+  const messageStr = JSON.stringify(message);
+
+  for (const client of clients) {
+    if (client.readyState === 1) { // WebSocket.OPEN
+      try {
+        client.send(messageStr);
+        sentCount++;
+      } catch (e) {
+        console.error('[WebSocket] Error sending to client:', e);
+      }
+    }
+  }
+
+  console.log(`[WebSocket] Broadcast to thread ${threadId}: ${sentCount} clients`);
+  return sentCount;
+}
+
+// Export broadcast function for use in routes
+export { broadcastToThread };
 
 // Start server
 server.listen(PORT, () => {
