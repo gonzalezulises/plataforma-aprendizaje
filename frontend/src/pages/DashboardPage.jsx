@@ -116,6 +116,46 @@ function DashboardPage() {
           )}
         </div>
 
+        {/* Upgrade Banner for Free Users */}
+        {user && user.role === 'student_free' && (
+          <div className="mb-8 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-6 text-white shadow-lg" data-testid="upgrade-banner">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Desbloquea todo el contenido</h3>
+                  <p className="text-white/90 text-sm">Accede a todos los cursos premium, proyectos avanzados y certificados verificables</p>
+                </div>
+              </div>
+              <Link
+                to="/upgrade"
+                className="px-6 py-2.5 bg-white text-amber-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+                data-testid="upgrade-button"
+              >
+                Actualizar a Premium
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Premium Badge for Premium Users */}
+        {user && (user.role === 'student_premium' || user.role === 'instructor_admin') && (
+          <div className="mb-8 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-4 text-white shadow-lg" data-testid="premium-badge">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <span className="font-medium">Tienes acceso Premium - Disfruta de todos los cursos y funciones exclusivas</span>
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
         {enrollments.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center" data-testid="empty-state">
