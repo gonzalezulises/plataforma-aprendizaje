@@ -390,7 +390,7 @@ router.delete('/:id', requireInstructor, (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:09:40.409Z
+    // Delete related data that may not have CASCADE constraints
     // 1. Delete enrollments for this course
     run('DELETE FROM enrollments WHERE course_id = ?', [id]);
 
@@ -574,7 +574,6 @@ router.put('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
 
 /**
  * DELETE /api/courses/:courseId/modules/:moduleId - Delete a module (instructor only)
- * This also deletes all lessons and their content within the module (cascade delete)
  */
 router.delete('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
   try {
@@ -588,21 +587,9 @@ router.delete('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
       return res.status(404).json({ error: 'Module not found' });
     }
 
-    // Get all lessons in this module to delete their content first
-    const lessons = queryAll('SELECT id FROM lessons WHERE module_id = ?', [moduleId]);
-
-    // Delete lesson content for all lessons in this module
-    for (const lesson of lessons) {
-      run('DELETE FROM lesson_content WHERE lesson_id = ?', [lesson.id]);
-    }
-
-    // Delete all lessons in this module (cascade)
-    run('DELETE FROM lessons WHERE module_id = ?', [moduleId]);
-
-    // Finally, delete the module
     run('DELETE FROM modules WHERE id = ?', [moduleId]);
 
-    res.json({ message: 'Module deleted successfully', lessonsDeleted: lessons.length });
+    res.json({ message: 'Module deleted successfully' });
   } catch (error) {
     console.error('Error deleting module:', error);
     res.status(500).json({ error: 'Failed to delete module' });

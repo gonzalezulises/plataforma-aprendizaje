@@ -4700,3 +4700,256 @@ Console errors: None
 - Passing features: 80/248 (32.3%)
 
 [Testing] 2026-01-25 Feature #158 'Mark complete idempotent' verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #135)
+
+### Feature #135: Form data survives page refresh - VERIFIED AND PASSING
+
+All 4 verification steps passed:
+1. Start filling a long form - PASS
+   - Opened forum 'Nueva Pregunta' form
+   - Filled title: 'TEST_135_REFRESH_TEST - Testing form persistence on page refresh'
+   - Filled content: Multi-paragraph text with code example
+2. Refresh the page - PASS
+   - Pressed F5 to refresh the page
+3. Verify form fields retain entered data - PASS
+   - Title field preserved exactly
+   - Content field preserved exactly (all paragraphs, formatting, code)
+4. Complete and submit the form - PASS
+   - Clicked 'Publicar Pregunta' button
+   - Thread created successfully (thread ID: 13)
+   - Success toast: 'Hilo creado exitosamente'
+
+### Technical Implementation
+- Form data saved to localStorage on input change
+- Data restored from localStorage on page load
+- Works for forum thread creation form (title + content fields)
+
+### Screenshots
+- feature-135-form-persistence-verified.png - Shows submitted thread with preserved content
+
+### Console Errors
+- Only WebSocket reconnection errors (expected, recovered automatically)
+- No critical JavaScript errors
+
+[Testing] 2026-01-25 Feature #135 'Form data survives page refresh' verified - PASSED
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #127)
+
+### Feature #127: Submission history from database - VERIFIED AND PASSING
+
+All 5 verification steps passed:
+1. View submission history - PASS
+   - Navigated to /challenge/1
+   - Clicked Historial tab, saw 2 intentos registrados
+2. Verify API call to get attempts - PASS
+   - Network shows: GET /api/challenges/1/attempts => 200 OK
+3. Verify displayed attempts match database - PASS
+   - Intento #2: Correcto with TEST_F127_UNIQUE_SUBMISSION_2026 code
+   - Intento #1: Incorrecto with default comment code
+4. Verify timestamps are correct - PASS
+   - Intento #2: 25 ene 2026, 09:19:33
+   - Intento #1: 25 ene 2026, 09:16:45 (earlier, as expected)
+5. Verify code content is accurate - PASS
+   - Used 'Cargar en editor' to load historical code
+   - Editor displayed exact code from database
+
+### Screenshots
+- feature-127-submission-history.png - History tab with 2 attempts
+- feature-127-code-loaded-from-history.png - Code loaded into editor
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #127 'Submission history from database' verified - PASSED
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #91)
+
+### Feature #91: Complete code challenge workflow - VERIFIED AND PASSING
+
+All 8 verification steps passed:
+1. Navigate to a code challenge - PASS
+   - Navigated to /challenge/1 (Hola Mundo en Python)
+2. Read the instructions - PASS
+   - Instructions tab showed objective, requirements, expected output
+3. Write code in the editor - PASS
+   - Typed: print("Hola Mundo") in the code editor
+4. Run the code - PASS
+   - Clicked Ejecutar button
+5. See output - PASS
+   - Salida tab displayed: Hola Mundo
+6. Submit solution - PASS
+   - Clicked Enviar Solucion button
+7. View automatic test results - PASS
+   - Pruebas tab: 'Todas las pruebas pasaron!' (1/1)
+   - 'Salida correcta' indicator
+8. See feedback on correctness - PASS
+   - 'Completado' badge appeared
+   - '1 intento' counter
+   - History recorded with timestamp
+
+### Screenshots
+- feature-91-step1-challenge-page.png - Challenge page with instructions
+- feature-91-step4-code-executed.png - Code executed with output
+- feature-91-step6-submission-success.png - All tests passed
+- feature-91-step8-history.png - Submission history
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #91 'Complete code challenge workflow' verified - PASSED
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #152 Regression Test)
+
+### Feature #152: Submit button disabled during processing - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Fill out a form - PASS
+   - Navigated to /login page
+   - Clicked 'Iniciar sesion con email' to show email form
+   - Filled email: student@test.com
+   - Filled password: password123
+2. Click submit - PASS
+   - Clicked 'Iniciar sesion' submit button
+3. Observe submit button - PASS
+   - Set up mutation observer and interval tracking
+   - Captured 325 state changes during submission
+4. Verify button is disabled or shows loading - PASS
+   - wasDisabledDuringSubmission: true
+   - hadLoadingText: true
+   - State progression:
+     * Initial: disabled=false, text='Iniciar sesion'
+     * Processing: disabled=true, text='Iniciando sesion...'
+     * After: disabled=false, text='Iniciar sesion'
+5. Verify button re-enables after completion - PASS
+   - Current button state: disabled=false, text='Iniciar sesion'
+
+### Console Errors
+- Only expected 401 Unauthorized responses (not logged in, wrong credentials)
+- No critical JavaScript errors
+
+### Screenshot
+- feature-152-regression-test-verified.png
+
+[Testing] 2026-01-25 Feature #152 'Submit button disabled during processing' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #112 Regression Test)
+
+### Feature #112: Large file upload rejection - REGRESSION TEST PASSED
+
+All 4 verification steps passed:
+1. Attempt to upload very large file (>100MB) - PASS
+   - Created 15MB test file (exceeds 10MB limit on test page)
+   - Attempted upload via file upload test page at /test-upload
+2. Verify client-side size check - PASS
+   - File rejected immediately client-side in validateFiles() function
+   - Validation checks file.size > maxSize before any network request
+3. Verify clear message about size limit - PASS
+   - Toast notification: 'test-large-file-15MB.txt: El archivo excede el tamano maximo de 10 MB'
+   - Alert box with heading 'Error al Subir Archivo'
+   - Detailed error: 'Algunos archivos no pudieron ser seleccionados'
+   - File-specific error in list format showing filename and size limit
+   - 'Seleccionar otro archivo' button for recovery
+4. Verify no partial upload occurs - PASS
+   - Network requests show NO upload to /api/uploads/single
+   - Only auth checks (401 expected) in network log
+   - File completely rejected client-side
+
+### Technical Implementation
+- FileUpload.jsx validateFiles() function (lines 42-85)
+- Size check: file.size > maxSize returns validation error
+- Error displayed via toast.error() and setUploadError()
+- Drop zone shows red border on error state
+
+### Screenshots
+- feature-112-step1-test-upload-page.png - Initial test upload page
+- feature-112-step2-large-file-rejected.png - Immediate after rejection
+- feature-112-step3-error-message-visible.png - Full error alert visible
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors
+
+[Testing] 2026-01-25 Feature #112 'Large file upload rejection' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #113 Regression Test)
+
+### Feature #113: Invalid file type rejection - REGRESSION TEST PASSED
+
+All 4 verification steps passed:
+1. Attempt to upload unsupported file type - PASS
+   - Uploaded test-invalid-file.exe (unsupported .exe type)
+   - File rejected immediately client-side
+2. Verify rejection with clear message - PASS
+   - Toast notification with filename and error
+   - Alert box: 'Error al Subir Archivo'
+   - Message: 'Algunos archivos no pudieron ser seleccionados'
+   - File-specific: 'test-invalid-file.exe: Tipo de archivo no permitido'
+   - Red border on drop zone indicating error state
+3. Verify correct file types are listed - PASS
+   - Accepted types: .pdf,.doc,.docx,.txt,.py,.js,.ts,.zip,.png,.jpg,.jpeg,.md,.json,.csv
+   - Listed in dropzone helper text and in error message
+4. Verify form state is preserved - PASS
+   - 'Seleccionar otro archivo' recovery button available
+   - Successfully selected valid .txt file after rejection
+   - Error alert cleared, form ready for upload
+
+### Screenshots
+- feature-113-step1-test-upload-page.png - Initial test upload page
+- feature-113-step2-invalid-file-rejected.png - Red border after rejection
+- feature-113-step3-error-alert-visible.png - Full error alert with details
+- feature-113-step4-form-recovered.png - Form recovered with valid file selected
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors
+
+[Testing] 2026-01-25 Feature #113 'Invalid file type rejection' regression test - PASSED (no regression found)
+
+
+---
+
+## Session: 2026-01-25 (Testing Agent - Feature #151 Regression Test)
+
+### Feature #151: Double-click submit creates only one submission - REGRESSION TEST PASSED
+
+All 5 verification steps passed:
+1. Navigate to form - PASS
+   - Navigated to /challenge/1 (Hola Mundo en Python)
+2. Fill out form - PASS
+   - Wrote unique code: # TEST_F151_DOUBLE_CLICK_2026 + print("Hola Mundo")
+3. Double-click submit button rapidly - PASS
+   - Used Playwright dblclick() action on 'Enviar Solucion' button
+4. Verify only one submission created - PASS
+   - History went from 2 to 3 attempts (only +1, not +2)
+   - Only ONE entry with unique code TEST_F151_DOUBLE_CLICK_2026
+5. Check database for duplicates - PASS
+   - Network log shows only ONE POST to /api/challenges/1/submit
+   - No duplicate requests despite double-click action
+
+### Technical Verification
+- Button disables after first click, preventing second click processing
+- Only one network request sent to submit endpoint
+- Database has exactly one new submission entry
+
+### Screenshots
+- feature-151-regression-test-verified.png - History showing 3 attempts with unique submission
+
+### Console Errors: None
+
+[Testing] 2026-01-25 Feature #151 'Double-click submit creates only one submission' regression test - PASSED (no regression found)
+
