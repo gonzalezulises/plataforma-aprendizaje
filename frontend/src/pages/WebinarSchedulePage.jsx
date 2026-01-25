@@ -36,7 +36,8 @@ function WebinarSchedulePage() {
   const [fieldErrors, setFieldErrors] = useState({
     title: '',
     scheduled_date: '',
-    scheduled_time: ''
+    scheduled_time: '',
+    max_attendees: ''
   });
 
   // localStorage key for webinar form persistence
@@ -142,11 +143,48 @@ function WebinarSchedulePage() {
     }
   };
 
+  // Handle numeric field changes with validation
+  const handleNumericChange = (e) => {
+    const { name, value } = e.target;
+    const numValue = parseInt(value, 10);
+
+    // Allow empty string (will be validated on submit)
+    if (value === '') {
+      setFormData(prev => ({ ...prev, [name]: '' }));
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+      return;
+    }
+
+    // Reject non-numeric input
+    if (isNaN(numValue)) {
+      setFieldErrors(prev => ({ ...prev, [name]: 'Debe ser un numero valido' }));
+      return;
+    }
+
+    // Validate range for max_attendees
+    if (name === 'max_attendees') {
+      if (numValue < 1) {
+        setFieldErrors(prev => ({ ...prev, [name]: 'La capacidad minima es 1' }));
+        setFormData(prev => ({ ...prev, [name]: numValue }));
+        return;
+      }
+      if (numValue > 1000) {
+        setFieldErrors(prev => ({ ...prev, [name]: 'La capacidad maxima es 1000' }));
+        setFormData(prev => ({ ...prev, [name]: numValue }));
+        return;
+      }
+    }
+
+    // Valid number - update form data and clear error
+    setFormData(prev => ({ ...prev, [name]: numValue }));
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate required fields and set field-level errors
-    const errors = { title: '', scheduled_date: '', scheduled_time: '' };
+    const errors = { title: '', scheduled_date: '', scheduled_time: '', max_attendees: '' };
     let hasErrors = false;
 
     if (!formData.title) {
@@ -159,6 +197,19 @@ function WebinarSchedulePage() {
     }
     if (!formData.scheduled_time) {
       errors.scheduled_time = 'La hora es requerida';
+      hasErrors = true;
+    }
+
+    // Validate numeric fields
+    const maxAttendees = parseInt(formData.max_attendees, 10);
+    if (isNaN(maxAttendees) || formData.max_attendees === '') {
+      errors.max_attendees = 'La capacidad debe ser un numero valido';
+      hasErrors = true;
+    } else if (maxAttendees < 1) {
+      errors.max_attendees = 'La capacidad minima es 1';
+      hasErrors = true;
+    } else if (maxAttendees > 1000) {
+      errors.max_attendees = 'La capacidad maxima es 1000';
       hasErrors = true;
     }
 
@@ -473,11 +524,22 @@ function WebinarSchedulePage() {
               id="max_attendees"
               name="max_attendees"
               value={formData.max_attendees}
-              onChange={handleChange}
+              onChange={handleNumericChange}
               min="1"
               max="1000"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              aria-invalid={!!fieldErrors.max_attendees}
+              aria-describedby={fieldErrors.max_attendees ? 'max_attendees-error' : undefined}
+              className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                fieldErrors.max_attendees
+                  ? 'border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
             />
+            {fieldErrors.max_attendees && (
+              <p id="max_attendees-error" className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                <span>⚠</span> {fieldErrors.max_attendees}
+              </p>
+            )}
           </div>
 
           {/* Submit */}

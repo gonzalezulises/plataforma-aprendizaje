@@ -7055,3 +7055,24 @@ Frontend (LessonPage.jsx):
 ### Console Errors: Only expected 401 Unauthorized (not logged in)
 ### Screenshots: feature-178-step1-special-chars-search.png, feature-178-step4-xss-test.png
 
+[Testing] 2026-01-25 Feature #146 'Shareable filter URLs work' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Apply filters to catalog - PASS (Data Science + Intermedio selected)
+- Step 2: Copy the URL - PASS (URL: /courses?category=Data%20Science&level=Intermedio)
+- Step 3: Open in new session - PASS (cleared localStorage, navigated to URL)
+- Step 4: Verify same filters are applied - PASS (dropdowns show correct selections)
+- Step 5: Verify same results are shown - PASS (2 courses: Data Science con Python, R para Estadistica)
+
+### Implementation:
+- Frontend: CourseCatalogPage.jsx uses useSearchParams from react-router-dom
+- URL params read on page load and set filter state (lines 52-69)
+- Filters synced to URL via updateURLParams function (lines 130-142)
+- LocalStorage persistence works alongside URL params (Feature #184)
+
+### Console Errors: Only expected 401 Unauthorized (not logged in)
+
+### Screenshots:
+- feature-146-shareable-url-verification.png
+- feature-146-new-session-verification.png
+
