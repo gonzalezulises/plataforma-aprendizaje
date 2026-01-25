@@ -4200,3 +4200,45 @@ Console errors: Only expected 404 for enrollment check before enrollment
 
 [Testing] 2026-01-25 Feature #148 "Direct access to deleted content handled" verified - PASSED
 
+
+---
+
+## Session: 2026-01-25 (Agent Session - Feature #150)
+
+### Completed Features
+- Feature #150: Forum thread direct link works - VERIFIED AND PASSING
+  - All 4 verification steps verified via browser automation:
+    1. Copy a thread URL - PASS
+       - Tested with /forum/thread/3 and /forum/thread/1
+    2. Open in new session - PASS
+       - Closed browser and opened fresh session (unauthenticated)
+    3. Verify thread loads correctly - PASS
+       - Thread 3: "TEST_95_Regression - Como funcionan los decoradores en Python?" - Status: Open
+       - Thread 1: "TEST_95_Como usar funciones en Python?" - Status: Resolved
+       - Both threads load with full content, author info, and timestamps
+    4. Verify replies are visible - PASS
+       - Thread 3: 10 replies visible with content and author info
+       - Thread 1: 1 reply visible with code example and upvote count
+
+### Additional Verified
+- Breadcrumb navigation works correctly (Cursos > Course > Foro > Thread title)
+- WebSocket connection established for real-time updates ("En vivo" indicator)
+- Both open and resolved threads display correct status badges
+- Author avatars and timestamps display properly
+- Upvote counts visible on replies
+
+### Screenshots
+- feature-150-direct-thread-link.png - Thread 3 loaded via direct URL (full page)
+- feature-150-direct-thread-link-2.png - Thread 1 loaded via direct URL
+
+### Console Errors
+- Only expected errors:
+  - 401 Unauthorized for /api/auth/me (user not logged in)
+  - WebSocket momentary disconnect/reconnect (normal behavior)
+- No critical JavaScript errors
+
+### Current Status
+- Feature #150 marked as PASSING
+- Passing features: 72/248 (29.0%)
+
+[Testing] 2026-01-25 Feature #150 'Forum thread direct link works' verified - PASSED
