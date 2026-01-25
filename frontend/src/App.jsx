@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, useSearchParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './store/AuthContext';
 import Navbar from './components/Navbar';
@@ -102,17 +102,52 @@ const CATALOG_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/a
 
 // Course Catalog Page
 function CourseCatalog() {
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState('');
-  const [priceFilter, setPriceFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchInput, setSearchInput] = useState('');
+  // Use URL search params for filter persistence (Feature #142)
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialize filters from URL search params
+  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || '');
+  const [levelFilter, setLevelFilter] = useState(() => searchParams.get('level') || '');
+  const [priceFilter, setPriceFilter] = useState(() => searchParams.get('price') || '');
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('search') || '');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [apiResponseData, setApiResponseData] = useState(null); // Store raw API response for verification
   const [availableLevels, setAvailableLevels] = useState([]); // Dynamic levels from database
   const [availableCategories, setAvailableCategories] = useState([]); // Dynamic categories from database (Feature #120)
+
+  // Update URL when filters change (Feature #142)
+  const updateURLParams = useCallback((updates) => {
+    setSearchParams(prevParams => {
+      const newParams = new URLSearchParams(prevParams);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value) {
+          newParams.set(key, value);
+        } else {
+          newParams.delete(key);
+        }
+      });
+      return newParams;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  // Wrapper functions to update both state and URL
+  const handleCategoryChange = useCallback((value) => {
+    setCategoryFilter(value);
+    updateURLParams({ category: value });
+  }, [updateURLParams]);
+
+  const handleLevelChange = useCallback((value) => {
+    setLevelFilter(value);
+    updateURLParams({ level: value });
+  }, [updateURLParams]);
+
+  const handlePriceChange = useCallback((value) => {
+    setPriceFilter(value);
+    updateURLParams({ price: value });
+  }, [updateURLParams]);
 
   // Fetch available categories from database (Feature #120)
   useEffect(() => {
@@ -221,10 +256,18 @@ function CourseCatalog() {
     }
   };
 
-  // Handle search form submission
+  // Handle search form submission (Feature #142 - persist to URL)
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setSearchQuery(searchInput);
+    updateURLParams({ search: searchInput });
+  };
+
+  // Handle clearing search (Feature #142)
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    updateURLParams({ search: '' });
   };
 
   // No client-side filtering - API returns pre-filtered results
@@ -275,7 +318,7 @@ function CourseCatalog() {
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => { setSearchInput(''); setSearchQuery(''); }}
+                onClick={handleClearSearch}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
                 data-testid="clear-search-button"
               >
@@ -295,7 +338,7 @@ function CourseCatalog() {
         <div className="mb-6 flex flex-wrap gap-4">
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="category-filter"
           >
@@ -306,7 +349,7 @@ function CourseCatalog() {
           </select>
           <select
             value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
+            onChange={(e) => handleLevelChange(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="level-filter"
           >
@@ -317,7 +360,7 @@ function CourseCatalog() {
           </select>
           <select
             value={priceFilter}
-            onChange={(e) => setPriceFilter(e.target.value)}
+            onChange={(e) => handlePriceChange(e.target.value)}
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="price-filter"
           >
