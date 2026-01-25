@@ -1,3 +1,48 @@
+## Session: 2026-01-25 (Agent Session - Feature #127)
+
+### Completed Features
+- Feature #127: Submission history from database - VERIFIED AND PASSING
+  - All 5 verification steps verified via browser automation:
+    1. View submission history - PASS
+       - Navigated to /challenge/1 as authenticated user (Test User)
+       - Historial tab shows "2 intentos registrados"
+    2. Verify API call to get attempts - PASS
+       - Network: GET /api/challenges/1/attempts => [200] OK
+       - API returns proper JSON with attempts array from code_submissions table
+    3. Verify displayed attempts match database - PASS
+       - Attempt #2 (id: 7): is_correct: 1, attempt_number: 2 → UI shows "Correcto, Intento #2"
+       - Attempt #1 (id: 6): is_correct: 0, attempt_number: 1 → UI shows "Incorrecto, Intento #1"
+    4. Verify timestamps are correct - PASS
+       - Attempt #2: "2026-01-25T14:19:33.919Z" → UI shows "25 ene 2026, 09:19:33"
+       - Attempt #1: "2026-01-25T14:16:45.075Z" → UI shows "25 ene 2026, 09:16:45"
+       - Timestamps formatted correctly with Intl.DateTimeFormat('es-ES')
+    5. Verify code content is accurate - PASS
+       - API code: "# TEST_F127_UNIQUE_SUBMISSION_2026\nprint(\"Hola Mundo\")" matches UI exactly
+       - "Ver codigo completo" button expands to show full code
+       - "Cargar en editor" button available to load code into editor
+
+### Technical Details
+- Backend: GET /api/challenges/:id/attempts (challenges.js lines 569-592)
+- Database: code_submissions table stores id, user_id, challenge_id, code, output, error, test_results, is_correct, execution_time_ms, attempt_number, created_at
+- Frontend: CodeChallengePage.jsx fetchSubmissionHistory() function fetches from API
+- No hardcoded data - all submissions come from database
+- Test data: Created unique submission with "# TEST_F127_UNIQUE_SUBMISSION_2026"
+
+### Screenshots
+- feature-127-step1-submission-history.png - Historial tab with 2 attempts
+- feature-127-step2-code-expanded.png - Full code shown in expanded view
+
+### Console Errors
+- None (only expected 401 for unauthenticated /api/auth/me before login)
+
+### Current Status
+- Feature #127 marked as PASSING
+- Passing: 52/248 features (21.0%)
+
+[Testing] 2026-01-25 Feature #127 "Submission history from database" verified - PASSED
+
+---
+
 ## Session: 2026-01-25 (Agent Session - Feature #128)
 
 ### Completed Features
