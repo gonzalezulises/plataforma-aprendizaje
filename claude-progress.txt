@@ -6529,3 +6529,25 @@ The existing search implementation handles long queries well:
 ### Screenshot: feature-127-submission-history.png
 
 ---
+[Testing] 2026-01-25 Feature #114 'Loading states display during API calls' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Trigger slow API operation - PASS (tested code execution, submission, page navigation)
+- Step 2: Loading spinner appears - PASS (verified in CourseCatalogPage, CourseDetailPage, CodeChallengePage, DashboardPage, LoginPage)
+- Step 3: UI is not frozen - PASS (buttons disabled but UI responsive)
+- Step 4: Loading indicator disappears when complete - PASS (content loads after API calls)
+
+### Implementation Analysis:
+- CourseCatalogPage: animate-spin spinner + 'Cargando cursos...'
+- CourseDetailPage: animate-spin spinner
+- CodeChallengePage: animate-spin + 'Ejecutando...' / 'Enviando...'
+- DashboardPage: animate-spin + 'Cargando tu dashboard...'
+- LoginPage: 'Iniciando sesion...'
+
+### Console Errors: None related to loading states
+
+### Screenshots:
+- feature-114-code-execution.png - Code execution output
+- feature-114-submit-success.png - Submission with loading completed
+
+---

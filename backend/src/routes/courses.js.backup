@@ -1,8 +1,7 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
-import { parseSearchQuery } from '../utils/searchUtils.js';
 
-console.log('Courses routes loading... (updated 2026-01-25 - Feature #179 quoted search)');
+console.log('Courses routes loading... (updated 2026-01-25 - Feature #174 pagination)');
 
 const router = express.Router();
 
@@ -141,31 +140,9 @@ router.get('/', (req, res) => {
       params.push(premium === 'true' ? 1 : 0);
     }
 
-    // Feature #179: Handle quoted phrase search
     if (search) {
-      console.log('[DEBUG #179] Raw search query:', JSON.stringify(search));
-      const { exactPhrases, words } = parseSearchQuery(search);
-      console.log('[DEBUG #179] Parsed:', { exactPhrases, words });
-
-      // Build search conditions
-      const searchConditions = [];
-
-      // Add exact phrase conditions (must contain the exact phrase)
-      for (const phrase of exactPhrases) {
-        searchConditions.push('(title LIKE ? OR description LIKE ?)');
-        params.push(`%${phrase}%`, `%${phrase}%`);
-      }
-
-      // Add word conditions (must contain each word)
-      for (const word of words) {
-        searchConditions.push('(title LIKE ? OR description LIKE ?)');
-        params.push(`%${word}%`, `%${word}%`);
-      }
-
-      // Combine with AND - all terms must match
-      if (searchConditions.length > 0) {
-        baseSql += ' AND (' + searchConditions.join(' AND ') + ')';
-      }
+      baseSql += ' AND (title LIKE ? OR description LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
     }
 
     // Get total count for pagination
