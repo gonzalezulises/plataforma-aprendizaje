@@ -2910,3 +2910,21 @@
 - Passing: 51/248 features (20.6%)
 
 [Testing] 2026-01-25 Feature #123 "Progress percentage matches database" verified - PASSED
+[Testing] 2026-01-25 Feature #126 'Code execution result matches backend response' regression test - PASSED
+  - Verified all 5 steps via browser automation:
+    1. Write code that prints unique value - PASS
+       - print(42 * 7) => 294
+       - print(123 + 456) => 579
+    2. Submit code - PASS (clicked Ejecutar button)
+    3. Inspect API response - PASS
+       - POST /api/challenges/1/run returned correct output
+    4. Verify UI displays same output as API - PASS
+       - UI displayed '294' matching API response
+       - UI displayed '579' matching API response
+    5. Verify no mocked execution results - PASS
+       - No mock patterns in frontend code
+       - setOutput(data.output) uses API response directly
+  - Console errors: None
+  - Screenshots: feature-126-test1-output-294.png, feature-126-test2-output-579.png
+[Testing] Session complete - Feature #126 verified, still passing
+[Testing] 2026-01-25 Feature #129 Notification count from database verified - PASSED
