@@ -424,11 +424,11 @@ function CourseDetailPage() {
               <div className="flex flex-wrap items-center gap-4 text-sm text-primary-200">
                 <div className="flex items-center gap-1">
                   <span className="text-yellow-400">★</span>
-                  <span className="text-white font-medium">{course.rating}</span>
-                  <span>({course.reviewsCount} resenas)</span>
+                  <span className="text-white font-medium">{course.rating || 4.5}</span>
+                  <span>({course.reviewsCount || 0} resenas)</span>
                 </div>
                 <span>•</span>
-                <span>{course.studentsCount.toLocaleString()} estudiantes</span>
+                <span>{(course.studentsCount || 0).toLocaleString()} estudiantes</span>
                 <span>•</span>
                 <span>{course.duration}</span>
                 <span>•</span>
@@ -438,11 +438,11 @@ function CourseDetailPage() {
               {/* Instructor */}
               <div className="mt-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
-                  {course.instructor.name.charAt(0)}
+                  {(course.instructor?.name || "I").charAt(0)}
                 </div>
                 <div>
-                  <p className="font-medium">{course.instructor.name}</p>
-                  <p className="text-sm text-primary-200">{course.instructor.bio}</p>
+                  <p className="font-medium">{course.instructor?.name || "Instructor"}</p>
+                  <p className="text-sm text-primary-200">{course.instructor?.bio || "Instructor del curso"}</p>
                 </div>
               </div>
             </div>
