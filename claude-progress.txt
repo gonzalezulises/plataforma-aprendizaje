@@ -6302,3 +6302,67 @@ Frontend (CourseCatalogPage.jsx):
 - Option to retry: PASS (Comenzar Quiz button available, 3 attempts allowed)
 
 ### Console Errors: None related to quiz functionality
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #178)
+
+### Feature #178: Special characters in search handled - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+1. Search for: @#$%^&*() - PASS
+   - No error or crash occurred
+   - API returned 200 OK status
+   - 0 results found (as expected)
+   - Special chars displayed properly in "Resultados para:" text
+2. Verify no error or crash - PASS
+   - Console shows only expected 401 (not logged in)
+   - No JavaScript errors
+3. Verify no results or escaped search - PASS
+   - Shows "0 curso(s) encontrado(s)"
+   - Special characters properly escaped in display
+4. Try: <script>alert(1)</script> - PASS
+   - No alert dialog appeared
+   - Script tags displayed as plain text
+5. Verify no XSS vulnerability - PASS
+   - React automatically escapes HTML content
+   - Script tag rendered as text: "<script>alert(1)</script>"
+
+### Additional Testing
+- SQL LIKE wildcard (%) - Works without error
+  - Note: % returns all courses because it's a SQL wildcard
+  - This is expected behavior (not a security issue)
+- URL encoding verified:
+  - @#$%^&*() encoded to %40%23%24%25%5E%26*%28%29
+  - <script>alert(1)</script> encoded to %3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+### Implementation Analysis
+Frontend (CourseCatalogPage.jsx):
+- React auto-escapes HTML content when rendering text
+- Search query displayed in JSX: "{searchQuery}" - auto-escaped
+- URL params properly encoded by URLSearchParams API
+
+Backend (courses.js):
+- Uses parameterized SQL queries (prevents SQL injection)
+- Search applied via: WHERE title LIKE ? OR description LIKE ?
+- Parameters passed separately from SQL string
+
+### Security Summary
+- XSS Prevention: React escapes HTML by default
+- SQL Injection Prevention: Parameterized queries used
+- URL Encoding: Special chars properly encoded in requests
+
+### Screenshots
+- feature-178-step1-special-chars-search.png - @#$%^&*() search
+- feature-178-step4-xss-test.png - XSS attempt with script tag
+- feature-178-sql-wildcard-test.png - % wildcard test
+
+### Console Errors
+- Only expected 401 Unauthorized (not logged in)
+- No JavaScript errors related to search functionality
+
+### Current Status
+- Feature #178 marked as PASSING
+- 100/248 features passing (40.3%)
+
+[Coding] 2026-01-25 Feature #178 'Special characters in search handled' verified - PASSED
