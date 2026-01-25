@@ -82,6 +82,25 @@ function WebinarSchedulePage() {
     setFormRestored(false);
   };
 
+  // Default form values for reset
+  const defaultFormData = {
+    title: '',
+    description: '',
+    course_id: '',
+    scheduled_date: '',
+    scheduled_time: '',
+    duration_minutes: 60,
+    meet_link: '',
+    max_attendees: 100
+  };
+
+  // Reset form to default values
+  const handleResetForm = () => {
+    setFormData({ ...defaultFormData });
+    clearSavedFormData();
+    toast.success('Formulario restablecido');
+  };
+
   useEffect(() => {
     // Check if user is instructor
     if (isAuthenticated && user?.role !== 'instructor_admin') {
@@ -401,6 +420,16 @@ function WebinarSchedulePage() {
               className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleResetForm}
+              className="px-6 py-2 border border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Restablecer
             </button>
             <button
               type="submit"
