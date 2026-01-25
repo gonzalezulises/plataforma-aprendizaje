@@ -1,5 +1,6 @@
 /**
  * Course Catalog Page (Feature #174: Pagination resets on context change)
+ * Feature #184: Filter persistence across sessions
  * Displays courses with filtering and pagination
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -9,14 +10,64 @@ import Pagination from '../components/Pagination';
 // API URL - use environment variable or default to port 3001
 const CATALOG_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// LocalStorage key for filter persistence (Feature #184)
+const FILTER_STORAGE_KEY = 'courseCatalogFilters';
+
+// Feature #184: Helper to get saved filters from localStorage
+const getSavedFilters = () => {
+  try {
+    const saved = localStorage.getItem(FILTER_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Validate saved data structure
+      if (typeof parsed === 'object' && parsed !== null) {
+        return {
+          category: parsed.category || '',
+          level: parsed.level || '',
+          price: parsed.price || '',
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[CourseCatalog] Error reading saved filters:', err);
+  }
+  return null;
+};
+
+// Feature #184: Helper to save filters to localStorage
+const saveFilters = (filters) => {
+  try {
+    localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
+  } catch (err) {
+    console.warn('[CourseCatalog] Error saving filters:', err);
+  }
+};
+
 export default function CourseCatalogPage() {
   // Use URL search params for filter persistence (Feature #142)
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Initialize filters from URL search params
-  const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || '');
-  const [levelFilter, setLevelFilter] = useState(() => searchParams.get('level') || '');
-  const [priceFilter, setPriceFilter] = useState(() => searchParams.get('price') || '');
+  // Feature #184: Initialize filters from URL params first, then localStorage
+  // URL params take priority (for shareable links), otherwise use saved filters
+  const [categoryFilter, setCategoryFilter] = useState(() => {
+    const urlValue = searchParams.get('category');
+    if (urlValue) return urlValue;
+    const savedFilters = getSavedFilters();
+    return savedFilters?.category || '';
+  });
+  const [levelFilter, setLevelFilter] = useState(() => {
+    const urlValue = searchParams.get('level');
+    if (urlValue) return urlValue;
+    const savedFilters = getSavedFilters();
+    return savedFilters?.level || '';
+  });
+  const [priceFilter, setPriceFilter] = useState(() => {
+    const urlValue = searchParams.get('price');
+    if (urlValue) return urlValue;
+    const savedFilters = getSavedFilters();
+    return savedFilters?.price || '';
+  });
+  // Note: Search query is NOT persisted across sessions (intentional - search is contextual)
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || '');
   const [searchInput, setSearchInput] = useState(() => searchParams.get('search') || '');
   const [courses, setCourses] = useState([]);
@@ -29,6 +80,51 @@ export default function CourseCatalogPage() {
   const [currentPage, setCurrentPage] = useState(() => parseInt(searchParams.get('page')) || 1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1, hasNext: false, hasPrev: false });
   const ITEMS_PER_PAGE = 6;
+
+  // Feature #184: Save filters to localStorage whenever they change
+  useEffect(() => {
+    const currentFilters = {
+      category: categoryFilter,
+      level: levelFilter,
+      price: priceFilter,
+    };
+    // Only save non-empty filters
+    const hasFilters = categoryFilter || levelFilter || priceFilter;
+    if (hasFilters) {
+      saveFilters(currentFilters);
+      console.log('[CourseCatalog] Saved filters to localStorage:', currentFilters);
+    } else {
+      // Clear saved filters if all are reset
+      try {
+        localStorage.removeItem(FILTER_STORAGE_KEY);
+        console.log('[CourseCatalog] Cleared saved filters from localStorage');
+      } catch (err) {
+        // Ignore localStorage errors
+      }
+    }
+  }, [categoryFilter, levelFilter, priceFilter]);
+
+  // Feature #184: Sync URL with restored filters on initial load (when no URL params present)
+  useEffect(() => {
+    // Only run once on mount - check if we need to update URL with restored filters
+    const hasUrlFilters = searchParams.get('category') || searchParams.get('level') || searchParams.get('price');
+    if (!hasUrlFilters && (categoryFilter || levelFilter || priceFilter)) {
+      // Filters were restored from localStorage but not in URL - update URL to match
+      const updates = {};
+      if (categoryFilter) updates.category = categoryFilter;
+      if (levelFilter) updates.level = levelFilter;
+      if (priceFilter) updates.price = priceFilter;
+      setSearchParams(prevParams => {
+        const newParams = new URLSearchParams(prevParams);
+        Object.entries(updates).forEach(([key, value]) => {
+          if (value) newParams.set(key, value);
+        });
+        return newParams;
+      }, { replace: true });
+      console.log('[CourseCatalog] Synced URL with restored filters:', updates);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   // Update URL when filters change (Feature #142)
   const updateURLParams = useCallback((updates) => {
@@ -220,7 +316,7 @@ export default function CourseCatalogPage() {
     resetPaginationOnFilterChange(); // Feature #174
   };
 
-  // Handle resetting all filters (Feature #171 + Feature #174: reset pagination)
+  // Handle resetting all filters (Feature #171 + Feature #174: reset pagination + Feature #184: clear localStorage)
   const handleResetFilters = useCallback(() => {
     setCategoryFilter('');
     setLevelFilter('');
@@ -229,6 +325,13 @@ export default function CourseCatalogPage() {
     setSearchQuery('');
     setCurrentPage(1); // Feature #174
     setSearchParams({}, { replace: true });
+    // Feature #184: Clear saved filters from localStorage
+    try {
+      localStorage.removeItem(FILTER_STORAGE_KEY);
+      console.log('[CourseCatalog] Cleared saved filters on reset');
+    } catch (err) {
+      // Ignore localStorage errors
+    }
   }, [setSearchParams]);
 
   // Check if any filters are applied (Feature #171)
