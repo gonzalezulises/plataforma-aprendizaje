@@ -12,6 +12,7 @@ function WebinarSchedulePage() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [courses, setCourses] = useState([]);
+  const [formRestored, setFormRestored] = useState(false);
 
   // Network-aware form submission
   const {
@@ -32,6 +33,54 @@ function WebinarSchedulePage() {
     meet_link: '',
     max_attendees: 100
   });
+
+  // localStorage key for webinar form persistence
+  const formDataKey = 'webinar_schedule_form';
+
+  // Restore form data from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(formDataKey);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        // Restore form data
+        setFormData(prev => ({
+          ...prev,
+          title: parsed.title || '',
+          description: parsed.description || '',
+          course_id: parsed.course_id || '',
+          scheduled_date: parsed.scheduled_date || '',
+          scheduled_time: parsed.scheduled_time || '',
+          duration_minutes: parsed.duration_minutes || 60,
+          meet_link: parsed.meet_link || '',
+          max_attendees: parsed.max_attendees || 100
+        }));
+        if (parsed.title || parsed.description) {
+          setFormRestored(true);
+          console.log('Webinar form data restored from previous session');
+        }
+      } catch (e) {
+        console.error('Error restoring webinar form data:', e);
+      }
+    }
+  }, [formDataKey]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (formData.title || formData.description || formData.scheduled_date) {
+      const dataToSave = {
+        ...formData,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(formDataKey, JSON.stringify(dataToSave));
+    }
+  }, [formData, formDataKey]);
+
+  // Clear saved form data
+  const clearSavedFormData = () => {
+    localStorage.removeItem(formDataKey);
+    setFormRestored(false);
+  };
 
   useEffect(() => {
     // Check if user is instructor
@@ -104,6 +153,8 @@ function WebinarSchedulePage() {
     await submit(performSubmit, {
       preserveData: { ...formData },
       onSuccess: () => {
+        // Clear saved form data after successful submission
+        clearSavedFormData();
         toast.success('Webinar programado exitosamente');
         navigate('/webinars');
       },
@@ -157,6 +208,27 @@ function WebinarSchedulePage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* Form Data Restored Notification */}
+          {formRestored && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                Tu formulario anterior ha sido restaurado automáticamente.
+              </span>
+              <button
+                type="button"
+                onClick={() => setFormRestored(false)}
+                className="ml-auto text-blue-500 hover:text-blue-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Network Error Banner */}
           <NetworkErrorBanner
             networkError={networkError}
@@ -322,7 +394,10 @@ function WebinarSchedulePage() {
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => navigate('/webinars')}
+              onClick={() => {
+                clearSavedFormData();
+                navigate('/webinars');
+              }}
               className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Cancelar

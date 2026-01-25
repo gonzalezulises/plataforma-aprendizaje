@@ -16,6 +16,7 @@ export default function ProjectSubmissionPage() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [formRestored, setFormRestored] = useState(false);
 
   // Network-aware form submission
   const {
@@ -26,6 +27,44 @@ export default function ProjectSubmissionPage() {
     retry,
     clearError,
   } = useNetworkAwareSubmit();
+
+  // localStorage keys for form persistence
+  const formDataKey = `project_submission_${projectId}_form`;
+
+  // Restore form data from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(formDataKey);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.content) setContent(parsed.content);
+        if (parsed.githubUrl) setGithubUrl(parsed.githubUrl);
+        setFormRestored(true);
+        // Show a brief notification that data was restored
+        console.log('Form data restored from previous session');
+      } catch (e) {
+        console.error('Error restoring form data:', e);
+      }
+    }
+  }, [formDataKey]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    // Only save if there's content to save
+    if (content || githubUrl) {
+      const dataToSave = {
+        content,
+        githubUrl,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(formDataKey, JSON.stringify(dataToSave));
+    }
+  }, [content, githubUrl, formDataKey]);
+
+  // Clear saved form data after successful submission
+  const clearSavedFormData = () => {
+    localStorage.removeItem(formDataKey);
+  };
 
   useEffect(() => {
     fetchProject();
@@ -78,6 +117,8 @@ export default function ProjectSubmissionPage() {
     await submit(performSubmit, {
       preserveData: { content, githubUrl },
       onSuccess: (data) => {
+        // Clear saved form data after successful submission
+        clearSavedFormData();
         toast.success('Proyecto enviado exitosamente!');
         navigate(`/project/submission/${data.submission.id}`);
       },
@@ -171,6 +212,27 @@ export default function ProjectSubmissionPage() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Tu Entrega
           </h2>
+
+          {/* Form Data Restored Notification */}
+          {formRestored && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                Tu progreso anterior ha sido restaurado automáticamente.
+              </span>
+              <button
+                type="button"
+                onClick={() => setFormRestored(false)}
+                className="ml-auto text-blue-500 hover:text-blue-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
 
           {/* Network Error Banner */}
           <NetworkErrorBanner

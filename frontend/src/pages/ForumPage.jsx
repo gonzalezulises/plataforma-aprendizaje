@@ -17,6 +17,7 @@ function ForumPage() {
   const [newThread, setNewThread] = useState({ title: '', content: '' });
   const [filter, setFilter] = useState('all'); // all, resolved, unresolved
   const [sort, setSort] = useState('newest');
+  const [formRestored, setFormRestored] = useState(false);
 
   // Network-aware form submission
   const {
@@ -42,6 +43,48 @@ function ForumPage() {
   };
 
   const user = getUser();
+
+  // localStorage key for forum thread form persistence
+  const formDataKey = `forum_thread_${slug}_form`;
+
+  // Restore form data from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem(formDataKey);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.title || parsed.content) {
+          setNewThread({
+            title: parsed.title || '',
+            content: parsed.content || ''
+          });
+          setShowNewThread(true);
+          setFormRestored(true);
+          console.log('Forum thread form data restored from previous session');
+        }
+      } catch (e) {
+        console.error('Error restoring forum form data:', e);
+      }
+    }
+  }, [formDataKey]);
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (newThread.title || newThread.content) {
+      const dataToSave = {
+        title: newThread.title,
+        content: newThread.content,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(formDataKey, JSON.stringify(dataToSave));
+    }
+  }, [newThread.title, newThread.content, formDataKey]);
+
+  // Clear saved form data
+  const clearSavedFormData = () => {
+    localStorage.removeItem(formDataKey);
+    setFormRestored(false);
+  };
 
   useEffect(() => {
     fetchCourse();
@@ -114,6 +157,8 @@ function ForumPage() {
     const result = await submit(performSubmit, {
       preserveData: { title: newThread.title, content: newThread.content },
       onSuccess: (data) => {
+        // Clear saved form data after successful submission
+        clearSavedFormData();
         toast.success('Hilo creado exitosamente');
         setNewThread({ title: '', content: '' });
         setShowNewThread(false);
@@ -222,6 +267,27 @@ function ForumPage() {
               Crear Nueva Pregunta
             </h2>
 
+            {/* Form Data Restored Notification */}
+            {formRestored && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm text-blue-700 dark:text-blue-300">
+                  Tu pregunta anterior ha sido restaurada automáticamente.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormRestored(false)}
+                  className="ml-auto text-blue-500 hover:text-blue-700"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             {/* Network Error Banner */}
             <NetworkErrorBanner
               networkError={networkError}
@@ -267,7 +333,11 @@ function ForumPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowNewThread(false)}
+                  onClick={() => {
+                    setShowNewThread(false);
+                    setNewThread({ title: '', content: '' });
+                    clearSavedFormData();
+                  }}
                   className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Cancelar
