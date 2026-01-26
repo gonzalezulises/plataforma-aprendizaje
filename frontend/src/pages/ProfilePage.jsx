@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 
+// Feature #230: Export student progress report
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 
 // Notification preference labels in Spanish
@@ -22,6 +24,57 @@ function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [isExporting, setIsExporting] = useState(false); // Feature #230
+
+  // Feature #230: Export progress function
+  const handleExportProgress = async () => {
+    setIsExporting(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me/progress/export`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login', { state: { from: '/profile' } });
+          return;
+        }
+        throw new Error('Error al exportar el progreso');
+      }
+
+      // Get the filename from the Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `progreso-${new Date().toISOString().split('T')[0]}.json`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Get the data and create download
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+
+      // Create download link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Progreso exportado exitosamente');
+    } catch (err) {
+      console.error('Error exporting progress:', err);
+      toast.error('Error al exportar el progreso');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -212,6 +265,48 @@ function ProfilePage() {
             </div>
           </div>
         )}
+
+        {/* Feature #230: Export Progress Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Exportar Mi Progreso
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Descarga un archivo con todo tu progreso, cursos completados, calificaciones de quizzes y retos
+            </p>
+          </div>
+
+          <button
+            onClick={handleExportProgress}
+            disabled={isExporting}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg transition-colors
+              ${isExporting
+                ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white'
+              }
+            `}
+            aria-label="Exportar progreso"
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Exportando...</span>
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                <span>Exportar Progreso</span>
+              </>
+            )}
+          </button>
+        </div>
 
         {/* Notification Preferences */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
