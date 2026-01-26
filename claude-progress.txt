@@ -13992,3 +13992,58 @@ All 6 verification steps completed:
 - Console errors: Only expected 401s for unauthenticated user
 - Screenshot: feature-42-course-catalog-verified.png
 - No regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #79)
+
+### Feature #79: Deleted course is removed from catalog - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as instructor@test.com (Test Instructor)
+   - Role: instructor_admin
+
+2. **Create a course TEST_DELETE_ME** - PASS
+   - Navigated to /admin/courses/new
+   - Created course with title "TEST_DELETE_ME"
+   - Added module "Test Module for Deletion"
+   - Added lesson "Test Lesson for Feature 79"
+   - Published the course
+
+3. **Verify it appears in catalog** - PASS
+   - Navigated to /courses
+   - TEST_DELETE_ME course visible as first item in catalog
+   - Screenshot: feature-79-step3-course-in-catalog.png
+
+4. **Delete the course** - PASS
+   - Navigated to /admin/courses
+   - Clicked delete button for TEST_DELETE_ME
+   - Confirmation dialog appeared: "¿Estas seguro de que quieres eliminar el curso...?"
+   - Confirmed deletion
+   - Toast: "Curso eliminado"
+
+5. **Refresh catalog page** - PASS
+   - Navigated to /courses
+   - Page loaded successfully
+
+6. **Verify course no longer appears** - PASS
+   - TEST_DELETE_ME no longer in course listing
+   - Search for "TEST_DELETE_ME" returns "0 curso(s) encontrado(s)"
+   - Screenshot: feature-79-step6-course-removed-from-catalog.png
+
+### Console Errors: None
+
+### Screenshots:
+- feature-79-step3-course-in-catalog.png - Course visible in catalog before deletion
+- feature-79-step6-course-removed-from-catalog.png - Catalog without the deleted course
+- feature-79-search-confirms-deletion.png - Search confirms 0 results
+
+### Current Status:
+- Feature #79 marked as PASSING
+- Progress: 213/248 features passing (85.9%)
+- Commit: 8b1da75
+
+[Coding] 2026-01-26 Feature #79 'Deleted course is removed from catalog' verified - PASSED
