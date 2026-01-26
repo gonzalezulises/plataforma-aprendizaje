@@ -455,13 +455,13 @@ function CourseDetailPage() {
   const totalLessons = course.modules?.reduce((acc, module) => acc + (module.lessons?.length || 0), 0) || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary-600 to-primary-800 text-white">
         <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 min-w-0">
             {/* Course Info */}
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 min-w-0 overflow-hidden">
               {/* Breadcrumb */}
               <nav className="text-primary-200 text-sm mb-4 flex items-center min-w-0">
                 <Link to="/" className="hover:text-white flex-shrink-0">Inicio</Link>
@@ -487,7 +487,7 @@ function CourseDetailPage() {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-4xl font-bold mb-4 break-words">{course.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 break-all">{course.title}</h1>
 
               {/* Description */}
               <p className="text-lg text-primary-100 mb-6">{course.description}</p>
