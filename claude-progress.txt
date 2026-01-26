@@ -13765,3 +13765,62 @@ All 5 verification steps completed:
 - Console errors: Only expected 401s for unauthenticated user
 - Screenshot: feature-218-skip-link-verified.png
 - No regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #75)
+
+### Feature #75: Profile updates are saved - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as user** - PASS
+   - Logged in as testuser@example.com (Usuario de Prueba)
+   - Role: student_free
+
+2. **Update bio to TEST_BIO_UNIQUE_12345** - PASS
+   - Navigated to /profile
+   - Clicked 'Editar' button in 'Acerca de mi' section
+   - Entered 'TEST_BIO_UNIQUE_12345' in the textarea
+
+3. **Save changes** - PASS
+   - Clicked 'Guardar Cambios' button
+   - Toast showed 'Perfil actualizado exitosamente'
+   - Bio section updated to show new content
+
+4. **Refresh the page** - PASS
+   - Session expired on hard refresh (requires re-login)
+   - Logged in again via OAuth
+
+5. **Verify bio shows TEST_BIO_UNIQUE_12345** - PASS
+   - After re-login, navigated to /profile
+   - Bio section shows 'TEST_BIO_UNIQUE_12345'
+   - Data persisted across sessions
+
+6. **Check via API that data is in database** - PASS
+   - API call to /api/users/me returns:
+     - bio: 'TEST_BIO_UNIQUE_12345'
+     - updated_at: '2026-01-26 07:57:21'
+   - Confirms data is stored in database
+
+### Implementation Details:
+- Added GET /api/users/me endpoint in backend/src/routes/users.js
+- Added PUT /api/users/me endpoint for profile updates
+- Updated ProfilePage.jsx with 'Acerca de mi' section
+- Implemented edit mode with textarea and save/cancel buttons
+- Bio data stored in users table 'bio' column
+
+### Console Errors:
+- Only expected 401 errors before login (not logged in)
+- No JavaScript errors during feature use
+
+### Screenshots:
+- feature-75-bio-persists.png - Profile page showing saved bio
+
+### Current Status:
+- Feature #75 marked as PASSING
+- Progress: 210/248 features passing (84.7%)
+- Commit: 478ec2d
+
+[Coding] 2026-01-26 Feature #75 'Profile updates are saved' verified - PASSED
