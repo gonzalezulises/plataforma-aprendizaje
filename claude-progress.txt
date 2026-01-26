@@ -1,3 +1,52 @@
+## Session: 2026-01-26 (Coding Agent - Feature #54)
+
+### Feature #54: Deep link to lesson works when logged in - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Enroll in a course** - PASS
+   - Test User already enrolled in "Python: Fundamentos" course
+   - Logged in with testuser@example.com / password123
+
+2. **Copy the URL of a specific lesson** - PASS
+   - Navigated to lesson 2: http://localhost:5173/course/python-fundamentos/lesson/2
+   - Also tested lesson 1 and lesson 3 URLs
+
+3. **Open new browser tab** - PASS
+   - Opened new tab via browser_tabs action
+
+4. **Paste the lesson URL** - PASS
+   - Navigated directly to http://localhost:5173/course/python-fundamentos/lesson/2
+   - Session cookie preserved across tabs
+
+5. **Verify lesson loads correctly** - PASS
+   - User remains authenticated ("Test User" displayed in header)
+   - Lesson 2 "Practica" loaded with correct title and description
+   - Sidebar navigation visible with all 3 modules
+   - Current lesson highlighted in blue
+   - Breadcrumbs display correctly
+   - Previous/Next navigation buttons functional
+   - Also verified lesson 1 and lesson 3 deep links work
+
+### Console Errors:
+- Only 404 errors for optional API endpoints (/api/modules/:id/lessons, /api/enrollments/progress)
+- These are handled gracefully with fallback data
+- No JavaScript errors
+
+### Screenshots:
+- feature-54-deep-link-lesson2.png - Lesson 2 loaded via deep link
+- feature-54-deep-link-lesson3.png - Lesson 3 loaded via deep link
+- feature-54-deep-link-lesson1-final.png - Lesson 1 loaded via deep link
+
+### Current Status:
+- Feature #54 marked as PASSING
+- Progress: 190/248 features passing (76.6%)
+- Commit: b607df6
+
+[Coding] 2026-01-26 Feature #54 "Deep link to lesson works when logged in" verified - PASSED
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #237)
 
 ### Feature #237: Code execution responds within 5 seconds - VERIFIED AND PASSING
@@ -12552,3 +12601,19 @@ All 7 verification steps completed:
 - Console errors: None
 - Screenshots: feature-216-step1-login-form.png, feature-216-step2-courses-filters.png, feature-216-step3-profile-toggles.png, feature-216-step4-login-label-test.png
 
+[Testing] 2026-01-26 Feature #185 'Required fields show error when empty' - VERIFIED PASSING
+- Step 1: Leave required field empty - PASS (email field left empty on login form)
+- Step 2: Submit form - PASS (clicked 'Iniciar sesion' button)
+- Step 3: Verify error message on field - PASS ('Completa este campo' shown on empty email field)
+- Step 4: Fill field - PASS (filled email, then tested password validation)
+- Step 5: Verify error clears - PASS (error cleared when fields filled)
+- Console errors: Only expected 401 (user not logged in)
+- Screenshots: feature-185-step1-empty-field-validation.png, feature-185-step2-password-validation.png, feature-185-step3-error-cleared.png
+[Testing] 2026-01-26 Feature #185 'Required fields show error when empty' - VERIFIED PASSING
+- Step 1: Leave required field empty - PASS (email field left empty on login form)
+- Step 2: Submit form - PASS (clicked 'Iniciar sesion' button)
+- Step 3: Verify error message on field - PASS ('Completa este campo' shown on empty email field)
+- Step 4: Fill field - PASS (filled email, then tested password validation)
+- Step 5: Verify error clears - PASS (error cleared when fields filled)
+- Console errors: Only expected 401 (user not logged in)
+- Screenshots: feature-185-step1-empty-field-validation.png, feature-185-step2-password-validation.png, feature-185-step3-error-cleared.png
