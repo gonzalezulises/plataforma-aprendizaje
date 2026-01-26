@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import CodeBlock from '../components/CodeBlock';
 import VideoPlayer from '../components/VideoPlayer';
+import CourseSidebar from '../components/CourseSidebar';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -53,6 +54,8 @@ function LessonPage() {
   });
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [navigation, setNavigation] = useState({ previous: null, next: null });
+  // Feature #46: Sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // States for API-based lesson loading and error handling
   const [isLoading, setIsLoading] = useState(true);
@@ -932,19 +935,23 @@ print(potencia(3, 3))   # 27 (3^3)`
         />
       </div>
 
-      {/* Breadcrumb navigation */}
+      {/* Breadcrumb navigation - Feature #45: Home > Course > Module > Lesson */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-5xl mx-auto px-4 py-3">
-          <nav className="flex items-center gap-2 text-sm">
-            <Link to="/courses" className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
-              Cursos
+          <nav className="flex items-center gap-2 text-sm flex-wrap" aria-label="Breadcrumb">
+            <Link to="/" className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+              Inicio
             </Link>
-            <span className="text-gray-400">/</span>
-            <Link to={`/course/${slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+            <span className="text-gray-400" aria-hidden="true">/</span>
+            <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
               {lesson.course}
             </Link>
-            <span className="text-gray-400">/</span>
-            <span className="text-gray-700 dark:text-gray-300">{lesson.module}</span>
+            <span className="text-gray-400" aria-hidden="true">/</span>
+            <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+              {lesson.module}
+            </Link>
+            <span className="text-gray-400" aria-hidden="true">/</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium" aria-current="page">{lesson.title}</span>
           </nav>
         </div>
       </div>

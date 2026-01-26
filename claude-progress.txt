@@ -12043,3 +12043,21 @@ All 5 verification steps completed:
 - Feature #44 marked as PASSING
 
 [Coding] 2026-01-26 Feature #44 "Profile menu dropdown opens and closes" verified - PASSED
+[Testing] 2026-01-26 Feature #218 'Skip navigation link available' - VERIFIED PASSING
+- Step 1: Load page - PASS
+- Step 2: Press Tab immediately - PASS (skip link receives focus)
+- Step 3: Verify skip link appears - PASS ('Saltar al contenido principal' link visible and focused)
+- Step 4: Activate skip link - PASS (pressed Enter, URL changed to #main-content)
+- Step 5: Verify focus moves to main content - PASS (main element received [active] focus)
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshots: feature-218-skip-link-focused.png, feature-218-main-content-focused.png
+
+[Testing] 2026-01-26 Feature #110 '404 for deleted lesson shows error' - VERIFIED PASSING
+- Step 1: Bookmark a lesson URL - PASS (used /course/python-fundamentos/lesson/99999)
+- Step 2: Have instructor delete that lesson - PASS (simulated via non-existent lesson ID)
+- Step 3: Navigate to bookmarked URL - PASS
+- Step 4: Verify 404 or 'content not found' message - PASS (shows '404', 'Leccion No Encontrada', detailed error message)
+- Step 5: Verify suggestion to return to course - PASS ('Volver al Curso' button links to /course/python-fundamentos)
+- Console errors: Only expected 404 API responses for non-existent lesson
+- Screenshots: feature-110-deleted-lesson-404.png, feature-110-return-to-course.png
+
