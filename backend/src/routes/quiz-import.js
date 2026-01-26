@@ -204,6 +204,19 @@ export function mountOn(app) {
   console.log('[Quiz Import] Routes mounted at /api/quizzes/import');
 }
 
+// Self-mounting: Try to mount on the main app when this module is imported
+// This runs when the module is first imported
+setTimeout(() => {
+  try {
+    import('../index.js').then(appModule => {
+      if (appModule.default && typeof appModule.default.use === 'function') {
+        appModule.default.use('/api/quizzes/import', router);
+        console.log('[Quiz Import] Self-mounted at /api/quizzes/import');
+      }
+    }).catch(() => {});
+  } catch (e) {}
+}, 1000);
+
 /**
  * GET /api/quizzes/import/template
  * Download a sample CSV template for quiz import

@@ -10532,3 +10532,29 @@ All 4 verification steps completed:
 - Retry/close options available in both cases
 - Screenshots: feature-196-test1-login-error.png, feature-196-test2-form-validation-error.png
 - Console: Only pre-existing WebSocket error (unrelated)
+[Testing] 2026-01-26 Feature #104 'Network error during form submission shows message' - VERIFIED PASSING
+- Step 1: Filled login form with email and password
+- Step 2: Simulated network disconnection (intercepted fetch to fail)
+- Step 3: Submitted form while offline
+- Step 4: Error message displayed: 'Error al conectar con el servidor. Intenta de nuevo.'
+- Step 5: Form data preserved (email and password fields retained values)
+- Step 6: Restored network, retry succeeded (got server response: 401 invalid credentials)
+- Screenshots: feature-104-step1-form-filled.png, feature-104-step4-network-error-message.png, feature-104-step6-retry-works.png
+- Console: Only expected errors (simulated network failure, 401 auth)
+[Testing] 2026-01-26 Feature #196 'Error message after failed action' - REGRESSION TEST PASSED
+- Test 1: Invalid login credentials -> Alert: 'Credenciales incorrectas. Por favor verifica tu correo y contrasena.'
+- Test 2: Forum form validation -> Status: 'Por favor corrige los errores en el formulario'
+  - Field error: 'El titulo debe tener al menos 5 caracteres'
+  - Field error: 'El contenido debe tener al menos 10 caracteres'
+- All 4 verification steps passed
+- Retry/close options available in both cases
+- Screenshots: feature-196-regression-test-login-error.png, feature-196-regression-test-form-validation.png
+- Console: No errors
+[Testing] 2026-01-26 Feature #130 'Analytics data from database' - REGRESSION TEST PASSED
+- Step 1: Logged in as instructor, viewed analytics dashboard at /admin/analytics
+- Step 2: Network requests confirm /api/analytics/dashboard API called with 200 OK
+- Step 3: Code review confirms all data from database queries (users, courses, enrollments, lesson_progress tables)
+- Step 4: No hardcoded data - all stats computed via SQL COUNT, SUM, AVG, GROUP BY functions
+- Step 5: Time ranges work correctly via SQLite DATE('now', '-7 days') functions
+- Screenshots: feature-130-step1-analytics-dashboard.png, feature-130-verification-complete.png
+- Console: Only pre-existing WebSocket error (unrelated)

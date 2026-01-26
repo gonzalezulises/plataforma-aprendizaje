@@ -1013,4 +1013,365 @@ router.post('/import/preview', requireInstructor, (req, res) => {
   }
 });
 
-export default router;// trigger reload feature232
+/**
+ * GET /api/analytics/export-structure/:courseId
+ * Export complete course structure (course, modules, lessons, lesson_content) for round-trip import
+ * This is different from the analytics export - this exports the actual course content for backup/restore
+ */
+router.get('/export-structure/:courseId', requireInstructor, (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+
+    // Get course info
+    const course = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Get all modules for this course
+    const modules = queryAll(`
+      SELECT id, course_id, title, description, order_index, bloom_objective, project_milestone, duration_hours
+      FROM modules
+      WHERE course_id = ?
+      ORDER BY order_index
+    `, [courseId]);
+
+    // Get all lessons for this course with full details
+    const lessons = queryAll(`
+      SELECT
+        l.id,
+        l.module_id,
+        l.title,
+        l.description,
+        l.order_index,
+        l.bloom_level,
+        l.structure_4c,
+        l.content_type,
+        l.duration_minutes,
+        l.created_at,
+        l.updated_at
+      FROM lessons l
+      JOIN modules m ON l.module_id = m.id
+      WHERE m.course_id = ?
+      ORDER BY m.order_index, l.order_index
+    `, [courseId]);
+
+    // Get all lesson_content for lessons in this course
+    const lessonContent = queryAll(`
+      SELECT
+        lc.id,
+        lc.lesson_id,
+        lc.type,
+        lc.content,
+        lc.order_index
+      FROM lesson_content lc
+      JOIN lessons l ON lc.lesson_id = l.id
+      JOIN modules m ON l.module_id = m.id
+      WHERE m.course_id = ?
+      ORDER BY m.order_index, l.order_index, lc.order_index
+    `, [courseId]);
+
+    // Build the structure export data
+    // We need to maintain relationships by including temporary IDs
+    const structureData = {
+      export_version: '1.0',
+      export_type: 'course_structure',
+      exported_at: new Date().toISOString(),
+      course: {
+        title: course.title,
+        slug: course.slug,
+        description: course.description,
+        category: course.category,
+        tags: course.tags,
+        level: course.level,
+        is_premium: course.is_premium,
+        is_published: course.is_published,
+        thumbnail_url: course.thumbnail_url,
+        duration_hours: course.duration_hours
+      },
+      modules: modules.map((m, moduleIndex) => {
+        const moduleLessons = lessons.filter(l => l.module_id === m.id);
+        return {
+          _temp_id: `module_${moduleIndex}`,
+          title: m.title,
+          description: m.description,
+          order_index: m.order_index,
+          bloom_objective: m.bloom_objective,
+          project_milestone: m.project_milestone,
+          duration_hours: m.duration_hours,
+          lessons: moduleLessons.map((l, lessonIndex) => {
+            const lessonContentItems = lessonContent.filter(lc => lc.lesson_id === l.id);
+            return {
+              _temp_id: `lesson_${moduleIndex}_${lessonIndex}`,
+              title: l.title,
+              description: l.description,
+              order_index: l.order_index,
+              bloom_level: l.bloom_level,
+              structure_4c: l.structure_4c,
+              content_type: l.content_type,
+              duration_minutes: l.duration_minutes,
+              content: lessonContentItems.map(lc => ({
+                type: lc.type,
+                content: lc.content,
+                order_index: lc.order_index
+              }))
+            };
+          })
+        };
+      }),
+      summary: {
+        total_modules: modules.length,
+        total_lessons: lessons.length,
+        total_content_items: lessonContent.length
+      }
+    };
+
+    const filename = `course-structure-${course.slug}-${new Date().toISOString().split('T')[0]}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(structureData);
+
+  } catch (error) {
+    console.error('Error exporting course structure:', error);
+    res.status(500).json({ error: 'Failed to export course structure: ' + error.message });
+  }
+});
+
+/**
+ * POST /api/analytics/import-structure
+ * Import complete course structure (course, modules, lessons, lesson_content)
+ * Creates a new course with all its content, or updates an existing one
+ * Body: { data: structureData, duplicateAction: 'skip' | 'overwrite' | 'create_new' }
+ */
+router.post('/import-structure', requireInstructor, (req, res) => {
+  try {
+    const { data, duplicateAction = 'create_new' } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'No data provided for import' });
+    }
+
+    // Validate import format
+    if (data.export_type !== 'course_structure' || !data.course || !data.modules) {
+      return res.status(400).json({
+        error: 'Invalid import format. Use data exported from /api/analytics/export-structure/:courseId',
+        hint: 'The data must have export_type: "course_structure", course, and modules fields'
+      });
+    }
+
+    const now = new Date().toISOString();
+    const courseData = data.course;
+
+    // Validate required course fields
+    if (!courseData.title || !courseData.slug) {
+      return res.status(400).json({ error: 'Course title and slug are required' });
+    }
+
+    // Check for existing course by slug
+    const existingCourse = queryOne('SELECT * FROM courses WHERE slug = ?', [courseData.slug]);
+
+    let courseId;
+    let action = 'created';
+
+    if (existingCourse) {
+      if (duplicateAction === 'skip') {
+        return res.json({
+          success: true,
+          action: 'skipped',
+          message: 'Course with this slug already exists',
+          course: { id: existingCourse.id, title: existingCourse.title, slug: existingCourse.slug }
+        });
+      } else if (duplicateAction === 'overwrite') {
+        // Delete existing modules, lessons, content for this course (cascade)
+        const existingModules = queryAll('SELECT id FROM modules WHERE course_id = ?', [existingCourse.id]);
+        for (const module of existingModules) {
+          const moduleLessons = queryAll('SELECT id FROM lessons WHERE module_id = ?', [module.id]);
+          for (const lesson of moduleLessons) {
+            run('DELETE FROM lesson_content WHERE lesson_id = ?', [lesson.id]);
+          }
+          run('DELETE FROM lessons WHERE module_id = ?', [module.id]);
+        }
+        run('DELETE FROM modules WHERE course_id = ?', [existingCourse.id]);
+
+        // Update course
+        run(`
+          UPDATE courses SET
+            title = ?,
+            description = ?,
+            category = ?,
+            level = ?,
+            is_premium = ?,
+            is_published = ?,
+            duration_hours = ?,
+            tags = ?,
+            updated_at = ?
+          WHERE id = ?
+        `, [
+          courseData.title,
+          courseData.description || '',
+          courseData.category || 'General',
+          courseData.level || 'Principiante',
+          courseData.is_premium ? 1 : 0,
+          courseData.is_published !== undefined ? (courseData.is_published ? 1 : 0) : 1,
+          courseData.duration_hours || 0,
+          typeof courseData.tags === 'string' ? courseData.tags : JSON.stringify(courseData.tags || []),
+          now,
+          existingCourse.id
+        ]);
+
+        courseId = existingCourse.id;
+        action = 'overwritten';
+      } else {
+        // create_new: Generate a new slug
+        let newSlug = courseData.slug + '-imported-' + Date.now();
+        courseData.slug = newSlug;
+
+        // Insert new course
+        run(`
+          INSERT INTO courses (title, slug, description, category, level, is_premium, is_published, duration_hours, tags, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          courseData.title + ' (Imported)',
+          newSlug,
+          courseData.description || '',
+          courseData.category || 'General',
+          courseData.level || 'Principiante',
+          courseData.is_premium ? 1 : 0,
+          courseData.is_published !== undefined ? (courseData.is_published ? 1 : 0) : 1,
+          courseData.duration_hours || 0,
+          typeof courseData.tags === 'string' ? courseData.tags : JSON.stringify(courseData.tags || []),
+          now,
+          now
+        ]);
+
+        const newCourse = queryOne('SELECT id FROM courses WHERE slug = ?', [newSlug]);
+        courseId = newCourse.id;
+        action = 'created_new';
+      }
+    } else {
+      // Insert new course
+      run(`
+        INSERT INTO courses (title, slug, description, category, level, is_premium, is_published, duration_hours, tags, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        courseData.title,
+        courseData.slug,
+        courseData.description || '',
+        courseData.category || 'General',
+        courseData.level || 'Principiante',
+        courseData.is_premium ? 1 : 0,
+        courseData.is_published !== undefined ? (courseData.is_published ? 1 : 0) : 1,
+        courseData.duration_hours || 0,
+        typeof courseData.tags === 'string' ? courseData.tags : JSON.stringify(courseData.tags || []),
+        now,
+        now
+      ]);
+
+      const newCourse = queryOne('SELECT id FROM courses WHERE slug = ?', [courseData.slug]);
+      courseId = newCourse.id;
+    }
+
+    // Import modules, lessons, and content
+    let modulesCreated = 0;
+    let lessonsCreated = 0;
+    let contentCreated = 0;
+
+    for (const moduleData of data.modules || []) {
+      // Insert module
+      run(`
+        INSERT INTO modules (course_id, title, description, order_index, bloom_objective, project_milestone, duration_hours)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [
+        courseId,
+        moduleData.title || 'Untitled Module',
+        moduleData.description || '',
+        moduleData.order_index || 0,
+        moduleData.bloom_objective || null,
+        moduleData.project_milestone || null,
+        moduleData.duration_hours || 0
+      ]);
+
+      // Get the module ID
+      const newModule = queryOne(
+        'SELECT id FROM modules WHERE course_id = ? AND order_index = ? ORDER BY id DESC LIMIT 1',
+        [courseId, moduleData.order_index || 0]
+      );
+      const moduleId = newModule.id;
+      modulesCreated++;
+
+      // Insert lessons for this module
+      for (const lessonData of moduleData.lessons || []) {
+        run(`
+          INSERT INTO lessons (module_id, title, description, order_index, bloom_level, structure_4c, content_type, duration_minutes, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          moduleId,
+          lessonData.title || 'Untitled Lesson',
+          lessonData.description || '',
+          lessonData.order_index || 0,
+          lessonData.bloom_level || null,
+          lessonData.structure_4c || null,
+          lessonData.content_type || 'text',
+          lessonData.duration_minutes || 0,
+          now,
+          now
+        ]);
+
+        // Get the lesson ID
+        const newLesson = queryOne(
+          'SELECT id FROM lessons WHERE module_id = ? AND order_index = ? ORDER BY id DESC LIMIT 1',
+          [moduleId, lessonData.order_index || 0]
+        );
+        const lessonId = newLesson.id;
+        lessonsCreated++;
+
+        // Insert lesson content
+        for (const contentData of lessonData.content || []) {
+          run(`
+            INSERT INTO lesson_content (lesson_id, type, content, order_index, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            lessonId,
+            contentData.type || 'text',
+            typeof contentData.content === 'string' ? contentData.content : JSON.stringify(contentData.content || {}),
+            contentData.order_index || 0,
+            now,
+            now
+          ]);
+          contentCreated++;
+        }
+      }
+    }
+
+    // Get the final course data for response
+    const finalCourse = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
+
+    res.json({
+      success: true,
+      action,
+      message: `Course structure imported successfully: ${modulesCreated} modules, ${lessonsCreated} lessons, ${contentCreated} content items`,
+      course: {
+        id: finalCourse.id,
+        title: finalCourse.title,
+        slug: finalCourse.slug,
+        description: finalCourse.description,
+        category: finalCourse.category,
+        level: finalCourse.level,
+        is_premium: finalCourse.is_premium,
+        is_published: finalCourse.is_published,
+        duration_hours: finalCourse.duration_hours
+      },
+      summary: {
+        modules_created: modulesCreated,
+        lessons_created: lessonsCreated,
+        content_created: contentCreated
+      }
+    });
+
+  } catch (error) {
+    console.error('Error importing course structure:', error);
+    res.status(500).json({ error: 'Failed to import course structure: ' + error.message });
+  }
+});
+
+export default router;// trigger reload feature234

@@ -4,6 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import AIQuizGeneratorModal from '../components/AIQuizGeneratorModal';
 import AICourseStructureModal from '../components/AICourseStructureModal';
+import QuizImportModal from '../components/QuizImportModal';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
@@ -68,6 +69,11 @@ export default function CourseCreatorPage() {
 
   // AI Course Structure Generator modal state
   const [showAICourseModal, setShowAICourseModal] = useState(false);
+
+  // Quiz Import modal state
+  const [showQuizImportModal, setShowQuizImportModal] = useState(false);
+  const [quizImportLessonId, setQuizImportLessonId] = useState(null);
+  const [quizImportLessonTitle, setQuizImportLessonTitle] = useState('');
 
   // Track original form state for unsaved changes detection
   const originalFormRef = useRef(null);
@@ -898,6 +904,20 @@ export default function CourseCreatorPage() {
                                   </button>
                                   <button
                                     onClick={() => {
+                                      setQuizImportLessonId(lesson.id);
+                                      setQuizImportLessonTitle(lesson.title);
+                                      setShowQuizImportModal(true);
+                                    }}
+                                    className="p-1.5 text-gray-400 hover:text-teal-600 transition-colors"
+                                    title="Importar Quiz desde CSV"
+                                    aria-label={`Importar Quiz desde CSV para ${lesson.title}`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => {
                                       setSelectedModuleId(module.id);
                                       setLessonForm({
                                         title: lesson.title,
@@ -1402,6 +1422,21 @@ export default function CourseCreatorPage() {
         onConfirm={confirmNavigation}
         onCancel={cancelNavigation}
         message={unsavedMessage}
+      />
+
+      {/* Quiz Import Modal */}
+      <QuizImportModal
+        isOpen={showQuizImportModal}
+        onClose={() => {
+          setShowQuizImportModal(false);
+          setQuizImportLessonId(null);
+          setQuizImportLessonTitle('');
+        }}
+        lessonId={quizImportLessonId}
+        lessonTitle={quizImportLessonTitle}
+        onQuizImported={(quizId) => {
+          toast.success(`Quiz #${quizId} importado con exito`);
+        }}
       />
     </div>
   );

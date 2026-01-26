@@ -3,6 +3,9 @@ import { queryOne, queryAll, run, getDatabase } from '../config/database.js';
 
 const router = express.Router();
 
+// Mount quiz import routes BEFORE :id routes to avoid conflicts
+import('./quiz-import.js').then(m => router.use('/import', m.default)).catch(e => console.error('[Quiz] Failed to load import routes:', e));
+
 let tablesInitialized = false;
 
 /**

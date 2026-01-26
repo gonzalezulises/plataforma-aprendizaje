@@ -1,0 +1,36 @@
+## Session: 2026-01-26 (Coding Agent - Features #118, #181, #169)
+
+### Feature #118: Course list fetches from API correctly - VERIFIED AND PASSING
+
+All verification steps completed:
+1. Navigate to course catalog - PASS
+2. Verify courses are fetched from /api/courses - PASS (200 OK)
+3. Verify course titles match database - PASS (7 courses)
+4. Verify thumbnails load correctly - PASS (placeholder graphics shown)
+5. Verify categories match database values - PASS (6 categories)
+
+### Feature #181: No results message displayed - VERIFIED AND PASSING
+
+All verification steps completed:
+1. Search for nonexistent term xyz123456789 - PASS
+2. Verify no results found message - PASS ("No hay cursos disponibles")
+3. Verify suggestions are provided - PASS ("Intenta con otros filtros o vuelve mas tarde")
+4. Verify option to clear search - PASS ("Limpiar" button + "Restablecer filtros")
+
+### Feature #169: Quiz shows default settings - VERIFIED AND PASSING
+
+All verification steps completed:
+1. Create a new quiz - PASS (lesson type "Quiz" created)
+2. Observe default values - PASS (via Quiz Import modal Step 2)
+3. Verify max attempts defaults appropriately - PASS (3 attempts)
+4. Verify time limit defaults or is empty - PASS (15 minutes)
+
+Additional defaults observed:
+- Passing score: 70%
+- Number of questions (AI generator): 5
+- Difficulty (AI generator): Media (Medium)
+
+### Progress: 155/248 features passing (62.5%)
+
+---
+
