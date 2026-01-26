@@ -1,3 +1,33 @@
+## Session: 2026-01-26 (Coding Agent - Feature #17)
+
+### Feature #17: Students cannot access instructor admin panel - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Log in as a student (free or premium)** - PASS
+   - Logged in as testuser@example.com (role: student_free)
+
+2. **Navigate directly to /admin** - PASS
+   - Attempted to navigate to http://localhost:5173/admin
+
+3. **Verify access is denied with appropriate error** - PASS
+   - Automatically redirected to /dashboard
+   - Toast message displayed: "Solo los instructores pueden acceder a esta pagina"
+
+4. **Verify no admin functionality is exposed** - PASS
+   - Student sees regular dashboard (Mis Cursos, enrollment info)
+   - No admin UI elements visible
+   - Role check in AdminCoursesPage.jsx: `user.role !== 'instructor_admin'`
+
+### Implementation:
+- Frontend role-based access control in AdminCoursesPage.jsx (lines 21-31)
+- Redirects non-instructors to /dashboard with error toast
+
+### Screenshots:
+- feature-17-admin-access-denied.png - Student redirected to dashboard
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #15)
 
 ### Feature #15: Free users cannot access premium content - VERIFIED AND PASSING
@@ -14592,4 +14622,55 @@ All 5 verification steps completed:
 - Console errors: Only expected 401 for /api/auth/me (not logged in)
 - Screenshots: feature-112-error-message.png
 - No regression found
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #16)
+
+### Feature #16: Free users cannot access premium webinars - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as a student_free user** - PASS
+   - Logged in as testuser@example.com (Test User)
+   - Role: student_free (shown as 'Estudiante')
+
+2. **Navigate to /webinar section** - PASS
+   - Page loads at http://localhost:5173/webinars
+   - Premium upgrade banner displayed prominently
+
+3. **Verify access is denied or shows upgrade prompt** - PASS
+   - Orange banner: 'Contenido Premium - Los webinars en vivo y grabaciones son exclusivos para usuarios premium'
+   - 'Actualizar a Premium' button in banner
+   - All action buttons show 'Actualizar' with lock icon instead of 'Registrarse'
+
+4. **Attempt direct URL to webinar page** - PASS
+   - API returns HTTP 403 with PREMIUM_REQUIRED code
+   - Tested: register, join, and recording endpoints
+
+5. **Verify premium content is blocked** - PASS
+   - Backend blocks all webinar actions for free users
+   - Frontend shows upgrade prompts and redirects to /upgrade
+
+### Additional Verification:
+- Premium user (instructor) can access all webinar features
+- Premium user can register for webinars (API returns 200 success)
+- No console errors
+
+### Implementation Details:
+- Backend: Added isPremiumUser helper function and checks in webinars.js
+- Frontend: Added premium upgrade banner, lock icon buttons, and redirect logic in WebinarsPage.jsx
+
+### Screenshots:
+- feature-16-step1-free-user-webinars-page.png - Free user sees upgrade banner
+- feature-16-step2-upgrade-page-redirect.png - Redirect to upgrade page
+- feature-16-step3-premium-user-webinars-page.png - Premium user full access
+
+### Current Status:
+- Feature #16 marked as PASSING
+- Commit: 454e0b7
+
+[Coding] 2026-01-26 Feature #16 'Free users cannot access premium webinars' verified - PASSED
 
