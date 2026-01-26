@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,20 +48,23 @@ function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Check for OAuth callback params
+  // Check for OAuth callback params and location state (Feature #55)
   useEffect(() => {
     const errorParam = searchParams.get('error');
-    const returnUrl = searchParams.get('returnUrl');
+    const returnUrlFromParams = searchParams.get('returnUrl');
+    // Also check React Router location state (used by protected routes like DashboardPage)
+    const returnUrlFromState = location.state?.from;
 
     if (errorParam) {
       setError(errorParam);
     }
 
-    // Store return URL for after login
+    // Store return URL for after login (prefer params over state)
+    const returnUrl = returnUrlFromParams || returnUrlFromState;
     if (returnUrl) {
       sessionStorage.setItem('loginReturnUrl', returnUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, location.state]);
 
   const handleLoginWithRizoMa = async () => {
     setIsLoading(true);
