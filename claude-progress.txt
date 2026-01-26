@@ -7891,3 +7891,112 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #198 'Disabled state during submission' verified - PASSED
 
+[Testing] 2026-01-26 Feature #152 'Submit button disabled during processing' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Fill out a form - PASS (tested login, forum thread, reply forms)
+- Step 2: Click submit - PASS (all forms submit successfully)
+- Step 3: Observe submit button - PASS (verified via code review)
+- Step 4: Verify button disabled/shows loading - PASS
+  - LoginPage.jsx: disabled={isLoading} with spinner + 'Iniciando sesion...'
+  - ForumPage.jsx: disabled={creating} with 'Creando...' text
+  - ThreadDetailPage.jsx: disabled={submitting} with 'Publicando...' text
+- Step 5: Verify button re-enables after completion - PASS
+  - Forms clear and redirect/update appropriately
+
+### Implementation verified in:
+- frontend/src/pages/LoginPage.jsx (lines 230, 349-377)
+- frontend/src/pages/ForumPage.jsx (lines 461, 464)
+- frontend/src/pages/ThreadDetailPage.jsx (lines 511, 514)
+
+### Console Errors: Only WebSocket reconnection (unrelated)
+
+### Screenshots:
+- feature-152-step1-form-filled.png - Login form
+- feature-152-step2-form-filled-forum.png - Forum form
+- feature-152-step3-submission-success.png - Thread created
+- feature-152-step4-reply-success.png - Reply posted
+
+### Note: Fixed frontend .env port mismatch (3002 -> 3001)
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #200)
+
+### Feature #200: Toast notifications stack correctly - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Trigger multiple notifications rapidly** - PASS
+   - Used JavaScript to import react-hot-toast and trigger 5 toasts simultaneously
+   - Triggered: success, success, error, success, default toast types
+   - All toasts appeared within milliseconds of each other
+
+2. **Verify toasts stack or queue** - PASS
+   - All 5 toasts stacked vertically in top-right corner (Toaster position="top-right")
+   - Stack order maintained (newest on top):
+     - Stack Test 5 - Fifth Toast (default style)
+     - Stack Test 4 - Fourth Toast (success)
+     - Stack Test 3 - Error Toast (error)
+     - Stack Test 2 - Second Toast (success)
+     - Stack Test 1 - First Toast (success)
+
+3. **Verify each is visible** - PASS
+   - All 5 toasts visible simultaneously in screenshot
+   - Each toast clearly distinguishable with proper styling
+   - Success toasts: green checkmark icon
+   - Error toast: red X icon
+   - Default toast: dark background without icon
+
+4. **Verify auto-dismiss works for each** - PASS
+   - Set 10-second duration for testing
+   - After waiting, all toasts automatically dismissed
+   - Page returned to clean state with no toast elements in DOM
+   - Snapshot confirmed no status elements (toasts) remaining
+
+### Implementation Details (already implemented in App.jsx):
+
+```jsx
+<Toaster
+  position="top-right"
+  toastOptions={{
+    duration: 4000,
+    style: {
+      background: '#363636',
+      color: '#fff',
+    },
+    success: {
+      iconTheme: {
+        primary: '#10b981',
+        secondary: '#fff',
+      },
+    },
+    error: {
+      iconTheme: {
+        primary: '#ef4444',
+        secondary: '#fff',
+      },
+    },
+  }}
+/>
+```
+
+- react-hot-toast library handles stacking automatically
+- Toasts use CSS transforms for smooth animations
+- Each toast has role="status" for accessibility
+- Default duration: 4000ms (4 seconds)
+
+### Console Errors: None
+
+### Screenshots:
+- feature-200-step1-multiple-toasts-triggered.png - Initial trigger attempt
+- feature-200-step2-multiple-toasts-stacked.png - All 5 toasts visible and stacked
+- feature-200-step4-toasts-auto-dismissed.png - Clean state after auto-dismiss
+
+### Current Status:
+- Feature #200 marked as PASSING
+- No code changes required - feature already fully implemented
+
+[Coding] 2026-01-26 Feature #200 'Toast notifications stack correctly' verified - PASSED
