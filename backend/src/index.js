@@ -269,6 +269,148 @@ if (process.env.NODE_ENV !== 'production') {
       user: req.session?.user || null
     });
   });
+
+  // Feature #24: Setup test data for instructor course ownership
+  app.post('/api/test/setup-feature24', async (req, res) => {
+    try {
+      const { queryOne, queryAll, run, getDatabase, saveDatabase } = await import('./config/database.js');
+      const crypto = await import('crypto');
+
+      function hashPassword(password, salt = null) {
+        if (!salt) {
+          salt = crypto.randomBytes(16).toString('hex');
+        }
+        const hash = crypto.createHash('sha256').update(password + salt).digest('hex');
+        return { hash, salt };
+      }
+
+      const now = new Date().toISOString();
+      const results = { actions: [] };
+
+      // 1. Ensure instructor user exists and get their ID
+      let instructor = queryOne('SELECT * FROM users WHERE email = ?', ['instructor@test.com']);
+      if (!instructor) {
+        const { hash, salt } = hashPassword('password123');
+        run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          ['instructor@test.com', 'Test Instructor', 'instructor_admin', hash, salt, now]);
+        instructor = queryOne('SELECT * FROM users WHERE email = ?', ['instructor@test.com']);
+        results.actions.push('Created instructor user');
+      }
+      results.instructor = { id: instructor.id, name: instructor.name, email: instructor.email };
+
+      // 2. Create a second instructor to test access restriction
+      let instructor2 = queryOne('SELECT * FROM users WHERE email = ?', ['instructor2@test.com']);
+      if (!instructor2) {
+        const { hash, salt } = hashPassword('password123');
+        run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          ['instructor2@test.com', 'Other Instructor', 'instructor_admin', hash, salt, now]);
+        instructor2 = queryOne('SELECT * FROM users WHERE email = ?', ['instructor2@test.com']);
+        results.actions.push('Created instructor2 user');
+      }
+      results.instructor2 = { id: instructor2.id, name: instructor2.name, email: instructor2.email };
+
+      // 3. Create or get student user
+      let student = queryOne('SELECT * FROM users WHERE email = ?', ['student@test.com']);
+      if (!student) {
+        const { hash, salt } = hashPassword('password123');
+        run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          ['student@test.com', 'Test Student', 'student_free', hash, salt, now]);
+        student = queryOne('SELECT * FROM users WHERE email = ?', ['student@test.com']);
+        results.actions.push('Created student user');
+      }
+      results.student = { id: student.id, name: student.name, email: student.email };
+
+      // 4. Get courses and assign to instructors
+      const courses = queryAll('SELECT id, title, slug FROM courses ORDER BY id LIMIT 4');
+
+      // Assign courses 1 and 3 to instructor 1
+      if (courses[0]) {
+        run('UPDATE courses SET instructor_id = ? WHERE id = ?', [instructor.id, courses[0].id]);
+        results.actions.push(`Assigned "${courses[0].title}" to instructor1`);
+      }
+      if (courses[2]) {
+        run('UPDATE courses SET instructor_id = ? WHERE id = ?', [instructor.id, courses[2].id]);
+        results.actions.push(`Assigned "${courses[2].title}" to instructor1`);
+      }
+
+      // Assign courses 2 and 4 to instructor 2
+      if (courses[1]) {
+        run('UPDATE courses SET instructor_id = ? WHERE id = ?', [instructor2.id, courses[1].id]);
+        results.actions.push(`Assigned "${courses[1].title}" to instructor2`);
+      }
+      if (courses[3]) {
+        run('UPDATE courses SET instructor_id = ? WHERE id = ?', [instructor2.id, courses[3].id]);
+        results.actions.push(`Assigned "${courses[3].title}" to instructor2`);
+      }
+
+      // 5. Create projects for courses
+      let project1 = queryOne('SELECT * FROM projects WHERE title = ?', ['Feature 24 Test - Instructor 1']);
+      if (!project1 && courses[0]) {
+        run('INSERT INTO projects (course_id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+          [courses[0].slug, 'Feature 24 Test - Instructor 1', 'Test project owned by instructor 1', now, now]);
+        project1 = queryOne('SELECT * FROM projects WHERE title = ?', ['Feature 24 Test - Instructor 1']);
+        results.actions.push('Created project for instructor1 course');
+      }
+
+      let project2 = queryOne('SELECT * FROM projects WHERE title = ?', ['Feature 24 Test - Instructor 2']);
+      if (!project2 && courses[1]) {
+        run('INSERT INTO projects (course_id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+          [courses[1].slug, 'Feature 24 Test - Instructor 2', 'Test project owned by instructor 2', now, now]);
+        project2 = queryOne('SELECT * FROM projects WHERE title = ?', ['Feature 24 Test - Instructor 2']);
+        results.actions.push('Created project for instructor2 course');
+      }
+
+      // 6. Create student submissions for both projects
+      if (project1) {
+        const existingSub1 = queryOne('SELECT * FROM project_submissions WHERE project_id = ? AND user_id = ?', [project1.id, student.id]);
+        if (!existingSub1) {
+          run('INSERT INTO project_submissions (user_id, project_id, content, status, submitted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [student.id, project1.id, 'TEST_SUBMISSION_F24_INST1_' + Date.now(), 'submitted', now, now]);
+          results.actions.push('Created submission for instructor1 project');
+        }
+      }
+
+      if (project2) {
+        const existingSub2 = queryOne('SELECT * FROM project_submissions WHERE project_id = ? AND user_id = ?', [project2.id, student.id]);
+        if (!existingSub2) {
+          run('INSERT INTO project_submissions (user_id, project_id, content, status, submitted_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [student.id, project2.id, 'TEST_SUBMISSION_F24_INST2_' + Date.now(), 'submitted', now, now]);
+          results.actions.push('Created submission for instructor2 project');
+        }
+      }
+
+      saveDatabase();
+
+      // Get final state
+      results.courses = queryAll(`
+        SELECT c.id, c.title, c.slug, c.instructor_id, u.name as instructor_name
+        FROM courses c
+        LEFT JOIN users u ON c.instructor_id = u.id
+        ORDER BY c.id LIMIT 4
+      `);
+
+      results.projects = queryAll(`
+        SELECT p.*, c.instructor_id, c.title as course_title
+        FROM projects p
+        JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+        WHERE p.title LIKE 'Feature 24%'
+      `);
+
+      results.submissions = queryAll(`
+        SELECT ps.id, ps.user_id, ps.project_id, ps.status, p.title as project_title, c.instructor_id
+        FROM project_submissions ps
+        JOIN projects p ON ps.project_id = p.id
+        JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+        WHERE ps.content LIKE 'TEST_SUBMISSION_F24%'
+      `);
+
+      results.success = true;
+      res.json(results);
+    } catch (error) {
+      console.error('Error setting up Feature #24 test data:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 // API Routes

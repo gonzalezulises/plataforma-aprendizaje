@@ -140,18 +140,21 @@ router.get('/my/pending', requireAuth, (req, res) => {
 });
 
 /**
- * Get all submissions awaiting review (instructor only)
+ * Get all submissions awaiting review for courses owned by the instructor (instructor only)
+ * Feature #24: Instructors can only view submissions for courses they own
  * MUST be before /:id routes
  */
 router.get('/pending/review', requireInstructor, (req, res) => {
   try {
+    const instructorId = req.session.user.id;
     const submissions = queryAll(
-      `SELECT ps.*, p.title as project_title, p.course_id
+      `SELECT ps.*, p.title as project_title, p.course_id, c.title as course_title
        FROM project_submissions ps
        JOIN projects p ON ps.project_id = p.id
-       WHERE ps.status = 'submitted'
+       JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+       WHERE ps.status = 'submitted' AND c.instructor_id = ?
        ORDER BY ps.submitted_at ASC`,
-      []
+      [instructorId]
     );
     res.json({ submissions });
   } catch (error) {
@@ -161,26 +164,35 @@ router.get('/pending/review', requireInstructor, (req, res) => {
 });
 
 /**
- * Get all submissions (instructor only - for review page)
+ * Get all submissions for courses owned by the instructor (instructor only - for review page)
+ * Feature #24: Instructors can only view submissions for courses they own
  * MUST be before /:id routes
  */
 router.get('/all/submissions', requireInstructor, (req, res) => {
   try {
     const { status } = req.query;
-    let query = `SELECT ps.*, p.title as project_title, p.course_id
-                 FROM project_submissions ps
-                 JOIN projects p ON ps.project_id = p.id`;
-    let params = [];
+    const instructorId = req.session.user.id;
+
+    // Build query to only get submissions from courses owned by this instructor
+    // Projects are linked to courses via course_id (which can be slug or course id)
+    let query = `
+      SELECT ps.*, p.title as project_title, p.course_id, c.title as course_title
+      FROM project_submissions ps
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE c.instructor_id = ?
+    `;
+    let params = [instructorId];
 
     if (status) {
-      query += ` WHERE ps.status = ?`;
+      query += ` AND ps.status = ?`;
       params.push(status);
     }
 
     query += ` ORDER BY ps.submitted_at DESC`;
 
     const submissions = queryAll(query, params);
-    res.json({ submissions });
+    res.json({ submissions, instructor_id: instructorId });
   } catch (error) {
     console.error('Error fetching all submissions:', error);
     res.status(500).json({ error: 'Failed to fetch submissions' });
@@ -268,8 +280,9 @@ router.post('/:id/submit', requireAuth, (req, res) => {
 /**
  * Get submissions for a project
  * Feature #23: Users can only see their own submissions
+ * Feature #24: Instructors can only see submissions for courses they own
  * - Regular users: can only see their own submissions for this project
- * - Instructors: can see all submissions for review purposes
+ * - Instructors: can see submissions only if they own the course
  */
 router.get('/:id/submissions', requireAuth, (req, res) => {
   try {
@@ -279,7 +292,23 @@ router.get('/:id/submissions', requireAuth, (req, res) => {
 
     let submissions;
     if (isInstructor) {
-      // Instructors can see all submissions for grading/review
+      // Feature #24: Instructors can only see submissions for projects in courses they own
+      const project = queryOne(`
+        SELECT p.*, c.instructor_id
+        FROM projects p
+        JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+        WHERE p.id = ?
+      `, [projectId]);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Check if instructor owns this course
+      if (project.instructor_id !== userId && project.instructor_id !== String(userId)) {
+        return res.status(403).json({ error: 'Access denied: You can only view submissions for your own courses' });
+      }
+
       submissions = queryAll(
         'SELECT * FROM project_submissions WHERE project_id = ? ORDER BY submitted_at DESC',
         [projectId]
@@ -301,8 +330,9 @@ router.get('/:id/submissions', requireAuth, (req, res) => {
 /**
  * Get a specific submission by ID
  * Feature #23: Users can only see their own submissions
+ * Feature #24: Instructors can only see submissions for courses they own
  * - Regular users: can only access their own submissions
- * - Instructors: can access any submission for review purposes
+ * - Instructors: can access submissions only for courses they own
  */
 router.get('/submissions/:submissionId', requireAuth, (req, res) => {
   try {
@@ -310,18 +340,25 @@ router.get('/submissions/:submissionId', requireAuth, (req, res) => {
     const userId = req.session.user.id;
     const isInstructor = req.session.user.role === 'instructor_admin';
 
-    const submission = queryOne(
-      'SELECT * FROM project_submissions WHERE id = ?',
-      [submissionId]
-    );
+    // Get submission with course ownership info
+    const submission = queryOne(`
+      SELECT ps.*, p.course_id, c.instructor_id
+      FROM project_submissions ps
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE ps.id = ?
+    `, [submissionId]);
 
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
     }
 
-    // Check ownership: only allow access if user owns the submission or is an instructor
-    if (!isInstructor && submission.user_id !== userId && submission.user_id !== String(userId)) {
-      return res.status(403).json({ error: 'Access denied: You can only view your own submissions' });
+    // Check access permissions
+    const isOwner = submission.user_id === userId || submission.user_id === String(userId);
+    const isCourseInstructor = submission.instructor_id === userId || submission.instructor_id === String(userId);
+
+    if (!isOwner && !(isInstructor && isCourseInstructor)) {
+      return res.status(403).json({ error: 'Access denied: You can only view your own submissions or submissions from your courses' });
     }
 
     res.json({ submission });
