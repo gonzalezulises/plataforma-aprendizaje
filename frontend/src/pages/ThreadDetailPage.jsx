@@ -17,6 +17,7 @@ function ThreadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [newReply, setNewReply] = useState('');
   const [course, setCourse] = useState(null);
+  const [replyError, setReplyError] = useState('');
 
   // WebSocket for real-time updates
   const ws = useWebSocket();
@@ -148,6 +149,9 @@ function ThreadDetailPage() {
       return;
     }
 
+    // Clear any previous error
+    setReplyError('');
+
     const performSubmit = async () => {
       const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/reply`, {
         method: 'POST',
@@ -161,7 +165,14 @@ function ThreadDetailPage() {
         })
       });
 
-      if (!res.ok) throw new Error('Failed to add reply');
+      // Handle server-side validation errors
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const error = new Error(errorData.error || 'Failed to add reply');
+        error.validationErrors = errorData.validationErrors;
+        error.status = res.status;
+        throw error;
+      }
       return res.json();
     };
 
@@ -176,13 +187,20 @@ function ThreadDetailPage() {
           fetchThread();
         }
         setNewReply('');
+        setReplyError('');
         toast.success('Respuesta publicada');
         // Update thread reply count
         setThread({ ...thread, reply_count: (thread.reply_count || 0) + 1 });
       },
       onError: (error) => {
         console.error('Error adding reply:', error);
-        toast.error('Error al publicar la respuesta');
+        // Handle server-side validation errors
+        if (error.validationErrors) {
+          setReplyError(error.validationErrors.content || '');
+          toast.error('Por favor corrige los errores en el formulario');
+        } else {
+          toast.error('Error al publicar la respuesta');
+        }
       },
       onNetworkError: (error) => {
         console.error('Network error adding reply:', error);
@@ -457,14 +475,36 @@ function ThreadDetailPage() {
           />
 
           <form onSubmit={handleAddReply}>
-            <textarea
-              value={newReply}
-              onChange={(e) => setNewReply(e.target.value)}
-              placeholder="Escribe tu respuesta aqui..."
-              rows={5}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
-              disabled={submitting}
-            />
+            <div className="mb-4">
+              <textarea
+                value={newReply}
+                onChange={(e) => {
+                  setNewReply(e.target.value);
+                  // Clear error when user types enough characters
+                  if (replyError && e.target.value.trim().length >= 5) {
+                    setReplyError('');
+                  }
+                }}
+                placeholder="Escribe tu respuesta aqui..."
+                rows={5}
+                className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  replyError
+                    ? 'border-red-500 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
+                disabled={submitting}
+                aria-invalid={!!replyError}
+                aria-describedby={replyError ? 'reply-error' : undefined}
+              />
+              {replyError && (
+                <p id="reply-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {replyError}
+                </p>
+              )}
+            </div>
             <div className="flex justify-end">
               <button
                 type="submit"

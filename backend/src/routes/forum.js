@@ -155,8 +155,49 @@ router.post('/course/:courseId/thread', async (req, res) => {
     const { courseId } = req.params;
     const { title, content, userId, userName } = req.body;
 
-    if (!title || !content) {
-      return res.status(400).json({ error: 'Title and content are required' });
+    // Server-side validation constants (must match frontend)
+    const MIN_TITLE_LENGTH = 5;
+    const MIN_CONTENT_LENGTH = 10;
+    const MAX_TITLE_LENGTH = 200;
+    const MAX_CONTENT_LENGTH = 10000;
+
+    // Collect all validation errors
+    const errors = {};
+
+    // Title validation
+    if (!title || typeof title !== 'string') {
+      errors.title = 'El titulo es requerido';
+    } else {
+      const trimmedTitle = title.trim();
+      if (trimmedTitle.length === 0) {
+        errors.title = 'El titulo es requerido';
+      } else if (trimmedTitle.length < MIN_TITLE_LENGTH) {
+        errors.title = `El titulo debe tener al menos ${MIN_TITLE_LENGTH} caracteres`;
+      } else if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+        errors.title = `El titulo no puede tener mas de ${MAX_TITLE_LENGTH} caracteres`;
+      }
+    }
+
+    // Content validation
+    if (!content || typeof content !== 'string') {
+      errors.content = 'El contenido es requerido';
+    } else {
+      const trimmedContent = content.trim();
+      if (trimmedContent.length === 0) {
+        errors.content = 'El contenido es requerido';
+      } else if (trimmedContent.length < MIN_CONTENT_LENGTH) {
+        errors.content = `El contenido debe tener al menos ${MIN_CONTENT_LENGTH} caracteres`;
+      } else if (trimmedContent.length > MAX_CONTENT_LENGTH) {
+        errors.content = `El contenido no puede tener mas de ${MAX_CONTENT_LENGTH} caracteres`;
+      }
+    }
+
+    // Return validation errors if any
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        error: 'Error de validacion',
+        validationErrors: errors
+      });
     }
 
     // Use session user or provided user
@@ -192,8 +233,33 @@ router.post('/thread/:threadId/reply', async (req, res) => {
     const { threadId } = req.params;
     const { content, userId, userName, isInstructorAnswer = false } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Content is required' });
+    // Server-side validation constants
+    const MIN_CONTENT_LENGTH = 5;
+    const MAX_CONTENT_LENGTH = 10000;
+
+    // Collect validation errors
+    const errors = {};
+
+    // Content validation
+    if (!content || typeof content !== 'string') {
+      errors.content = 'El contenido es requerido';
+    } else {
+      const trimmedContent = content.trim();
+      if (trimmedContent.length === 0) {
+        errors.content = 'El contenido es requerido';
+      } else if (trimmedContent.length < MIN_CONTENT_LENGTH) {
+        errors.content = `El contenido debe tener al menos ${MIN_CONTENT_LENGTH} caracteres`;
+      } else if (trimmedContent.length > MAX_CONTENT_LENGTH) {
+        errors.content = `El contenido no puede tener mas de ${MAX_CONTENT_LENGTH} caracteres`;
+      }
+    }
+
+    // Return validation errors if any
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        error: 'Error de validacion',
+        validationErrors: errors
+      });
     }
 
     // Check thread exists

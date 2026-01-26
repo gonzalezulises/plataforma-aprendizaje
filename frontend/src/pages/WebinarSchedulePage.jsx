@@ -333,6 +333,26 @@ function WebinarSchedulePage() {
 
       if (!response.ok) {
         const data = await response.json();
+        // Handle server-side validation errors (Feature #193)
+        if (data.validationErrors) {
+          // Map server-side field errors to frontend field errors
+          const serverErrors = { title: '', scheduled_date: '', scheduled_time: '', max_attendees: '' };
+          if (data.validationErrors.title) {
+            serverErrors.title = data.validationErrors.title;
+          }
+          if (data.validationErrors.scheduled_date) {
+            serverErrors.scheduled_date = data.validationErrors.scheduled_date;
+          }
+          if (data.validationErrors.max_attendees) {
+            serverErrors.max_attendees = data.validationErrors.max_attendees;
+          }
+          if (data.validationErrors.description) {
+            // Show description error as toast since no dedicated field error
+            toast.error(data.validationErrors.description);
+          }
+          setFieldErrors(serverErrors);
+          throw new Error(data.error || 'Error de validacion del servidor');
+        }
         throw new Error(data.error || 'Error al programar el webinar');
       }
 

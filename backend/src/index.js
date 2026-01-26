@@ -1,4 +1,4 @@
-// Last reload: 2026-01-25T20:40:10.361Z
+// Last reload: 2026-01-25T21:51:30.000Z - Feature #170
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -85,7 +85,19 @@ app.use(cors({
       'http://localhost:5180',
       'http://localhost:5181',
       'http://localhost:5182',
-      'http://localhost:5183'
+      'http://localhost:5183',
+      'http://localhost:5184',
+      'http://localhost:5185',
+      'http://localhost:5186',
+      'http://localhost:5187',
+      'http://localhost:5188',
+      'http://localhost:5189',
+      'http://localhost:5190',
+      'http://localhost:5191',
+      'http://localhost:5192',
+      'http://localhost:5193',
+      'http://localhost:5194',
+      'http://localhost:5195'
     ];
 
     if (allowedOrigins.indexOf(origin) !== -1) {
@@ -392,3 +404,5 @@ export default app;
 // restart trigger do., 25 de ene. de 2026 14:34:42
 
 // RELOAD_MARKER: 2026-01-25T20:42:42.010Z
+// Feature #191 trigger reload at do., 25 de ene. de 2026 16:44:59
+// Trigger reload

@@ -267,16 +267,86 @@ router.post('/', (req, res) => {
 
     const { title, description, course_id, scheduled_at, duration_minutes, meet_link, max_attendees } = req.body;
 
-    if (!title || !scheduled_at) {
-      return res.status(400).json({ error: 'Title and scheduled date are required' });
+    // Server-side validation constants (must match frontend expectations)
+    const MIN_TITLE_LENGTH = 1;
+    const MAX_TITLE_LENGTH = 200;
+    const MAX_DESCRIPTION_LENGTH = 5000;
+    const MIN_ATTENDEES = 1;
+    const MAX_ATTENDEES = 1000;
+
+    // Collect all validation errors
+    const errors = {};
+
+    // Title validation
+    if (!title || typeof title !== 'string') {
+      errors.title = 'El titulo es requerido';
+    } else {
+      const trimmedTitle = title.trim();
+      if (trimmedTitle.length === 0) {
+        errors.title = 'El titulo es requerido';
+      } else if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+        errors.title = `El titulo no puede tener mas de ${MAX_TITLE_LENGTH} caracteres`;
+      }
+    }
+
+    // Scheduled date validation
+    if (!scheduled_at || typeof scheduled_at !== 'string') {
+      errors.scheduled_date = 'La fecha y hora son requeridas';
+    } else {
+      const scheduledDate = new Date(scheduled_at);
+      const now = new Date();
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+
+      if (isNaN(scheduledDate.getTime())) {
+        errors.scheduled_date = 'Formato de fecha invalido';
+      } else if (scheduledDate < now) {
+        errors.scheduled_date = 'La fecha no puede ser en el pasado';
+      } else if (scheduledDate > oneYearFromNow) {
+        errors.scheduled_date = 'La fecha no puede ser mas de 1 año en el futuro';
+      }
+    }
+
+    // Description validation (optional but has max length)
+    if (description && typeof description === 'string' && description.length > MAX_DESCRIPTION_LENGTH) {
+      errors.description = `La descripcion no puede tener mas de ${MAX_DESCRIPTION_LENGTH} caracteres`;
+    }
+
+    // Max attendees validation
+    if (max_attendees !== undefined && max_attendees !== null) {
+      const attendeesNum = parseInt(max_attendees, 10);
+      if (isNaN(attendeesNum)) {
+        errors.max_attendees = 'La capacidad debe ser un numero valido';
+      } else if (attendeesNum < MIN_ATTENDEES) {
+        errors.max_attendees = `La capacidad minima es ${MIN_ATTENDEES}`;
+      } else if (attendeesNum > MAX_ATTENDEES) {
+        errors.max_attendees = `La capacidad maxima es ${MAX_ATTENDEES}`;
+      }
+    }
+
+    // Duration validation
+    if (duration_minutes !== undefined && duration_minutes !== null) {
+      const durationNum = parseInt(duration_minutes, 10);
+      const validDurations = [30, 45, 60, 90, 120, 180];
+      if (isNaN(durationNum) || !validDurations.includes(durationNum)) {
+        errors.duration_minutes = 'Duracion invalida';
+      }
+    }
+
+    // Return validation errors if any
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        error: 'Error de validacion',
+        validationErrors: errors
+      });
     }
 
     const result = run(`
       INSERT INTO webinars (title, description, course_id, scheduled_at, duration_minutes, meet_link, max_attendees, instructor_id, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', datetime('now'), datetime('now'))
     `, [
-      title,
-      description || null,
+      title.trim(),
+      description ? description.trim() : null,
       course_id || null,
       scheduled_at,
       duration_minutes || 60,
