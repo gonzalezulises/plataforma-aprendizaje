@@ -10226,3 +10226,94 @@ All 4 verification steps completed:
 - Step 4: No errors occurred - page functions normally
 - Screenshots: feature-177-courses-whitespace-search.png, feature-177-whitespace-search-enter.png
 - Console: Only expected 401 auth errors (user not logged in)
+[Testing] 2026-01-26 Feature #190 'Date validation' - VERIFIED PASSING
+- Step 1-2: Invalid date format - Browser HTML5 date input enforces YYYY-MM-DD format
+- Step 3-4: Past date (2020-01-01) shows error 'La fecha no puede ser en el pasado'
+- Step 3-4b: Future date >1yr (2028-06-15) shows error 'La fecha no puede ser mas de 1 año en el futuro'  
+- Step 5-6: Valid date (2026-02-15) accepted - no error message displayed
+- Screenshots: feature-190-step1-initial-form.png, feature-190-step2-past-date-error.png, feature-190-step3-future-date-error.png, feature-190-step5-valid-date-accepted.png
+- Console: Only pre-existing WebSocket error (unrelated)
+[Testing] 2026-01-26 Feature #121 'Level filter options from database' - VERIFIED PASSING
+- Step 1: Database has levels: Principiante, Intermedio, Avanzado
+- Step 2: Navigated to /courses catalog page
+- Step 3: Filter dropdown shows matching options (Todos los niveles, Avanzado, Intermedio, Principiante)
+- Step 4: Selecting 'Intermedio' triggers API call with level=Intermedio parameter
+- Step 5: Results show only courses matching filtered level (4 Intermedio, 2 Avanzado)
+- Screenshots: feature-121-level-filter-intermedio.png, feature-121-level-filter-avanzado.png
+- Console: Only expected 401 auth errors (user not logged in)
+
+[Testing] 2026-01-26 Feature #115 'Concurrent edit conflict handled' - VERIFIED PASSING
+- Step 1: Opened course editor in two browser tabs (both editing course ID 42)
+- Step 2: Tab 1 (User A) edited description to 'USER A EDIT - Testing concurrent edit conflict detection at timestamp 115'
+- Step 2b: Tab 2 (User B) edited description to 'USER B EDIT - This is a different edit made in the second tab'
+- Step 3: User A saved changes successfully - 'Curso actualizado' message appeared
+- Step 4: User B attempted to save - CONFLICT DETECTED!
+  * Server returned 409 Conflict status code
+  * Conflict dialog showed: 'Conflicto de Edicion' heading
+  * Message: 'Otro usuario modifico este curso mientras lo editabas'
+  * Current server data displayed (Title, Category, Level)
+  * Two resolution options: 'Recargar Datos' and 'Sobrescribir'
+- Step 5: Clicked 'Recargar Datos' - form updated with User A's saved data
+- Screenshots: feature-115-step1-tab1-initial.png, feature-115-step3-tab1-saved.png, feature-115-step4-conflict-detected.png, feature-115-step5-reloaded-data.png
+- Console errors: Only expected 409 Conflict (correct behavior)
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #230)
+
+### Feature #230: Export student progress report - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to profile or progress** - PASS
+   - Navigated to /profile page successfully
+   - "Exportar Mi Progreso" section visible with description
+
+2. **Click export progress** - PASS
+   - Clicked "Exportar Progreso" button
+   - Toast message: 'Progreso exportado exitosamente'
+
+3. **Download file** - PASS
+   - File downloaded as progreso-2026-01-26.json
+   - JSON format with proper structure
+
+4. **Verify contains completed courses** - PASS
+   - 14 courses total in courses array
+   - 5 completed courses with status: 'Completado', progressPercent: 100
+   - Summary shows completedCourses: 5, completionRate: 36%
+
+5. **Verify contains grades/scores** - PASS
+   - Summary includes: totalQuizzesTaken, quizzesPassed, averageQuizScore
+   - challengesSolved: 6, totalChallengesAttempted: 8
+   - Challenge scores array with solved challenges
+   - Certificates array with verification codes
+
+### Implementation Details:
+
+**Backend (users.js):**
+- GET /api/users/me/progress/export endpoint
+- Queries: enrollments, quiz_attempts, code_submissions, lesson_progress, certificates
+- Returns comprehensive JSON with exportInfo, user, summary, courses, quizScores, challengeScores, certificates
+- Sets Content-Disposition header for file download
+
+**Frontend (ProfilePage.jsx):**
+- "Exportar Mi Progreso" section with button
+- handleExportProgress() fetches API and creates Blob download
+- Loading state during export
+- Success/error toast notifications
+
+### Console Errors: None (only expected WebSocket reconnection)
+
+### Screenshots:
+- feature-230-step1-profile-page.png - Profile page showing export section
+- feature-230-step2-profile-export-section.png - Export button before click
+- feature-230-step3-export-success.png - Success toast after export
+
+### Current Status:
+- Feature #230 marked as PASSING
+- Commit: caa3e24
+
+[Coding] 2026-01-26 Feature #230 'Export student progress report' verified - PASSED
+
