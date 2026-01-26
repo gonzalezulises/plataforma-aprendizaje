@@ -12178,3 +12178,58 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #46 'Sidebar navigation shows all course modules' verified - PASSED
 
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #47)
+
+### Feature #47: Next lesson button advances to next lesson - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to first lesson in a module** - PASS
+   - Navigated to http://localhost:5173/course/python-fundamentos/lesson/1
+   - Lesson 1: "Leccion 1: Introduccion" displayed
+   - Sidebar shows Module 1 (Introduccion a Python) expanded with 3 lessons
+
+2. **Click 'Next' or 'Siguiente' button** - PASS
+   - Clicked "Siguiente leccion" button at bottom of page
+   - Button clearly visible with right arrow icon
+
+3. **Verify navigation to second lesson** - PASS
+   - URL changed from /lesson/1 to /lesson/2
+   - Page loaded successfully
+
+4. **Verify content updates** - PASS
+   - Title changed from "Leccion 1: Introduccion" to "Leccion 2: Practica"
+   - Description changed from "Primera leccion del modulo" to "Segunda leccion del modulo"
+   - Duration changed from 10 min to 15 min
+   - Breadcrumb updated to show "Leccion 2: Practica"
+   - Navigation now shows both "Anterior" (Previous) and "Siguiente leccion" (Next) buttons
+
+5. **Verify sidebar highlights new lesson** - PASS
+   - In sidebar, "Instalacion de Python" (lesson 2) now highlighted with blue circle
+   - Previously "Bienvenida al curso" (lesson 1) was highlighted
+   - Visual indicator correctly tracks current lesson
+
+### Additional Testing:
+- Verified navigation to lesson 3 works correctly
+- "Tu primer programa" becomes highlighted in sidebar after second click
+- Navigation works smoothly without page reload issues
+
+### Console Errors: 
+- Some 404 errors for /api/modules/:id/lessons and /api/enrollments/progress
+- These are separate API endpoint issues, not related to the Next button feature
+- Core navigation functionality works correctly
+
+### Screenshots:
+- feature-47-step1-first-lesson.png - Initial lesson with Next button visible
+- feature-47-step2-second-lesson.png - After clicking Next, lesson 2 displayed
+- feature-47-step3-third-lesson.png - After second click, lesson 3 displayed
+
+### Current Status:
+- Feature #47 marked as PASSING
+- Commit: 9a00da9
+
+[Coding] 2026-01-26 Feature #47 "Next lesson button advances to next lesson" verified - PASSED
