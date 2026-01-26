@@ -7,12 +7,16 @@ import toast from 'react-hot-toast';
  * - Shows appropriate error messages
  * - Preserves form data on failure
  * - Provides retry functionality
+ * - Prevents rapid double-clicks using synchronous ref tracking
  */
 export function useNetworkAwareSubmit() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [networkError, setNetworkError] = useState(null);
   const [lastSubmission, setLastSubmission] = useState(null);
   const retryTimeoutRef = useRef(null);
+  // Use a ref to track submission state synchronously to prevent rapid double-clicks
+  // React state updates are batched and async, so multiple clicks can slip through
+  const isSubmittingRef = useRef(false);
 
   // Clean up timeout on unmount
   useEffect(() => {
@@ -65,6 +69,15 @@ export function useNetworkAwareSubmit() {
       retryable = true,
     } = options;
 
+    // CRITICAL: Check ref synchronously to prevent rapid double-clicks
+    // This happens BEFORE any async operations
+    if (isSubmittingRef.current) {
+      console.log('[useNetworkAwareSubmit] Blocked duplicate submission - already submitting');
+      return { success: false, error: new Error('Already submitting'), isDuplicate: true };
+    }
+
+    // Set ref immediately (synchronous) to block subsequent rapid clicks
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setNetworkError(null);
 
@@ -80,6 +93,7 @@ export function useNetworkAwareSubmit() {
     try {
       const result = await submitFn();
       setLastSubmission(null);
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
 
       if (onSuccess) {
@@ -88,6 +102,7 @@ export function useNetworkAwareSubmit() {
 
       return { success: true, data: result };
     } catch (error) {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
 
       if (isNetworkError(error)) {
@@ -131,6 +146,9 @@ export function useNetworkAwareSubmit() {
       console.warn('No submission to retry');
       return { success: false, error: new Error('No submission to retry') };
     }
+
+    // Reset the ref to allow retry
+    isSubmittingRef.current = false;
 
     toast.loading('Reintentando...', { id: 'retry-toast' });
 
