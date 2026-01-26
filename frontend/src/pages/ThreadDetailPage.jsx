@@ -20,6 +20,19 @@ function ThreadDetailPage() {
   const [course, setCourse] = useState(null);
   const [replyError, setReplyError] = useState('');
 
+  // Edit thread state
+  const [isEditingThread, setIsEditingThread] = useState(false);
+  const [editThreadTitle, setEditThreadTitle] = useState('');
+  const [editThreadContent, setEditThreadContent] = useState('');
+  const [editThreadError, setEditThreadError] = useState('');
+  const [savingThread, setSavingThread] = useState(false);
+
+  // Edit reply state
+  const [editingReplyId, setEditingReplyId] = useState(null);
+  const [editReplyContent, setEditReplyContent] = useState('');
+  const [editReplyError, setEditReplyError] = useState('');
+  const [savingReply, setSavingReply] = useState(false);
+
   // WebSocket for real-time updates
   const ws = useWebSocket();
   const [wsStatus, setWsStatus] = useState('disconnected');
@@ -293,7 +306,8 @@ function ThreadDetailPage() {
       const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        credentials: 'include',
+        body: JSON.stringify({ userId: user?.id })
       });
 
       if (!res.ok) {
@@ -312,6 +326,148 @@ function ThreadDetailPage() {
     } catch (error) {
       console.error('Error deleting thread:', error);
       toast.error('Error al eliminar el hilo');
+    }
+  };
+
+  // Edit thread handlers
+  const handleStartEditThread = () => {
+    setEditThreadTitle(thread.title);
+    setEditThreadContent(thread.content);
+    setEditThreadError('');
+    setIsEditingThread(true);
+  };
+
+  const handleCancelEditThread = () => {
+    setIsEditingThread(false);
+    setEditThreadTitle('');
+    setEditThreadContent('');
+    setEditThreadError('');
+  };
+
+  const handleSaveEditThread = async () => {
+    if (!editThreadTitle.trim() || !editThreadContent.trim()) {
+      toast.error('El titulo y contenido son requeridos');
+      return;
+    }
+
+    setSavingThread(true);
+    setEditThreadError('');
+
+    try {
+      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: editThreadTitle,
+          content: editThreadContent,
+          userId: user?.id
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (errorData.validationErrors) {
+          setEditThreadError(errorData.validationErrors.title || errorData.validationErrors.content || '');
+          throw new Error('Validation error');
+        }
+        throw new Error(errorData.error || 'Failed to update thread');
+      }
+
+      const data = await res.json();
+      setThread(data.thread);
+      setIsEditingThread(false);
+      toast.success('Hilo actualizado correctamente');
+    } catch (error) {
+      console.error('Error updating thread:', error);
+      if (!editThreadError) {
+        toast.error('Error al actualizar el hilo');
+      }
+    } finally {
+      setSavingThread(false);
+    }
+  };
+
+  // Edit reply handlers
+  const handleStartEditReply = (reply) => {
+    setEditingReplyId(reply.id);
+    setEditReplyContent(reply.content);
+    setEditReplyError('');
+  };
+
+  const handleCancelEditReply = () => {
+    setEditingReplyId(null);
+    setEditReplyContent('');
+    setEditReplyError('');
+  };
+
+  const handleSaveEditReply = async (replyId) => {
+    if (!editReplyContent.trim()) {
+      toast.error('El contenido es requerido');
+      return;
+    }
+
+    setSavingReply(true);
+    setEditReplyError('');
+
+    try {
+      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          content: editReplyContent,
+          userId: user?.id
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (errorData.validationErrors) {
+          setEditReplyError(errorData.validationErrors.content || '');
+          throw new Error('Validation error');
+        }
+        throw new Error(errorData.error || 'Failed to update reply');
+      }
+
+      const data = await res.json();
+      setReplies(replies.map(r => r.id === replyId ? data.reply : r));
+      setEditingReplyId(null);
+      toast.success('Respuesta actualizada correctamente');
+    } catch (error) {
+      console.error('Error updating reply:', error);
+      if (!editReplyError) {
+        toast.error('Error al actualizar la respuesta');
+      }
+    } finally {
+      setSavingReply(false);
+    }
+  };
+
+  const handleDeleteReply = async (replyId) => {
+    if (!window.confirm('¿Estás seguro de que quieres eliminar esta respuesta?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: user?.id })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete reply');
+      }
+
+      setReplies(replies.filter(r => r.id !== replyId));
+      setThread({ ...thread, reply_count: Math.max(0, (thread.reply_count || 1) - 1) });
+      toast.success('Respuesta eliminada correctamente');
+    } catch (error) {
+      console.error('Error deleting reply:', error);
+      toast.error('Error al eliminar la respuesta');
     }
   };
 
@@ -402,7 +558,7 @@ function ThreadDetailPage() {
               )}
             </div>
 
-            {(isOwner || isInstructor) && (
+            {(isOwner || isInstructor) && !isEditingThread && (
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleMarkResolved}
@@ -413,6 +569,16 @@ function ThreadDetailPage() {
                   }`}
                 >
                   {thread.is_resolved ? 'Reabrir Hilo' : 'Marcar como Resuelto'}
+                </button>
+                <button
+                  onClick={handleStartEditThread}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center gap-1"
+                  title="Editar hilo"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Editar
                 </button>
                 <button
                   onClick={handleDeleteThread}
@@ -428,15 +594,65 @@ function ThreadDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {thread.title}
-          </h1>
+          {isEditingThread ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Titulo
+                </label>
+                <input
+                  type="text"
+                  value={editThreadTitle}
+                  onChange={(e) => setEditThreadTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled={savingThread}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contenido
+                </label>
+                <textarea
+                  value={editThreadContent}
+                  onChange={(e) => setEditThreadContent(e.target.value)}
+                  rows={6}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  disabled={savingThread}
+                />
+              </div>
+              {editThreadError && (
+                <p className="text-sm text-red-500 dark:text-red-400">{editThreadError}</p>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={handleCancelEditThread}
+                  disabled={savingThread}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEditThread}
+                  disabled={savingThread}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {savingThread ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                {thread.title}
+              </h1>
 
-          <div className="prose dark:prose-invert max-w-none mb-4">
-            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-              {thread.content}
-            </p>
-          </div>
+              <div className="prose dark:prose-invert max-w-none mb-4">
+                <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {thread.content}
+                </p>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-700">
             <span className="flex items-center gap-2">
@@ -474,55 +690,116 @@ function ThreadDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {replies.map((reply) => (
-                <div
-                  key={reply.id}
-                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 ${
-                    reply.is_instructor_answer ? 'ring-2 ring-primary-500' : ''
-                  }`}
-                >
-                  {reply.is_instructor_answer && (
-                    <div className="flex items-center gap-2 mb-3 text-primary-600 dark:text-primary-400">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm font-medium">Respuesta del Instructor</span>
-                    </div>
-                  )}
+              {replies.map((reply) => {
+                const isReplyOwner = user && String(user.id) === String(reply.user_id);
+                const canModerateReply = isInstructor || isReplyOwner;
+                const isEditingThisReply = editingReplyId === reply.id;
 
-                  <div className="prose dark:prose-invert max-w-none mb-4">
-                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {reply.content}
-                    </p>
-                  </div>
+                return (
+                  <div
+                    key={reply.id}
+                    className={`bg-white dark:bg-gray-800 rounded-xl shadow-md p-5 ${
+                      reply.is_instructor_answer ? 'ring-2 ring-primary-500' : ''
+                    }`}
+                  >
+                    {reply.is_instructor_answer && (
+                      <div className="flex items-center gap-2 mb-3 text-primary-600 dark:text-primary-400">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm font-medium">Respuesta del Instructor</span>
+                      </div>
+                    )}
 
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium">
-                          {reply.user_name?.charAt(0).toUpperCase() || 'U'}
+                    {isEditingThisReply ? (
+                      <div className="space-y-3 mb-4">
+                        <textarea
+                          value={editReplyContent}
+                          onChange={(e) => setEditReplyContent(e.target.value)}
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          disabled={savingReply}
+                        />
+                        {editReplyError && (
+                          <p className="text-sm text-red-500 dark:text-red-400">{editReplyError}</p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={handleCancelEditReply}
+                            disabled={savingReply}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => handleSaveEditReply(reply.id)}
+                            disabled={savingReply}
+                            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+                          >
+                            {savingReply ? 'Guardando...' : 'Guardar'}
+                          </button>
                         </div>
-                        <span>{reply.user_name}</span>
-                      </span>
-                      <span>{formatDate(reply.created_at)}</span>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="prose dark:prose-invert max-w-none mb-4">
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                          {reply.content}
+                        </p>
+                      </div>
+                    )}
 
-                    <button
-                      onClick={() => handleVote(reply.id)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      title="Marcar como util"
-                      aria-label={`Marcar respuesta como util. Votos actuales: ${reply.votes || 0}`}
-                    >
-                      <svg className="w-5 h-5 text-gray-400 hover:text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                      </svg>
-                      <span className={`font-medium ${reply.votes > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`} aria-hidden="true">
-                        {reply.votes || 0}
-                      </span>
-                    </button>
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-medium">
+                            {reply.user_name?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <span>{reply.user_name}</span>
+                        </span>
+                        <span>{formatDate(reply.created_at)}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {canModerateReply && !isEditingThisReply && (
+                          <>
+                            <button
+                              onClick={() => handleStartEditReply(reply)}
+                              className="p-1.5 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600 dark:text-blue-400 transition-colors"
+                              title="Editar respuesta"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReply(reply.id)}
+                              className="p-1.5 rounded-lg text-sm hover:bg-red-100 dark:hover:bg-red-900 text-red-600 dark:text-red-400 transition-colors"
+                              title="Eliminar respuesta"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleVote(reply.id)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          title="Marcar como util"
+                          aria-label={`Marcar respuesta como util. Votos actuales: ${reply.votes || 0}`}
+                        >
+                          <svg className="w-5 h-5 text-gray-400 hover:text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                          </svg>
+                          <span className={`font-medium ${reply.votes > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`} aria-hidden="true">
+                            {reply.votes || 0}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

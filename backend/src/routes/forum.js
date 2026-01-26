@@ -405,15 +405,109 @@ router.patch('/thread/:threadId/resolve', async (req, res) => {
 });
 
 /**
- * DELETE /api/forum/thread/:threadId - Delete thread (admin/owner only)
+ * PUT /api/forum/thread/:threadId - Edit thread (instructor or owner only)
  */
-router.delete('/thread/:threadId', async (req, res) => {
+router.put('/thread/:threadId', async (req, res) => {
   try {
     const { threadId } = req.params;
+    const { title, content, userId } = req.body;
 
     const thread = queryOne(`SELECT * FROM forum_threads WHERE id = ?`, [threadId]);
     if (!thread) {
       return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Authorization check: instructor or owner
+    const actualUserId = req.session?.user?.id || userId;
+    const userRole = req.session?.user?.role;
+    const isInstructor = userRole === 'instructor_admin';
+    const isOwner = String(actualUserId) === String(thread.user_id);
+
+    if (!isInstructor && !isOwner) {
+      return res.status(403).json({
+        error: 'Access denied: You can only edit your own threads or must be an instructor'
+      });
+    }
+
+    // Server-side validation
+    const MIN_TITLE_LENGTH = 5;
+    const MIN_CONTENT_LENGTH = 10;
+    const MAX_TITLE_LENGTH = 200;
+    const MAX_CONTENT_LENGTH = 10000;
+
+    const errors = {};
+
+    if (title !== undefined) {
+      const trimmedTitle = (title || '').trim();
+      if (trimmedTitle.length < MIN_TITLE_LENGTH) {
+        errors.title = `El titulo debe tener al menos ${MIN_TITLE_LENGTH} caracteres`;
+      } else if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+        errors.title = `El titulo no puede tener mas de ${MAX_TITLE_LENGTH} caracteres`;
+      }
+    }
+
+    if (content !== undefined) {
+      const trimmedContent = (content || '').trim();
+      if (trimmedContent.length < MIN_CONTENT_LENGTH) {
+        errors.content = `El contenido debe tener al menos ${MIN_CONTENT_LENGTH} caracteres`;
+      } else if (trimmedContent.length > MAX_CONTENT_LENGTH) {
+        errors.content = `El contenido no puede tener mas de ${MAX_CONTENT_LENGTH} caracteres`;
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        error: 'Error de validacion',
+        validationErrors: errors
+      });
+    }
+
+    const now = new Date().toISOString();
+    const newTitle = title !== undefined ? title.trim() : thread.title;
+    const newContent = content !== undefined ? content.trim() : thread.content;
+
+    run(`
+      UPDATE forum_threads
+      SET title = ?, content = ?, updated_at = ?
+      WHERE id = ?
+    `, [newTitle, newContent, now, threadId]);
+
+    const updatedThread = queryOne(`SELECT * FROM forum_threads WHERE id = ?`, [threadId]);
+
+    res.json({
+      success: true,
+      thread: updatedThread,
+      message: 'Thread updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating thread:', error);
+    res.status(500).json({ error: 'Failed to update thread' });
+  }
+});
+
+/**
+ * DELETE /api/forum/thread/:threadId - Delete thread (instructor or owner only)
+ */
+router.delete('/thread/:threadId', async (req, res) => {
+  try {
+    const { threadId } = req.params;
+    const { userId } = req.body;
+
+    const thread = queryOne(`SELECT * FROM forum_threads WHERE id = ?`, [threadId]);
+    if (!thread) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    // Authorization check: instructor or owner
+    const actualUserId = req.session?.user?.id || userId;
+    const userRole = req.session?.user?.role;
+    const isInstructor = userRole === 'instructor_admin';
+    const isOwner = String(actualUserId) === String(thread.user_id);
+
+    if (!isInstructor && !isOwner) {
+      return res.status(403).json({
+        error: 'Access denied: You can only delete your own threads or must be an instructor'
+      });
     }
 
     // Delete in proper order to maintain referential integrity:
@@ -446,6 +540,123 @@ router.delete('/thread/:threadId', async (req, res) => {
   } catch (error) {
     console.error('Error deleting thread:', error);
     res.status(500).json({ error: 'Failed to delete thread' });
+  }
+});
+
+/**
+ * PUT /api/forum/reply/:replyId - Edit reply (instructor or owner only)
+ */
+router.put('/reply/:replyId', async (req, res) => {
+  try {
+    const { replyId } = req.params;
+    const { content, userId } = req.body;
+
+    const reply = queryOne(`SELECT * FROM forum_replies WHERE id = ?`, [replyId]);
+    if (!reply) {
+      return res.status(404).json({ error: 'Reply not found' });
+    }
+
+    // Authorization check: instructor or owner
+    const actualUserId = req.session?.user?.id || userId;
+    const userRole = req.session?.user?.role;
+    const isInstructor = userRole === 'instructor_admin';
+    const isOwner = String(actualUserId) === String(reply.user_id);
+
+    if (!isInstructor && !isOwner) {
+      return res.status(403).json({
+        error: 'Access denied: You can only edit your own replies or must be an instructor'
+      });
+    }
+
+    // Server-side validation
+    const MIN_CONTENT_LENGTH = 5;
+    const MAX_CONTENT_LENGTH = 10000;
+
+    const errors = {};
+    const trimmedContent = (content || '').trim();
+
+    if (!trimmedContent) {
+      errors.content = 'El contenido es requerido';
+    } else if (trimmedContent.length < MIN_CONTENT_LENGTH) {
+      errors.content = `El contenido debe tener al menos ${MIN_CONTENT_LENGTH} caracteres`;
+    } else if (trimmedContent.length > MAX_CONTENT_LENGTH) {
+      errors.content = `El contenido no puede tener mas de ${MAX_CONTENT_LENGTH} caracteres`;
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        error: 'Error de validacion',
+        validationErrors: errors
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    run(`
+      UPDATE forum_replies
+      SET content = ?, updated_at = ?
+      WHERE id = ?
+    `, [trimmedContent, now, replyId]);
+
+    const updatedReply = queryOne(`SELECT * FROM forum_replies WHERE id = ?`, [replyId]);
+
+    res.json({
+      success: true,
+      reply: updatedReply,
+      message: 'Reply updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating reply:', error);
+    res.status(500).json({ error: 'Failed to update reply' });
+  }
+});
+
+/**
+ * DELETE /api/forum/reply/:replyId - Delete reply (instructor or owner only)
+ */
+router.delete('/reply/:replyId', async (req, res) => {
+  try {
+    const { replyId } = req.params;
+    const { userId } = req.body;
+
+    const reply = queryOne(`SELECT * FROM forum_replies WHERE id = ?`, [replyId]);
+    if (!reply) {
+      return res.status(404).json({ error: 'Reply not found' });
+    }
+
+    // Authorization check: instructor or owner
+    const actualUserId = req.session?.user?.id || userId;
+    const userRole = req.session?.user?.role;
+    const isInstructor = userRole === 'instructor_admin';
+    const isOwner = String(actualUserId) === String(reply.user_id);
+
+    if (!isInstructor && !isOwner) {
+      return res.status(403).json({
+        error: 'Access denied: You can only delete your own replies or must be an instructor'
+      });
+    }
+
+    // Delete votes for this reply first
+    run(`DELETE FROM reply_votes WHERE reply_id = ?`, [replyId]);
+
+    // Delete the reply
+    run(`DELETE FROM forum_replies WHERE id = ?`, [replyId]);
+
+    // Update thread reply count
+    run(`
+      UPDATE forum_threads
+      SET reply_count = (SELECT COUNT(*) FROM forum_replies WHERE thread_id = ?),
+          updated_at = ?
+      WHERE id = ?
+    `, [reply.thread_id, new Date().toISOString(), reply.thread_id]);
+
+    res.json({
+      success: true,
+      message: 'Reply deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting reply:', error);
+    res.status(500).json({ error: 'Failed to delete reply' });
   }
 });
 
