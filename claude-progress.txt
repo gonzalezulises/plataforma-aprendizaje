@@ -14131,3 +14131,70 @@ All 5 verification steps completed:
 - Console errors: Only expected 401s for unauthenticated state
 - Screenshots: feature-92-step*.png (4 files)
 - No regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #80)
+
+### Feature #80: Deleted forum post is removed - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Create a forum post TEST_DELETE_POST** - PASS
+   - Logged in as testuser@example.com (Test User)
+   - Navigated to Python: Fundamentos forum
+   - Clicked "Nueva Pregunta" and created post with title "TEST_DELETE_POST"
+   - Toast: "Hilo creado exitosamente"
+
+2. **Verify it appears in forum** - PASS
+   - Post visible at top of forum list
+   - Screenshot: feature-80-step2-post-in-forum.png
+
+3. **Delete the post** - PASS
+   - Implemented delete functionality in ThreadDetailPage.jsx
+   - Added "Eliminar" button (visible to owner/instructor)
+   - Clicked delete button
+   - Confirmation dialog appeared: "¿Estás seguro...?"
+   - Confirmed deletion
+   - Toast: "Hilo eliminado correctamente"
+   - Redirected to forum page
+
+4. **Refresh forum page** - PASS
+   - Hard refresh via navigate to same URL
+   - Post no longer appears in list
+
+5. **Verify post no longer appears** - PASS
+   - Forum list shows only 5 threads (was 6 before deletion)
+   - TEST_DELETE_POST is completely gone
+
+6. **Search for it to confirm removal** - PASS
+   - Direct URL access (/forum/thread/6) shows 404 page
+   - Message: "Hilo no encontrado - El hilo que buscas no existe o fue eliminado"
+   - API returns: {"error":"Thread not found"}
+
+### Implementation Details:
+- Added `handleDeleteThread` function to ThreadDetailPage.jsx
+- Added delete button with trash icon next to "Marcar como Resuelto" button
+- Button only visible to thread owner or instructor (same permissions as resolve)
+- Uses DELETE /api/forum/thread/:threadId endpoint
+- Shows confirmation dialog before deletion
+- Navigates back to forum after successful deletion
+
+### Console Errors:
+- 404 for deleted thread (expected - proves deletion worked)
+- 401 Unauthorized (expected - session expired on refresh)
+- WebSocket reconnection (transient, non-critical)
+
+### Screenshots:
+- feature-80-step1-post-created.png - Thread detail after creation
+- feature-80-step2-post-in-forum.png - Forum list showing the post
+- feature-80-step3-delete-button-visible.png - Delete button visible on thread
+- feature-80-step4-post-deleted-from-forum.png - Forum without deleted post
+- feature-80-step6-search-confirms-removal.png - 404 page for deleted thread
+
+### Current Status:
+- Feature #80 marked as PASSING
+- Commit: 1ee48f9
+
+[Coding] 2026-01-26 Feature #80 'Deleted forum post is removed' verified - PASSED
