@@ -266,15 +266,31 @@ router.post('/:id/submit', requireAuth, (req, res) => {
 });
 
 /**
- * Get all submissions for a project
+ * Get submissions for a project
+ * Feature #23: Users can only see their own submissions
+ * - Regular users: can only see their own submissions for this project
+ * - Instructors: can see all submissions for review purposes
  */
-router.get('/:id/submissions', (req, res) => {
+router.get('/:id/submissions', requireAuth, (req, res) => {
   try {
     const projectId = req.params.id;
-    const submissions = queryAll(
-      'SELECT * FROM project_submissions WHERE project_id = ? ORDER BY submitted_at DESC',
-      [projectId]
-    );
+    const userId = req.session.user.id;
+    const isInstructor = req.session.user.role === 'instructor_admin';
+
+    let submissions;
+    if (isInstructor) {
+      // Instructors can see all submissions for grading/review
+      submissions = queryAll(
+        'SELECT * FROM project_submissions WHERE project_id = ? ORDER BY submitted_at DESC',
+        [projectId]
+      );
+    } else {
+      // Regular users can only see their own submissions
+      submissions = queryAll(
+        'SELECT * FROM project_submissions WHERE project_id = ? AND user_id = ? ORDER BY submitted_at DESC',
+        [projectId, userId]
+      );
+    }
     res.json({ submissions });
   } catch (error) {
     console.error('Error fetching submissions:', error);
@@ -284,16 +300,30 @@ router.get('/:id/submissions', (req, res) => {
 
 /**
  * Get a specific submission by ID
+ * Feature #23: Users can only see their own submissions
+ * - Regular users: can only access their own submissions
+ * - Instructors: can access any submission for review purposes
  */
-router.get('/submissions/:submissionId', (req, res) => {
+router.get('/submissions/:submissionId', requireAuth, (req, res) => {
   try {
+    const submissionId = req.params.submissionId;
+    const userId = req.session.user.id;
+    const isInstructor = req.session.user.role === 'instructor_admin';
+
     const submission = queryOne(
       'SELECT * FROM project_submissions WHERE id = ?',
-      [req.params.submissionId]
+      [submissionId]
     );
+
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
     }
+
+    // Check ownership: only allow access if user owns the submission or is an instructor
+    if (!isInstructor && submission.user_id !== userId && submission.user_id !== String(userId)) {
+      return res.status(403).json({ error: 'Access denied: You can only view your own submissions' });
+    }
+
     res.json({ submission });
   } catch (error) {
     console.error('Error fetching submission:', error);

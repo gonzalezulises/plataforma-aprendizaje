@@ -345,6 +345,76 @@ router.get('/me/progress/export', (req, res) => {
 });
 
 /**
+ * GET /api/users/:id
+ * Get a user's profile by ID
+ * Feature #22: Users can only view their own profile details
+ * - Returns FULL profile (including email, preferences) if viewing own profile
+ * - Returns PUBLIC profile only (name, avatar, bio, role) for other users
+ */
+router.get('/:id', (req, res) => {
+  const requestedUserId = parseInt(req.params.id);
+  const currentUser = req.session?.user;
+
+  // Must be authenticated to view any profile
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const user = queryOne(
+      'SELECT id, email, name, avatar_url, role, bio, preferences, created_at, updated_at FROM users WHERE id = ?',
+      [requestedUserId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    // Check if user is viewing their own profile
+    const isOwnProfile = currentUser.id === requestedUserId;
+
+    if (isOwnProfile) {
+      // Return full profile with private data
+      console.log('[Users] User', currentUser.id, 'viewing their own profile');
+      res.json({
+        success: true,
+        isOwnProfile: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url,
+          role: user.role,
+          bio: user.bio || '',
+          preferences: user.preferences ? JSON.parse(user.preferences) : {},
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      });
+    } else {
+      // Return public profile only - NO email or preferences
+      console.log('[Users] User', currentUser.id, 'viewing profile of user', requestedUserId, '- returning public data only');
+      res.json({
+        success: true,
+        isOwnProfile: false,
+        user: {
+          id: user.id,
+          name: user.name,
+          avatar_url: user.avatar_url,
+          role: user.role,
+          bio: user.bio || '',
+          created_at: user.created_at
+          // NOTE: email and preferences are INTENTIONALLY excluded for privacy
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[Users] Get user profile error:', err);
+    res.status(500).json({ success: false, error: 'Error al obtener el perfil' });
+  }
+});
+
+/**
  * DELETE /api/users/:id
  * Delete a user account and cascade to all related data
  * Feature #162: Deleting user removes their submissions

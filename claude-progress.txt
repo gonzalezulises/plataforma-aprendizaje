@@ -14770,3 +14770,32 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #16 'Free users cannot access premium webinars' verified - PASSED
 
+[Testing] 2026-01-26 Feature #71 'Quiz answers are saved correctly' - VERIFIED PASSING
+- Step 1: Log in as student - PASS (Usuario de Prueba)
+- Step 2: Take quiz and answer all 10 questions - PASS
+- Step 3: Submit the quiz - PASS (100% score)
+- Step 4: View results - PASS (10/10 points, all answers shown)
+- Step 5: Verify answers match - PASS (All 10 userAnswers match entered values)
+- Step 6: Refresh and verify persistence - PASS (Results persist after F5)
+- API verification: /api/quizzes/1/attempt/5 confirms database storage
+- Console errors: None
+- Screenshot: feature-71-quiz-results-persist.png
+- No regression found
+
+
+[Testing] 2026-01-26 Feature #150 'Forum thread direct link works' - VERIFIED PASSING
+- Step 1: Copy a thread URL - PASS (URL format: /forum/thread/:threadId)
+- Step 2: Open in new session - PASS (Direct navigation to /forum/thread/1 and /forum/thread/3)
+- Step 3: Verify thread loads correctly - PASS (Title, content, author, timestamp, status badge)
+- Step 4: Verify replies are visible - PASS (Replies with content, author, votes, instructor badge)
+- Additional: Non-existent thread (99999) shows proper 404 error page
+- Console errors: Only expected 401 Unauthorized (not logged in)
+- Screenshot: feature-150-thread-direct-link.png
+- No regression found
+
+[Testing] 2026-01-26 Feature #150 'Forum thread direct link works' - VERIFIED PASSING
+- Step 1: Copy a thread URL - PASS
+- Step 2: Open in new session - PASS
+- Step 3: Verify thread loads correctly - PASS
+- Step 4: Verify replies are visible - PASS
+- No regression found
