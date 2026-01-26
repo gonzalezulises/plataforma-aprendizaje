@@ -323,8 +323,8 @@ function Navbar() {
         <div className="flex justify-between h-16">
           {/* Left side: Hamburger + Logo */}
           <div className="flex items-center">
-            {/* Hamburger Menu Button - Visible on mobile/tablet */}
-            <div className="md:hidden mr-2" ref={mobileMenuRef}>
+            {/* Hamburger Menu Button - Visible on mobile/tablet (below 1024px) */}
+            <div className="lg:hidden mr-2" ref={mobileMenuRef}>
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
                 className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -381,8 +381,8 @@ function Navbar() {
             </Link>
           </div>
 
-          {/* Navigation Links - Hidden on mobile/tablet, visible on desktop */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
+          {/* Navigation Links - Hidden on mobile/tablet (below 1024px), visible on desktop */}
+          <div className="hidden lg:flex lg:items-center lg:space-x-4">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -615,9 +615,9 @@ function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer - Slides in from left */}
+      {/* Mobile Navigation Drawer - Visible on mobile/tablet (below 1024px) */}
       {showMobileMenu && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+        <div className="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navLinks.map((link) => (
               <Link

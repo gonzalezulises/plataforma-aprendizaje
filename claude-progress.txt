@@ -8378,3 +8378,44 @@ All 5 verification steps completed:
 - No code changes required - responsive layout already fully implemented
 
 [Coding] 2026-01-26 Feature #204 Laptop layout at 1024px works correctly verified - PASSED
+[Testing] 2026-01-26 Feature #156 'Back and resubmit prevention' regression test - PASSED
+
+### Verification Steps:
+1. **Submit a form** - PASS
+   - Created forum thread #34 with unique test title
+   - Redirected to thread page with success message
+
+2. **Click browser back** - PASS
+   - Returned to forum page
+   - Form was NOT displayed (closed state)
+   - No pre-filled data from previous submission
+
+3. **Click forward or resubmit** - PASS
+   - Navigated back to thread page successfully
+   - Thread displays correctly with original content
+   - No automatic resubmission occurred
+
+4. **Verify no duplicate entry** - PASS
+   - Only ONE thread with title 'TEST_156_BACK_RESUBMIT_2026_REGRESSION' exists
+   - Forum list shows single entry
+
+5. **Verify appropriate message if attempted** - PASS
+   - When opening form after back navigation, form is EMPTY
+   - User must manually re-enter data to submit again
+   - Prevents accidental duplicate submissions
+
+### Implementation Details:
+- Form clears data after successful submission
+- Uses replace navigation (not push) to prevent back-to-form-with-data
+- Form state is not retained in browser history
+
+### Console Errors: Only WebSocket reconnection (expected behavior)
+
+### Screenshots:
+- feature-156-step1-form-filled.png
+- feature-156-step2-after-submit.png
+- feature-156-step3-after-back-form-empty.png
+- feature-156-step4-no-duplicates-verified.png
+- feature-156-step5-form-empty-after-back.png
+
+
