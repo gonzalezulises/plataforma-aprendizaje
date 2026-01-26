@@ -11301,3 +11301,224 @@ Verification:
 - Full-page /server-error page also tested and working
 - Console errors: Only expected 401 auth + intentional 500 test error
 - Screenshots: feature-109-step1-error-test-page.png, feature-109-step2-error-banner.png, feature-109-step4-full-error-page-top.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #247)
+
+### Feature #247: Dark mode toggle works - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Find dark mode toggle in settings or header** - PASS
+   - Dark mode toggle button added to Navbar header (visible on desktop)
+   - Sun icon shown when in dark mode (to switch to light)
+   - Moon icon shown when in light mode (to switch to dark)
+   - Also accessible in mobile hamburger menu
+
+2. **Toggle to dark mode** - PASS
+   - Clicked toggle button, page switched to dark mode instantly
+   - Dark backgrounds applied (gray-800, gray-900)
+   - Light text for contrast (white, gray-300)
+   - Button label changed to "Cambiar a modo claro"
+
+3. **Verify colors change appropriately** - PASS
+   - Navbar: dark background with light text
+   - Page content: dark backgrounds with appropriate contrast
+   - Cards and components: dark variants applied
+   - All existing dark: CSS classes now functional
+
+4. **Toggle back to light mode** - PASS
+   - Clicked toggle again, page switched to light mode
+   - Light backgrounds restored (white, gray-50)
+   - Dark text restored
+   - Button label changed to "Cambiar a modo oscuro"
+
+5. **Verify preference persists across refresh** - PASS
+   - Set to dark mode, refreshed page
+   - Page loaded in dark mode (preference persisted)
+   - Uses localStorage with key "theme-preference"
+   - Falls back to system preference if no stored preference
+
+### Technical Implementation:
+- Created ThemeContext.jsx for state management
+- Applies "dark" class to document.documentElement
+- Tailwind darkMode: "class" already configured
+- Toggle in header + mobile menu for accessibility
+- Icons: Sun (switch to light), Moon (switch to dark)
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-247-step2-dark-mode-active.png - Dark mode enabled
+- feature-247-step4-light-mode-restored.png - Light mode restored
+- feature-247-step5-preference-persists.png - Preference persists after refresh
+- feature-247-mobile-menu-dark-mode-toggle.png - Mobile menu toggle
+
+### Current Status:
+- Feature #247 marked as PASSING
+- Commit: 47793b3
+
+[Coding] 2026-01-26 Feature #247 "Dark mode toggle works" verified - PASSED
+
+[Testing] 2026-01-26 Feature #150 'Forum thread direct link works' - VERIFIED PASSING
+- Step 1: Thread URL: http://localhost:5173/forum/thread/5 - PASS
+- Step 2: Navigated from homepage to direct URL - PASS
+- Step 3: Thread loads correctly with title, content, author, status - PASS
+- Step 4: Replies visible (1 Respuesta) with reply content - PASS
+- Console errors: Only WebSocket reconnection error (expected behavior, reconnects successfully)
+- Screenshots: feature-150-direct-link-verification.png
+[Testing] 2026-01-26 Feature #96 'Complete webinar workflow' - VERIFIED PASSING
+- Step 1: Log in as instructor - PASS (logged in as Test Instructor)
+- Step 2: Schedule a new webinar - PASS (created Test Webinar Feature 96)
+- Step 3: Add title, description, date - PASS (all fields filled successfully)
+- Step 4: Save webinar - PASS (success message shown, webinar in list)
+- Step 5: View webinar in calendar - PASS (calendar view shows webinar by date)
+- Step 6: Join webinar at scheduled time - PASS (Meet link generated, join mechanism available)
+- Step 7: After webinar, access recording - PASS (Ver Grabacion button opens recording URL)
+- Console errors: None
+- Screenshots: feature-96-step1-webinars-page.png, feature-96-step2-schedule-form-filled.png, feature-96-step4-webinar-created.png, feature-96-step5-calendar-view.png, feature-96-step7-recording-available.png
+
+[Testing] 2026-01-26 Feature #161 'Deleting lesson removes progress entries' - VERIFIED PASSING
+- Step 1: Enrolled in PERF_100 course, completed 'Leccion 1: Primeros pasos' - PASS
+- Step 2: Verified progress was recorded (status: completed, timeSpentSeconds: 60) - PASS
+- Step 3: Deleted the lesson via admin course editor - PASS
+- Step 4: Verified lesson_progress entries removed (status: not_started, timeSpentSeconds: 0) - PASS
+- Step 5: Verified overall course progress recalculated (progress_percent: 0, completed_at: null) - PASS
+- Console errors: None
+- Screenshots: feature-161-step1-lesson-completed.png, feature-161-step2-before-delete.png, feature-161-step3-lesson-deleted.png, feature-161-verification-complete.png
+
+[Testing] 2026-01-26 Feature #231 'Import quiz questions from file' - VERIFIED PASSING
+- Step 1: Prepared CSV with 3 quiz questions (Linux and Ansible topics)
+- Step 2: Navigated to quiz editor via Course Editor > Modulos y Lecciones
+- Step 3: Clicked 'Importar Quiz desde CSV' button - modal opened
+- Step 4: Pasted CSV data with header and 3 rows - processed successfully, showed preview
+- Step 5: Added quiz title, clicked 'Importar Quiz' - success message shown
+- Step 6: Verified via API: Quiz #2 created with 3 questions, correct options, and settings
+- Console errors: None
+- Screenshots: feature-231-quiz-import-preview.png, feature-231-quiz-import-success.png
+[Testing] 2026-01-26 Feature #237 'Code execution responds within 5 seconds' - VERIFIED PASSING
+- Step 1: Wrote simple Python print statement: print("Hello World") - PASS
+- Step 2: Clicked 'Ejecutar' (Run) button - PASS
+- Step 3: Response time measured - essentially instantaneous (< 1 second) - PASS
+- Step 4: Output 'Hello World' appeared immediately, well under 5 second threshold - PASS
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshot: feature-237-code-execution-response-time.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #83)
+
+### Feature #83: Project submission is stored correctly - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Submit a project with content TEST_PROJECT_ABC** - PASS
+   - Created test project "Feature 83 Test Project"
+   - Submitted project with content starting with "TEST_PROJECT_ABC"
+   - Included comprehensive test description and code example
+
+2. **Include a GitHub URL** - PASS
+   - Added GitHub URL: https://github.com/test-user/feature-83-project
+   - URL stored correctly in database
+
+3. **View submission page** - PASS
+   - Fixed missing routes in App.jsx:
+     - Added /project/submit/:projectId route
+     - Added /project/submission/:submissionId route
+   - Fixed SubmissionViewPage API URL (removed duplicate /api/ prefix)
+   - Submission page loads correctly at /project/submission/1
+
+4. **Verify content matches exactly** - PASS
+   - Content displays "TEST_PROJECT_ABC" at the beginning
+   - Full content preserved including code blocks and formatting
+   - Database verified via API: content field matches exactly
+
+5. **Verify GitHub URL is correct** - PASS
+   - GitHub URL displayed correctly: https://github.com/test-user/feature-83-project
+   - URL is clickable with GitHub icon
+   - Database verified: github_url field matches exactly
+
+### Fixes Applied:
+- frontend/src/App.jsx: Added routes for project submission and viewing
+- frontend/src/pages/SubmissionViewPage.jsx: Fixed API URL to use correct path
+
+### Console Errors: None
+
+### Screenshots:
+- feature-83-step1-form-filled.png - Submission form with content and GitHub URL
+- feature-83-step2-submission-view.png - Submission details page showing content
+- feature-83-step3-github-url-visible.png - Full page showing GitHub URL section
+
+### Current Status:
+- Feature #83 marked as PASSING
+- Commit: d5850cc
+
+[Coding] 2026-01-26 Feature #83 "Project submission is stored correctly" verified - PASSED
+
+[Testing] 2026-01-26 Feature #110 '404 for deleted lesson shows error' - VERIFIED PASSING
+- Step 1: Used lesson URL /course/test-course-feature-246/lesson/111 - PASS
+- Step 2: Logged in as instructor, deleted Lesson 3.2 Final Project (ID 111) - PASS
+- Step 3: Navigated to deleted lesson URL - PASS
+- Step 4: Shows '404' with 'Leccion No Encontrada' message - PASS
+- Step 5: Shows 'Volver al Curso' button and helpful suggestions - PASS
+- Console errors: Only expected 404 errors for deleted lesson
+- Screenshot: feature-110-deleted-lesson-404.png
+[Testing] 2026-01-26 Feature #6 'Typography uses Inter font family' - VERIFIED PASSING
+- Step 1: Navigated to home page at http://localhost:5173 - PASS
+- Step 2: Inspected heading elements (h1, h2, h3) - PASS
+- Step 3: Verified font-family includes Inter: 'Inter, system-ui, sans-serif' - PASS
+- Step 4: Inspected body text (paragraphs) - PASS
+- Step 5: Verified body text font-family includes Inter: 'Inter, system-ui, sans-serif' - PASS
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshot: feature-6-inter-font-verification.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #84)
+
+### Feature #84: Rubric feedback is stored correctly - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as Test Instructor (instructor_admin role)
+   - User ID: 99
+
+2. **Provide feedback with specific scores per criterion** - PASS
+   - Calidad del Codigo: 22/25
+   - Funcionalidad: 24/25
+   - Documentacion: 20/25
+   - Creatividad: 18/25
+   - Total Score: 84/100
+
+3. **Add comment: TEST_FEEDBACK_COMMENT** - PASS
+   - Added comment with TEST_FEEDBACK_COMMENT prefix
+
+4. **Save feedback** - PASS
+   - Clicked Guardar Retroalimentacion button
+   - Feedback saved successfully, redirected to dashboard
+
+5. **View as student** - PASS
+   - Logged in as student (user_id: 1)
+   - Navigated to /feedback/1
+   - Page shows status Evaluado
+
+6. **Verify scores and comment match** - PASS
+   - Total score: 84 / 100
+   - All criterion scores match exactly
+   - Comment displayed with TEST_FEEDBACK_COMMENT
+   - Database verification via API confirmed
+
+### Screenshots:
+- feature-84-step1-instructor-feedback-page.png
+- feature-84-step2-form-filled.png
+- feature-84-step5-student-view-feedback.png
+
+### Current Status:
+- Feature #84 marked as PASSING
+
+[Coding] 2026-01-26 Feature #84 Rubric feedback is stored correctly verified - PASSED
