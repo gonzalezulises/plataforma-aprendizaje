@@ -1,3 +1,41 @@
+## Session: 2026-01-26 (Coding Agent - Feature #233)
+
+### Feature #233: Import malformed file handled - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. Prepare malformed CSV/JSON files - PASS
+   - Created test-malformed-233-1.json (incomplete JSON, missing brackets)
+   - Created test-malformed-233-2.json (plain text, not JSON)
+   - Created test-malformed-233-3.json (JSON with missing comma)
+   - Created test-malformed-233-4.json (valid JSON, missing required fields)
+
+2. Attempt to import - PASS
+   - Each file was selected via the import modal
+   - Error handling code processed each malformed file
+
+3. Verify error message describes issue - PASS
+   - File 1: "Error de sintaxis JSON en la linea 8. El archivo parece estar incompleto o mal formateado."
+   - File 2: "El archivo contiene caracteres invalidos. Posicion: desconocida..."
+   - File 3: "Error de sintaxis JSON en la linea 1. El archivo parece estar incompleto o mal formateado."
+   - File 4: Shows preview with "Elementos invalidos (2)" listing missing fields
+
+4. Verify no partial import - PASS
+   - Total Cursos remained at 7 after all tests
+   - Import button correctly disabled for invalid files
+
+### Implementation Details
+
+**frontend/src/pages/AnalyticsDashboardPage.jsx:**
+- Added try/catch around JSON.parse with specific error type detection
+- User-friendly Spanish error messages based on parse error type
+- HTTP error status handling (401, 403, 400) with appropriate messages
+- Clear guidance to use files exported from this platform
+
+### Progress: 152/248 features passing (61.3%)
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #228)
 
 ### Feature #228: Late API response handled - VERIFIED AND PASSING
@@ -10409,3 +10447,88 @@ All 5 verification steps completed:
 - Screenshots: feature-130-step1-analytics-dashboard.png, feature-130-step2-analytics-data.png
 - Console: Only pre-existing WebSocket error (unrelated)
 [Testing] 2026-01-26 Feature #132 Webinar list from database - VERIFIED PASSING
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #232)
+
+### Feature #232: Import with duplicate handling - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Import file with some existing items** - PASS
+   - Created test-import-232.json with 3 courses:
+     - Python: Fundamentos (existing)
+     - TEST_232_NEW_COURSE (new)
+     - Data Science con Python (existing)
+   - File uploaded successfully and parsed
+
+2. **Verify duplicate warning shown** - PASS
+   - Yellow warning box: "Duplicados encontrados (2)"
+   - List shows: "Python: Fundamentos (slug: python-fundamentos)" and "Data Science con Python (slug: data-science-python)"
+   - New items section shows: "Nuevos (1): TEST_232_NEW_COURSE"
+
+3. **Choose to skip or overwrite** - PASS
+   - Radio buttons available: "Omitir" (Skip) and "Sobrescribir" (Overwrite)
+   - Default selection is "Omitir"
+   - Can switch between options before importing
+
+4. **Verify correct action taken** - PASS
+   - Skip test: Nuevos: 1, Omitidos: 2, Sobrescritos: 0
+     - Total courses increased from 6 to 7
+     - TEST_232_NEW_COURSE appears in course list
+   - Overwrite test: Nuevos: 0, Omitidos: 0, Sobrescritos: 1
+     - Verified via API: Python course now has:
+       - description: "OVERWRITTEN DESCRIPTION - Updated via import feature #232"
+       - category: "Programacion Avanzada"
+       - level: "Intermedio"
+
+### Implementation Details:
+
+**Backend (analytics.js):**
+- POST /api/analytics/import - Main import endpoint with duplicateAction parameter
+- POST /api/analytics/import/preview - Preview endpoint to detect duplicates before import
+- Duplicate detection based on course slug (unique identifier)
+- Supports both skip and overwrite actions
+- Returns detailed summary: imported, skipped, overwritten, errors
+
+**Frontend (AnalyticsDashboardPage.jsx):**
+- Added green "Importar" button next to "Exportar"
+- Import modal with file selection, preview, and action buttons
+- Preview shows: new items (green), duplicates (yellow warning), invalid items (red)
+- Radio buttons for duplicate handling: Omitir (Skip) / Sobrescribir (Overwrite)
+- Success result shows counts for each action type
+
+### Console Errors: Only pre-existing WebSocket error (unrelated)
+
+### Screenshots:
+- feature-232-step1-analytics-with-import.png - Analytics page with Import button
+- feature-232-step2-duplicate-warning-shown.png - Import modal with duplicate warning
+- feature-232-step3-overwrite-selected.png - Overwrite option selected
+- feature-232-step3-skip-duplicates-result.png - Skip result (1 new, 2 skipped)
+- feature-232-step4-overwrite-result.png - Overwrite result (1 overwritten)
+
+### Current Status:
+- Feature #232 marked as PASSING
+- Commit: eaa2432
+
+[Coding] 2026-01-26 Feature #232 'Import with duplicate handling' verified - PASSED
+[Testing] Feature #185 Required fields show error when empty - VERIFIED PASSING
+[Testing] 2026-01-26 Feature #157 'Vote button toggle idempotent' - VERIFIED PASSING
+- Step 1: Found voteable item (created forum reply with vote button)
+- Step 2: Clicked upvote - vote count increased from 0 to 1
+- Step 3: Verified vote count increased by exactly 1 (toast: 'Voto registrado')
+- Step 4: Clicked upvote again - vote toggled off
+- Step 5: Verified vote toggled to 0 (toast: 'Voto removido')
+- Additional testing: Clicked 5 times total - consistently toggled 0↔1, never multiplied
+- Backend: UNIQUE(reply_id, user_id) constraint + toggle logic confirmed
+- Console: Only pre-existing unrelated errors (enrollment 404, WebSocket)
+- Screenshot: feature-157-vote-idempotent.png
+[Testing] 2026-01-26 Feature #196 'Error message after failed action' - REGRESSION TEST PASSED
+- Test 1: Invalid login credentials -> Error alert: 'Credenciales incorrectas. Por favor verifica tu correo y contrasena.'
+- Test 2: Forum form validation errors -> Status message + field-level errors shown
+- All 4 verification steps passed
+- Retry/close options available in both cases
+- Screenshots: feature-196-test1-login-error.png, feature-196-test2-form-validation-error.png
+- Console: Only pre-existing WebSocket error (unrelated)
