@@ -1,5 +1,6 @@
 import express from 'express';
 import { queryAll, queryOne, run, getDatabase, saveDatabase } from '../config/database.js';
+import { sendFeedbackNotificationEmail, isEmailNotificationEnabled } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -211,6 +212,60 @@ router.post('/submissions/:submissionId/feedback', (req, res) => {
       ]
     );
 
+    // Feature #201: Send email notification for new feedback
+    try {
+      // Get student info and preferences
+      const student = queryOne(
+        'SELECT id, email, name, preferences FROM users WHERE id = ?',
+        [submission.user_id]
+      );
+
+      if (student && student.email) {
+        // Check if user has email_feedback_received notifications enabled
+        const shouldSendEmail = isEmailNotificationEnabled(student.preferences, 'email_feedback_received');
+
+        if (shouldSendEmail) {
+          // Get course and project info for richer email content
+          const project = queryOne(
+            'SELECT p.title as project_name, c.title as course_name FROM projects p ' +
+            'LEFT JOIN courses c ON p.course_id = c.id ' +
+            'WHERE p.id = ?',
+            [submission.project_id]
+          );
+
+          // Get instructor info
+          const instructor = queryOne(
+            'SELECT name FROM users WHERE id = ?',
+            [createdBy]
+          );
+
+          // Generate feedback link (frontend URL - matches route /feedback/:submissionId)
+          const feedbackLink = `http://localhost:5173/feedback/${submissionId}`;
+
+          // Send email notification
+          sendFeedbackNotificationEmail({
+            studentEmail: student.email,
+            studentName: student.name,
+            courseName: project?.course_name || 'Curso',
+            projectName: project?.project_name || submission.project_id ? `Proyecto #${submission.project_id}` : 'Tu entrega',
+            score: total_score,
+            maxScore: max_score,
+            feedbackLink: feedbackLink,
+            instructorName: instructor?.name
+          });
+
+          console.log(`[Feedback] Email notification sent to ${student.email} for submission ${submissionId}`);
+        } else {
+          console.log(`[Feedback] Email notification skipped for user ${submission.user_id} (disabled in preferences)`);
+        }
+      } else {
+        console.log(`[Feedback] Could not send email: student ${submission.user_id} not found or no email`);
+      }
+    } catch (emailError) {
+      // Don't fail the request if email fails - just log it
+      console.error('[Feedback] Error sending email notification:', emailError);
+    }
+
     // Fetch the newly created feedback
     // result.lastInsertRowid might be BigInt, so we need to handle it
     const feedbackId = result.lastInsertRowid ? Number(result.lastInsertRowid) : null;
@@ -342,3 +397,4 @@ router.get('/default-rubric', (req, res) => {
 });
 
 export default router;
+// Feature #201 trigger reload do., 25 de ene. de 2026 19:23:33
