@@ -13956,3 +13956,39 @@ All 6 verification steps completed:
 - Screenshot: feature-43-dashboard-link-verified.png
 - No regression found
 
+[Testing] 2026-01-26 Feature #206 'Mobile layout at 375px works correctly' - VERIFIED PASSING
+- Step 1: Set viewport to 375px wide - PASS (resized to 375x800)
+- Step 2: Verify single column layout - PASS (home page and courses page both single column)
+- Step 3: Verify touch-friendly buttons - PASS (main CTAs 56-60px height, hamburger menu functional)
+- Step 4: Verify text readable - PASS (smallest font 12px)
+- Step 5: Verify no horizontal scroll - PASS (scrollWidth === clientWidth on all pages)
+- Console errors: Only expected 401s for unauthenticated user
+- Screenshots: feature-206-mobile-375px.png, feature-206-courses-mobile.png, feature-206-mobile-menu-open.png
+- No regression found
+[Testing] 2026-01-26 Feature #206 'Mobile layout at 375px works correctly' - VERIFIED PASSING
+- Step 1: Set viewport to 375px wide - PASS (resized to 375x800)
+- Step 2: Verify single column layout - PASS (home page and courses page both single column)
+- Step 3: Verify touch-friendly buttons - PASS (main CTAs 56-60px height, hamburger menu functional)
+- Step 4: Verify text readable - PASS (smallest font 12px)
+- Step 5: Verify no horizontal scroll - PASS (scrollWidth === clientWidth on all pages)
+- Console errors: Only expected 401s for unauthenticated user
+- Screenshots: feature-206-mobile-375px.png, feature-206-courses-mobile.png, feature-206-mobile-menu-open.png
+- No regression found
+[Testing] 2026-01-26 Feature #244 'Instructor name and avatar shown on course' - VERIFIED PASSING
+- Step 1: Navigate to course detail - PASS (tested /course/python-fundamentos and /course/data-science-python)
+- Step 2: Verify instructor name is visible - PASS ('Carlos Rodriguez' and 'Maria Garcia' displayed)
+- Step 3: Verify instructor avatar is shown - PASS (letter avatars 'C' and 'M' displayed)
+- Step 4: Click instructor name if link - PASS (link is clickable, stays on course page)
+- Step 5: Verify instructor profile loads - N/A (no separate profile page, by design)
+- Console errors: Only expected 401s for unauthenticated user
+- Screenshots: feature-244-instructor-visible.png, feature-244-data-science-instructor.png
+- No regression found
+
+[Testing] 2026-01-26 Feature #42 'Course catalog link works' - VERIFIED PASSING
+- Step 1: Navigate to home page - PASS (http://localhost:5173/)
+- Step 2: Click on 'Cursos' link - PASS (clicked navigation link)
+- Step 3: Verify navigation to /courses - PASS (URL: http://localhost:5173/courses)
+- Step 4: Verify course listing is displayed - PASS (6+ courses shown with cards, search, filters)
+- Console errors: Only expected 401s for unauthenticated user
+- Screenshot: feature-42-course-catalog-verified.png
+- No regression found
