@@ -1,0 +1,21 @@
+### COURSE INFO ###
+Field,Value
+Course ID,3
+Title,"Python: Fundamentos"
+Category,Programacion
+Level,Principiante
+Total Enrollments,2
+Completed Enrollments,0
+Average Progress,0%
+Exported At,2026-01-26T02:38:35.147Z
+
+### ENROLLMENTS ###
+Student Name,Student Email,Enrolled At,Completed At,Progress %,Last Accessed
+"Test User","testuser@example.com",2026-01-25T19:52:08.351Z,,0,2026-01-25T19:52:08.351Z
+"Test Instructor","instructor@test.com",2026-01-25T15:48:33.293Z,,0,2026-01-25T15:48:33.293Z
+
+### LESSON PROGRESS ###
+Student Name,Student Email,Lesson Title,Status,Time Spent (min),Completed At
+"Test User","testuser@example.com","TEST_100_Introduccion a Variables en Python",completed,0,2026-01-25T14:10:43.931Z
+"Test Instructor","instructor@test.com","TEST_100_Introduccion a Variables en Python",in_progress,0,
+

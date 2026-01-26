@@ -10317,3 +10317,25 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #230 'Export student progress report' verified - PASSED
 
+[Testing] 2026-01-26 Feature #133 'API error displayed in UI' - VERIFIED PASSING
+- Step 1: Submitted login form with invalid credentials (nonexistent@example.com)
+- Step 2: API returned 401 Unauthorized error
+- Step 3: UI displayed error: 'Credenciales incorrectas. Por favor verifica tu correo y contrasena.'
+- Step 3b: Forum form showed validation errors for min length (title 2/5, content 1/10)
+- Step 4: Fixed errors - login with valid credentials succeeded, redirected to Dashboard
+- Screenshots: feature-133-step1-api-error-displayed.png, feature-133-step2-forum-validation-errors.png
+- Console: Only pre-existing WebSocket error (unrelated)
+[Testing] 2026-01-26 Feature #196 'Error message after failed action' - VERIFIED PASSING
+- Step 1: Triggered failed actions (invalid login, empty forum form, too-short content)
+- Step 2: Error messages appeared (alert boxes, status messages, field-level errors)
+- Step 3: Messages describe issues clearly (specific Spanish text for each error type)
+- Step 4: Retry/close options available (submit buttons for retry, cancel/back buttons for close)
+- Screenshots: feature-196-step1-login-error.png, feature-196-step2-forum-validation-error.png, feature-196-step3-min-length-error.png
+- Console: Only pre-existing WebSocket error (unrelated)
+[Testing] 2026-01-26 Feature #182 'Combined filters with no results' - VERIFIED PASSING
+- Step 1: Applied multiple restrictive filters (Web3 category + Principiante level)
+- Step 2: No results message displayed: 'No hay cursos disponibles'
+- Step 3: Each filter shown in dropdowns (Web3, Principiante selected)
+- Step 4: Removed level filter - Web3 course reappeared (individual filter removal works)
+- Screenshots: feature-182-step1-no-results.png, feature-182-step4-filter-removed.png
+- Console: Only expected 401 auth errors (user not logged in)
