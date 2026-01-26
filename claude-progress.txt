@@ -1,3 +1,62 @@
+## Session: 2026-01-26 (Coding Agent - Feature #72)
+
+### Feature #72: Code submission is saved correctly - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as student** - PASS
+   - Logged in as testuser@example.com (Test User)
+   - Role: student_free
+
+2. **Navigate to a code challenge** - PASS
+   - Navigated to http://localhost:5173/challenge/1
+   - Challenge: "Hola Mundo en Python" (Easy, Python)
+   - Initial state: 1 intento, Completado badge
+
+3. **Write unique code: # TEST_CODE_UNIQUE_123** - PASS
+   - Wrote unique code in editor:
+     ```python
+     # TEST_CODE_UNIQUE_72_FEATURE_VERIFY
+     print("Hola Mundo")
+     ```
+
+4. **Submit the code** - PASS
+   - Clicked "Enviar Solucion" button
+   - Result: "Todas las pruebas pasaron!"
+   - Attempt count increased from 1 to 2
+   - Execution time: 5ms
+
+5. **View submission history** - PASS
+   - Clicked "Historial" tab
+   - Shows "2 intentos registrados"
+   - Intento #2: Correcto, 26 ene 2026, 02:47:18, 5ms
+   - Intento #1: Correcto, 26 ene 2026, 01:52:09
+
+6. **Verify exact code appears in history** - PASS
+   - Code preview shows: `# TEST_CODE_UNIQUE_72_FEATURE_VERIFY print("Hola Mundo")`
+   - "Ver codigo completo" button expands to show full code
+   - "Cargar en editor" button available to restore code
+   - Test results: "Salida correcta: Paso" (1/1)
+
+### Additional Verifications:
+- Data persists after page refresh (submissions still visible from database)
+- Submission timestamps correctly recorded
+- Execution time recorded
+- Test results recorded with pass/fail status
+- No console errors
+
+### Screenshots:
+- feature-72-submission-history.png - Submission history with unique code
+- feature-72-submission-persists-after-refresh.png - Data persists after refresh
+
+### Current Status:
+- Feature #72 marked as PASSING
+- Progress: 207/248 features passing (83.5%)
+
+[Coding] 2026-01-26 Feature #72 'Code submission is saved correctly' verified - PASSED
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #71)
 
 ### Feature #71: Quiz answers are saved correctly - VERIFIED AND PASSING
@@ -13623,3 +13682,17 @@ All 6 verification steps completed:
   - Full text visible on detail pages
 - Console errors: None
 - Screenshots: feature-210-*.png (4 files)
+[Testing] 2026-01-26 Feature #9 'OAuth callback handles successful login' - VERIFIED PASSING
+- Step 1: Complete OAuth login flow with rizo.ma - PASS
+  - Clicked 'Iniciar Sesion con rizo.ma' button on login page
+- Step 2: Verify callback URL is processed correctly - PASS
+  - OAuth callback handled, user redirected to dashboard
+- Step 3: Verify user session is created - PASS
+  - User 'Usuario de Prueba' shown in navbar with UD avatar
+- Step 4: Verify user is redirected to dashboard - PASS
+  - Redirected to /dashboard showing 'Mi Dashboard'
+- Step 5: Verify user profile information is loaded - PASS
+  - User menu shows: name, email (test@rizo.ma), role (Estudiante)
+  - Dashboard shows 'Mis Cursos (2)' with enrolled courses
+- Console errors: None (only pre-login 401s to wrong port)
+- Screenshots: feature-9-oauth-callback-success.png, feature-9-user-profile-loaded.png
