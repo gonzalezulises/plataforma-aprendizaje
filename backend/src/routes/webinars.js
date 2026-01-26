@@ -453,12 +453,28 @@ router.delete('/:id', (req, res) => {
 });
 
 /**
- * POST /api/webinars/:id/register - Register for a webinar
+ * Helper function to check if user has premium access
+ */
+function isPremiumUser(user) {
+  return user && (user.role === 'student_premium' || user.role === 'instructor_admin');
+}
+
+/**
+ * POST /api/webinars/:id/register - Register for a webinar (PREMIUM ONLY)
  */
 router.post('/:id/register', (req, res) => {
   try {
     if (!req.session?.user) {
       return res.status(401).json({ error: 'Must be logged in to register' });
+    }
+
+    // Check for premium access (Feature #16)
+    if (!isPremiumUser(req.session.user)) {
+      return res.status(403).json({
+        error: 'Webinars are a premium feature',
+        code: 'PREMIUM_REQUIRED',
+        message: 'Los webinars son una funcion exclusiva para usuarios premium. Actualiza tu cuenta para acceder.'
+      });
     }
 
     const { id } = req.params;
@@ -557,12 +573,21 @@ router.delete('/:id/register', (req, res) => {
 });
 
 /**
- * POST /api/webinars/:id/join - Join a webinar (marks attendance)
+ * POST /api/webinars/:id/join - Join a webinar (marks attendance) (PREMIUM ONLY)
  */
 router.post('/:id/join', (req, res) => {
   try {
     if (!req.session?.user) {
       return res.status(401).json({ error: 'Must be logged in to join' });
+    }
+
+    // Check for premium access (Feature #16)
+    if (!isPremiumUser(req.session.user)) {
+      return res.status(403).json({
+        error: 'Webinars are a premium feature',
+        code: 'PREMIUM_REQUIRED',
+        message: 'Los webinars son una funcion exclusiva para usuarios premium. Actualiza tu cuenta para acceder.'
+      });
     }
 
     const { id } = req.params;
@@ -607,12 +632,21 @@ router.post('/:id/join', (req, res) => {
 });
 
 /**
- * GET /api/webinars/:id/recording - Get recording URL for a completed webinar
+ * GET /api/webinars/:id/recording - Get recording URL for a completed webinar (PREMIUM ONLY)
  */
 router.get('/:id/recording', (req, res) => {
   try {
     if (!req.session?.user) {
       return res.status(401).json({ error: 'Must be logged in' });
+    }
+
+    // Check for premium access (Feature #16)
+    if (!isPremiumUser(req.session.user)) {
+      return res.status(403).json({
+        error: 'Webinar recordings are a premium feature',
+        code: 'PREMIUM_REQUIRED',
+        message: 'Las grabaciones de webinars son una funcion exclusiva para usuarios premium. Actualiza tu cuenta para acceder.'
+      });
     }
 
     const { id } = req.params;

@@ -6,6 +6,11 @@ import toast from 'react-hot-toast';
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
 
+// Helper to check if user has premium access (Feature #16)
+function isPremiumUser(user) {
+  return user && (user.role === 'student_premium' || user.role === 'instructor_admin');
+}
+
 function WebinarsPage() {
   const [webinars, setWebinars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,6 +18,9 @@ function WebinarsPage() {
   const [filter, setFilter] = useState('all'); // 'all', 'upcoming', 'past'
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Check if user is a free user (logged in but not premium) - Feature #16
+  const isFreeUser = isAuthenticated && user && user.role === 'student_free';
 
   useEffect(() => {
     fetchWebinars();
@@ -51,6 +59,13 @@ function WebinarsPage() {
       return;
     }
 
+    // Check for premium access (Feature #16)
+    if (isFreeUser) {
+      toast.error('Los webinars son una funcion premium. Actualiza tu cuenta para acceder.');
+      navigate('/upgrade');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/webinars/${webinarId}/register`, {
         method: 'POST',
@@ -62,6 +77,12 @@ function WebinarsPage() {
         fetchWebinars();
       } else {
         const data = await response.json();
+        // Handle premium required error from backend
+        if (data.code === 'PREMIUM_REQUIRED') {
+          toast.error(data.message || 'Funcion premium requerida');
+          navigate('/upgrade');
+          return;
+        }
         toast.error(data.error || 'Error al registrarse');
       }
     } catch (error) {
@@ -74,6 +95,13 @@ function WebinarsPage() {
     if (!isAuthenticated) {
       toast.error('Debes iniciar sesion para unirte');
       navigate('/login');
+      return;
+    }
+
+    // Check for premium access (Feature #16)
+    if (isFreeUser) {
+      toast.error('Los webinars son una funcion premium. Actualiza tu cuenta para acceder.');
+      navigate('/upgrade');
       return;
     }
 
@@ -90,6 +118,12 @@ function WebinarsPage() {
         toast.success('Te has unido al webinar');
       } else {
         const data = await response.json();
+        // Handle premium required error from backend
+        if (data.code === 'PREMIUM_REQUIRED') {
+          toast.error(data.message || 'Funcion premium requerida');
+          navigate('/upgrade');
+          return;
+        }
         toast.error(data.error || 'Error al unirse');
       }
     } catch (error) {
@@ -105,6 +139,13 @@ function WebinarsPage() {
       return;
     }
 
+    // Check for premium access (Feature #16)
+    if (isFreeUser) {
+      toast.error('Las grabaciones de webinars son una funcion premium. Actualiza tu cuenta para acceder.');
+      navigate('/upgrade');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/webinars/${webinar.id}/recording`, {
         credentials: 'include'
@@ -115,6 +156,12 @@ function WebinarsPage() {
         window.open(data.recording_url, '_blank');
       } else {
         const data = await response.json();
+        // Handle premium required error from backend
+        if (data.code === 'PREMIUM_REQUIRED') {
+          toast.error(data.message || 'Funcion premium requerida');
+          navigate('/upgrade');
+          return;
+        }
         toast.error(data.error || 'Grabacion no disponible');
       }
     } catch (error) {
@@ -192,6 +239,22 @@ function WebinarsPage() {
   };
 
   const getActionButton = (webinar) => {
+    // For free users, show lock icon and upgrade button (Feature #16)
+    if (isFreeUser) {
+      return (
+        <Link
+          to="/upgrade"
+          className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors flex items-center gap-2"
+          data-testid="upgrade-button"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          Actualizar
+        </Link>
+      );
+    }
+
     if (webinar.status === 'completed' && webinar.recording_url) {
       return (
         <button
@@ -269,6 +332,35 @@ function WebinarsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Premium Upgrade Banner for Free Users (Feature #16) */}
+        {isFreeUser && (
+          <div className="mb-6 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl shadow-lg overflow-hidden" data-testid="premium-upgrade-banner">
+            <div className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Contenido Premium
+                  </h3>
+                  <p className="text-white/90 text-sm">
+                    Los webinars en vivo y grabaciones son exclusivos para usuarios premium. Actualiza tu cuenta para acceder a sesiones en vivo con instructores expertos.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/upgrade"
+                className="flex-shrink-0 px-6 py-3 bg-white text-orange-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-md"
+              >
+                Actualizar a Premium
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
