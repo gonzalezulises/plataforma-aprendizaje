@@ -1,3 +1,47 @@
+## Session: 2026-01-26 (Coding Agent - Feature #15)
+
+### Feature #15: Free users cannot access premium content - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as a student_free user** - PASS
+   - Logged in as testuser@example.com (role: student_free)
+
+2. **Navigate to a premium course** - PASS
+   - Navigated to premium course "Data Science con Python" (id: 2, is_premium: 1)
+   - User was already enrolled from previous testing
+
+3. **Attempt to access lesson content** - PASS
+   - Navigated to premium lesson: /course/data-science-python/lesson/10
+   - API returned 403 with `requiresUpgrade: true`
+
+4. **Verify access is denied with upgrade prompt** - PASS
+   - Premium upgrade prompt displayed with:
+     - Crown icon and "Contenido Premium" heading
+     - Message: "Este contenido es exclusivo para usuarios premium. Actualiza tu cuenta para desbloquear."
+     - Premium benefits list (4 items)
+     - "Actualizar a Premium" button linking to /upgrade
+     - "Ver Curso" and "Ver Cursos Gratis" alternative navigation
+
+5. **Verify no premium content is leaked** - PASS
+   - No lesson content visible
+   - API does not return lesson content for blocked requests
+   - Only upgrade prompt UI is shown
+
+### Implementation:
+- Backend enrollments.js: Block free users from enrolling in premium courses
+- Backend lessons.js: Block free users from accessing premium lesson content
+- Frontend LessonPage.jsx: Premium upgrade prompt UI with benefits list
+
+### Bug Found and Fixed:
+- Initially, free users could enroll in premium courses AND see premium content
+- Screenshot: feature-15-bug-free-user-sees-premium-content.png
+
+### Screenshots:
+- feature-15-verified-premium-blocked.png - Upgrade prompt displayed correctly
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #74)
 
 ### Feature #74: Comment text is saved correctly - VERIFIED AND PASSING
@@ -14471,4 +14515,81 @@ All 5 verification steps completed:
 - Commit: c64397a
 
 [Coding] 2026-01-26 Feature #12 'Session expires after 24 hours of inactivity' verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Testing Agent - Feature #122)
+
+### Feature #122: Enrollment status reflects database - VERIFIED PASSING
+
+All 5 verification steps completed:
+
+1. **Check database for user enrollment** - PASS
+   - User ID 1 (Test User) has enrollments in courses 1, 2, 3
+   - API endpoint /api/enrollments returns correct data
+   - Dashboard shows 'Mis Cursos (3)' with enrolled courses
+
+2. **Navigate to course as that user** - PASS
+   - Navigated to Python: Fundamentos (enrolled course)
+   - UI shows 'Continuar Curso' button and 'Cancelar inscripcion'
+   - Module progress displayed: '2/2 completadas (100%)'
+
+3. **Verify enrollment status matches database** - PASS
+   - Enrolled courses show 'Continuar Curso' button
+   - Non-enrolled courses show 'Inscribirse' button
+   - Progress percentages match database values
+
+4. **Enroll or unenroll** - PASS
+   - Enrolled in Machine Learning Basico course
+   - Toast: 'Te has inscrito exitosamente!'
+   - Button changed to 'Continuar Curso'
+   - Unenrolled from course
+   - Toast: 'Te has desinscrito del curso'
+   - Button changed back to 'Inscribirse'
+
+5. **Verify database is updated** - PASS
+   - After enroll: API returned enrollment record with id=6, course_id=4
+   - After unenroll: API returned 'Enrollment not found' (404)
+   - Database correctly reflects UI changes
+
+### Console Errors:
+- 401 on /api/auth/me: Expected before login
+- 404 on /api/enrollments/4: Expected after unenrollment
+
+### Screenshots:
+- feature-122-step3-enrolled-status.png - Course detail showing enrolled state
+- feature-122-step4-newly-enrolled.png - After enrolling in ML course
+- feature-122-step5-unenrolled.png - After unenrolling from ML course
+
+### Implementation Details:
+- Frontend: CourseDetailPage.jsx checks enrollment via checkEnrollmentStatus()
+- Backend: /api/enrollments/:courseId returns enrollment or 404
+- Enroll: POST /api/enrollments creates record
+- Unenroll: DELETE /api/enrollments/:courseId removes record
+- UI updates immediately after API responses
+
+### Current Status:
+- Feature #122 verified - STILL PASSING
+- No regression found
+
+[Testing] 2026-01-26 Feature #122 'Enrollment status reflects database' - VERIFIED PASSING
+
+[Testing] 2026-01-26 Feature #112 'Large file upload rejection' - VERIFIED PASSING
+- Step 1: Attempt to upload large file (>10MB) - PASS
+  - Created 15MB test file and attempted upload
+  - File was immediately rejected on selection
+- Step 2: Verify client-side size check - PASS
+  - FileUpload component validates size in validateFiles()
+  - Rejection happens before any network request
+- Step 3: Verify clear message about size limit - PASS
+  - Error: 'El archivo excede el tamano maximo de 10 MB'
+  - Red alert box with clear explanation displayed
+  - Toast notification also shown
+- Step 4: Verify no partial upload occurs - PASS
+  - No POST request to /api/uploads/single
+  - Network log shows only auth checks, no upload attempts
+- Console errors: Only expected 401 for /api/auth/me (not logged in)
+- Screenshots: feature-112-error-message.png
+- No regression found
 
