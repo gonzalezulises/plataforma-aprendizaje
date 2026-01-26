@@ -124,7 +124,17 @@ function WebinarsPage() {
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    // Handle both ISO timestamps (2026-01-22T07:18:56.255Z) and date-only strings (2026-01-22)
+    // For date-only strings (YYYY-MM-DD), parse as local date to avoid timezone shift
+    let date;
+    if (dateString.includes('T')) {
+      // Full ISO timestamp - convert to local time
+      date = new Date(dateString);
+    } else {
+      // Date-only string (YYYY-MM-DD) - parse as local date components
+      const [year, month, day] = dateString.split('-').map(Number);
+      date = new Date(year, month - 1, day); // month is 0-indexed
+    }
     return date.toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',
@@ -228,9 +238,19 @@ function WebinarsPage() {
     return null;
   };
 
-  // Group webinars by date for calendar view
+  // Group webinars by LOCAL date for calendar view (ensures consistency across timezones)
+  // Using toISOString on a local date to get YYYY-MM-DD format for grouping key
+  const getLocalDateKey = (dateString) => {
+    const date = new Date(dateString);
+    // Get local date components
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const groupedWebinars = webinars.reduce((acc, webinar) => {
-    const date = webinar.scheduled_at.split('T')[0];
+    const date = getLocalDateKey(webinar.scheduled_at);
     if (!acc[date]) {
       acc[date] = [];
     }

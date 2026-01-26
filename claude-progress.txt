@@ -9744,3 +9744,161 @@ All 4 verification steps completed:
 
 [Coding] 2026-01-26 Feature #222 'Date picker respects locale' verified - PASSED
 
+[Testing] 2026-01-26 Feature #42 'Course catalog link works' - VERIFIED PASSING
+- Navigated to home page at http://localhost:5173
+- Clicked 'Cursos' link in main navigation
+- URL correctly changed to /courses
+- Course catalog page displayed with:
+  - 'Catalogo de Cursos' heading
+  - Search box with 'Buscar cursos' placeholder
+  - Filter dropdowns (category, level, price)
+  - Course cards with images, titles, descriptions
+  - Pagination showing 'Página 1 de 3 (13 resultados)'
+- Only expected 401 errors (auth check for logged-out user)
+- Screenshot: feature-42-course-catalog-verified.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #221)
+
+### Feature #221: Due date countdown accurate - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Set due date for tomorrow** - PASS
+   - Created project 'TEST_221_DUE_TOMORROW_VERIFICATION' with due date 2026-01-27T12:00:00
+   - Project ID: 6
+
+2. **View countdown** - PASS
+   - Countdown displayed: '1 dia, 15 horas, 7 minutos'
+   - Shows clock icon with urgency-based coloring (amber for <3 days)
+
+3. **Verify hours/days shown correctly** - PASS
+   - Shows 'martes, 27 de ene de 2026, 12:00' as the due date
+   - Days, hours, and minutes calculated accurately
+   - Existing project (32 days away) shows green color, new project (1 day) shows amber
+
+4. **Wait some time** - PASS
+   - Waited 65 seconds
+
+5. **Verify countdown updates** - PASS
+   - Countdown changed from '7 minutos' to '6 minutos'
+   - Confirms live update mechanism works correctly (updates every minute)
+
+### Implementation Details:
+
+**New files created:**
+- frontend/src/utils/dateUtils.js - Date utility functions
+  - calculateTimeRemaining(): Returns days, hours, minutes, seconds
+  - formatTimeRemaining(): Human-readable countdown string
+  - getUrgencyLevel(): Returns past/urgent/warning/normal
+  - getUrgencyClasses(): CSS classes for each urgency level
+
+- frontend/src/components/DueCountdown.jsx - Three component variants
+  - DueCountdown: Standard with icon
+  - DueCountdownBadge: Compact badge
+  - DueCountdownCard: Full card with title and date
+
+**Files modified:**
+- frontend/src/pages/ProjectSubmissionPage.jsx - Uses DueCountdownCard
+- frontend/src/pages/DashboardPage.jsx - Added pending projects section with badges
+- backend/src/routes/projects.js - Added /my/pending endpoint
+
+**Features:**
+- Live updating countdown (configurable interval, default 60s)
+- Color-coded urgency: green (>3d), amber (<3d), red (<24h), red-dark (past)
+- Proper timezone handling using browser Intl API
+- Spanish language formatting
+
+### Console Errors: Only expected 401 (not logged in)
+
+### Screenshots:
+- feature-221-step1-countdown-display.png - Project with 32 days countdown (green)
+- feature-221-step2-tomorrow-countdown.png - Project with 1 day countdown (amber)
+- feature-221-step5-countdown-updated.png - After waiting, shows 6 minutes (was 7)
+
+### Current Status:
+- Feature #221 marked as PASSING
+- Commit: 82f4644
+
+[Coding] 2026-01-26 Feature #221 'Due date countdown accurate' verified - PASSED
+
+
+[Testing] 2026-01-26 Feature #145 'URL manipulation security' - VERIFIED PASSING
+- Step 1: Navigated to valid lesson /course/python-fundamentos/lesson/6 - loads correctly
+- Step 2: Navigated to /course/python-fundamentos/lesson/999 (non-existent) - shows 404 'Leccion No Encontrada'
+- Step 3: Navigated to /admin as regular user - redirected to /dashboard with message 'Solo los instructores pueden acceder a esta pagina'
+- All URL manipulation attempts properly handled
+- No security bypass possible
+- Screenshots: feature-145-step1-valid-lesson.png, feature-145-step2-nonexistent-lesson-404.png, feature-145-step3-admin-access-denied.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #224)
+
+### Feature #224: Concurrent edits show conflict - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **User A opens edit form** - PASS
+   - Logged in as Test Instructor
+   - Created test course: TEST_224_CONCURRENT_EDIT_CONFLICT (ID: 42)
+   - Opened course edit form in tab 1
+
+2. **User B opens same form** - PASS
+   - Opened second browser tab to same course edit URL
+   - Both tabs show identical form data
+
+3. **User A saves changes** - PASS (User B saved first in our test)
+   - User B modified description: 'MODIFIED BY USER B - This description was changed while User A had the form open'
+   - User B changed category to 'Data Science'
+   - User B clicked 'Guardar Borrador' - successfully saved
+
+4. **User B tries to save** - PASS (User A tried second)
+   - User A modified description with different content
+   - User A clicked 'Guardar Borrador'
+   - Backend returned 409 Conflict response
+
+5. **Verify conflict notification for User B** - PASS (for User A)
+   - Conflict modal appeared with:
+     - Warning icon
+     - 'Conflicto de Edicion' heading
+     - 'Otro usuario modifico este curso mientras lo editabas' message
+     - Current server data: Title, Categoria: Data Science, Nivel: Principiante
+     - Two action buttons: 'Recargar Datos' and 'Sobrescribir'
+   - After reload, form shows User B's saved data correctly
+
+### Implementation Details (Already Implemented):
+
+**Backend (courses.js):**
+- PUT /api/courses/:id accepts 'version' parameter (updated_at timestamp)
+- Compares version with current course.updated_at
+- Returns 409 with conflict details when mismatch detected
+
+**Frontend (CourseCreatorPage.jsx):**
+- Stores courseVersion state from loaded course's updated_at
+- Sends version with PUT requests for optimistic locking
+- Handles 409 response by showing ConflictModal
+- Modal displays current server data and offers two options:
+  - 'Recargar Datos' - reloads course data from server
+  - 'Sobrescribir' - saves with new version to force overwrite
+
+### Console Errors: Only expected WebSocket error (unrelated)
+
+### Screenshots:
+- feature-224-step1-user-a-opens-form.png
+- feature-224-step2-user-b-opens-form.png
+- feature-224-step3-user-b-saves.png
+- feature-224-step5-conflict-notification.png
+- feature-224-step6-data-reloaded.png
+
+### Current Status:
+- Feature #224 marked as PASSING
+- Commit: 2b16349
+
+[Coding] 2026-01-26 Feature #224 'Concurrent edits show conflict' verified - PASSED
+
