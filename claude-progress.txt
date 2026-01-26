@@ -14914,3 +14914,97 @@ All 4 verification steps completed:
 
 [Coding] 2026-01-26 Feature #23 'Users can only see their own submissions' verified - PASSED
 
+[Testing] 2026-01-26 Feature #172 'Form reset clears all fields' - VERIFIED PASSING
+- Step 1: Fill out a form - PASS
+  - Tested WebinarSchedulePage (title, description, course, duration, meet link, capacity)
+  - Tested ProjectSubmissionPage (content, github URL)
+- Step 2: Click reset button - PASS
+  - Both forms have 'Restablecer' button
+  - Toast message 'Formulario restablecido' displayed
+- Step 3: Verify all fields return to defaults - PASS
+  - Text fields cleared
+  - Dropdowns reset to default selections
+  - Numeric fields reset to default values
+- Step 4: Verify no partial data remains - PASS
+  - No partial data in any field
+  - Submit buttons properly disabled after reset
+- Console errors: Only expected 401 before login
+- Screenshots: feature-172-step1-form-filled.png, feature-172-step2-form-reset.png, feature-172-step3-project-form-reset.png
+- No regression found
+
+[Testing] 2026-01-26 Feature #150 'Forum thread direct link works' - REGRESSION TEST PASSED
+- Step 1: Copy a thread URL - PASS (URL format: /forum/thread/:threadId)
+- Step 2: Open in new session - PASS (Direct navigation to /forum/thread/1 and /forum/thread/3)
+- Step 3: Verify thread loads correctly - PASS (Title, content, author, timestamp, status badge)
+- Step 4: Verify replies are visible - PASS (Replies with content, author, votes visible)
+- Additional: Non-existent thread (99999) shows proper 404 error page
+- Console errors: Only expected 401 Unauthorized (not logged in) and WebSocket reconnection
+- Screenshot: feature-150-regression-test.png
+- No regression found - Feature still PASSING
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #24)
+
+### Feature #24: Instructor can view all student submissions for their courses - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as Test Instructor (instructor@test.com, id=2)
+   - Role: instructor_admin
+
+2. **Navigate to a course they own** - PASS
+   - Test Instructor owns courses:
+     - Python: Fundamentos (id=1)
+     - SQL desde Cero (id=3)
+
+3. **Access student submissions section** - PASS
+   - Navigated to /admin/submissions
+   - Submissions review page loaded successfully
+
+4. **Verify all enrolled student submissions are visible** - PASS
+   - Test Instructor sees 3 submissions:
+     - Feature 25 Test Project - Instructor A (ID: 4)
+     - Feature 24 Test - Instructor 1 (ID: 2)
+     - Test Project Feature 23 (ID: 1)
+   - All submissions belong to Python course (owned by Test Instructor)
+
+5. **Verify submissions from other courses are not visible** - PASS
+   - Logged in as Other Instructor (instructor2@test.com, id=3)
+   - Other Instructor owns: Data Science con Python, Machine Learning Basico
+   - Other Instructor only sees 2 submissions:
+     - Feature 25 Test Project - Instructor B (ID: 5)
+     - Feature 24 Test - Instructor 2 (ID: 3)
+   - Does NOT see Test Instructor's 3 submissions
+
+### Implementation Details:
+- Updated /projects/all/submissions to filter by instructor's courses via JOIN
+- Updated /projects/pending/review to filter by instructor's courses
+- Updated /projects/:id/submissions to verify instructor owns the course before returning data
+- Updated /projects/submissions/:submissionId to check course ownership
+- Added test endpoint /api/test/setup-feature24 to create test data with:
+  - Two instructor accounts with different course ownership
+  - Projects assigned to different instructors' courses
+  - Student submissions for each project
+
+### Security Improvement:
+- Before: Any instructor could see ALL submissions across the entire platform
+- After: Instructors can ONLY see submissions from courses they own
+- This properly isolates instructor data access
+
+### Console Errors: None
+
+### Screenshots:
+- feature-24-step1-instructor1-sees-own-submissions.png
+- feature-24-step5-instructor2-sees-only-own-submissions.png
+
+### Current Status:
+- Feature #24 marked as PASSING
+- Progress: 229/248 features passing (92.3%)
+- Commit: 6975224
+
+[Coding] 2026-01-26 Feature #24 'Instructor can view all student submissions for their courses' verified - PASSED
+
