@@ -28,16 +28,16 @@ function isInstructor(req) {
 }
 
 // Middleware to require instructor role
-// NOTE: In development, this is relaxed to allow testing with any authenticated user
+// Feature #19: Students cannot create courses - role check must be enforced
 function requireInstructor(req, res, next) {
   if (!req.session?.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  // In development, allow any authenticated user for testing
-  // In production, uncomment the role check below
-  // if (!isInstructor(req)) {
-  //   return res.status(403).json({ error: 'Instructor role required' });
-  // }
+  // Feature #19: Enforce instructor role check for course management operations
+  if (!isInstructor(req)) {
+    console.log(`[Courses] Blocked non-instructor user ${req.session.user.id} (role: ${req.session.user.role}) from instructor-only operation`);
+    return res.status(403).json({ error: 'Instructor role required' });
+  }
   next();
 }
 
