@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export default function SubmissionViewPage() {
   const { submissionId } = useParams();
@@ -15,7 +15,7 @@ export default function SubmissionViewPage() {
 
   const fetchSubmission = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/projects/submissions/${submissionId}`, {
+      const response = await fetch(`${API_URL}/projects/submissions/${submissionId}`, {
         credentials: 'include',
       });
       if (response.ok) {

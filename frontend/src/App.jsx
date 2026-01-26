@@ -32,6 +32,7 @@ import CareerPathsPage from './pages/CareerPathsPage';
 import ServerErrorPage from './pages/ServerErrorPage';
 import ErrorTestPage from './pages/ErrorTestPage';
 import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
+import SubmissionViewPage from './pages/SubmissionViewPage';
 import FileUploadTestPage from './pages/FileUploadTestPage';
 import VideoTestPage from './pages/VideoTestPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
@@ -561,6 +562,8 @@ function App() {
             <Route path="/admin/review/:submissionId" element={<InstructorFeedbackPage />} />
             <Route path="/feedback/:submissionId" element={<SubmissionFeedbackPage />} />
             <Route path="/project/:projectId/submit" element={<ProjectSubmissionPage />} />
+            <Route path="/project/submit/:projectId" element={<ProjectSubmissionPage />} />
+            <Route path="/project/submission/:submissionId" element={<SubmissionViewPage />} />
             <Route path="/webinars" element={<WebinarsPage />} />
             <Route path="/webinars/schedule" element={<WebinarSchedulePage />} />
             <Route path="/certificates" element={<CertificatesPage />} />
