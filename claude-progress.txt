@@ -1,3 +1,67 @@
+## Session: 2026-01-26 (Coding Agent - Feature #35)
+
+### Feature #35: Upgrade to premium requires payment confirmation - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as free user** - PASS
+   - Logged in as Test User (testuser@example.com)
+   - Role confirmed as student_free
+   - Dashboard shows "Desbloquea todo el contenido" upgrade banner
+
+2. **Click upgrade to premium** - PASS
+   - Clicked "Actualizar a Premium" link
+   - Navigated to /upgrade page
+   - Both plan options displayed (Mensual $9.99, Anual $79.99)
+
+3. **Verify redirect to rizo.ma payment page** - PASS
+   - Backend generates payment URL: `https://rizo.ma/payment?transaction_id=...`
+   - URL includes: amount, currency, callback_url, success_url, cancel_url
+   - Dev mode auto-redirects to simulate-payment endpoint
+   - Backend log: `[Upgrade] Payment URL: https://rizo.ma/payment?...`
+
+4. **Verify role is not changed until payment confirms** - PASS
+   - Code analysis verified:
+     - POST /api/upgrade/initiate creates PENDING subscription (line 177)
+     - POST /api/upgrade/initiate creates PENDING transaction (line 188)
+     - User role ONLY updated in /callback handler (line 312)
+   - Backend logs confirm: payment initiated → callback received → THEN upgrade
+
+5. **Complete payment flow** - PASS
+   - Payment callback received with status "success"
+   - Transaction marked as completed
+   - Subscription activated with expiration date
+
+6. **Verify role is upgraded** - PASS
+   - User now shows "Ya eres Premium" on /upgrade page
+   - Subscription details:
+     - Plan: Plan Anual
+     - Estado: Activo
+     - Vence: 26 de enero de 2027
+   - Backend log: `[Upgrade] User upgraded to premium: 1`
+
+### Backend Payment Flow:
+1. `/api/upgrade/initiate` - Creates pending subscription and transaction
+2. Redirects to payment URL (rizo.ma in production, simulate-payment in dev)
+3. `/api/upgrade/callback` - Receives payment result, updates subscription and user role
+4. `/api/upgrade/verify` - Frontend verifies transaction success
+
+### Console Errors: Only expected 401 (not logged in on initial page load)
+
+### Screenshots:
+- feature-35-step1-logged-in-as-free-user.png
+- feature-35-step2-upgrade-page.png
+- feature-35-step5-upgrade-success.png
+- feature-35-step6-role-upgraded.png
+
+### Current Status:
+- Feature #35 marked as PASSING
+- Commit: 3d79b18
+
+[Coding] 2026-01-26 Feature #35 'Upgrade to premium requires payment confirmation' verified - PASSED
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #30)
 
 ### Feature #30: XSS prevention in user-generated content - VERIFIED AND PASSING
