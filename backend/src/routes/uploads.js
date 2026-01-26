@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getDatabase } from '../config/database.js';
+import { getDatabase, run, queryOne, queryAll, saveDatabase } from '../config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -80,7 +80,7 @@ const requireAuth = (req, res, next) => {
 
 // Initialize uploads table
 export const initUploadsTables = (db) => {
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS uploads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -95,6 +95,9 @@ export const initUploadsTables = (db) => {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // Create index for user uploads
+  db.run(`CREATE INDEX IF NOT EXISTS idx_uploads_user ON uploads(user_id)`);
 };
 
 // Upload single file
@@ -125,18 +128,17 @@ router.post('/single', requireAuth, (req, res, next) => {
     }
 
     try {
-      const db = await getDatabase();
       const user = req.session?.user;
       const { context, context_id } = req.body;
 
       // Get user ID, fallback to 1 for development if not set
       const userId = user?.id || 1;
 
-      // Save upload record to database
-      const result = db.prepare(`
+      // Save upload record to database using sql.js compatible run function
+      const result = run(`
         INSERT INTO uploads (user_id, filename, original_name, mimetype, size, path, context, context_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `, [
         userId,
         req.file.filename,
         req.file.originalname,
@@ -145,7 +147,7 @@ router.post('/single', requireAuth, (req, res, next) => {
         req.file.path,
         context || null,
         context_id || null
-      );
+      ]);
 
       res.status(201).json({
         success: true,
@@ -191,7 +193,6 @@ router.post('/multiple', requireAuth, (req, res, next) => {
     }
 
     try {
-      const db = await getDatabase();
       const user = req.session?.user;
       const { context, context_id } = req.body;
 
@@ -199,13 +200,12 @@ router.post('/multiple', requireAuth, (req, res, next) => {
       const userId = user?.id || 1;
 
       const uploads = [];
-      const insertStmt = db.prepare(`
-        INSERT INTO uploads (user_id, filename, original_name, mimetype, size, path, context, context_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
 
       for (const file of req.files) {
-        const result = insertStmt.run(
+        const result = run(`
+          INSERT INTO uploads (user_id, filename, original_name, mimetype, size, path, context, context_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
           userId,
           file.filename,
           file.originalname,
@@ -214,7 +214,7 @@ router.post('/multiple', requireAuth, (req, res, next) => {
           file.path,
           context || null,
           context_id || null
-        );
+        ]);
 
         uploads.push({
           id: result.lastInsertRowid,
@@ -262,9 +262,8 @@ router.get('/file/:filename', async (req, res) => {
 // Get user's uploads
 router.get('/my-uploads', requireAuth, async (req, res) => {
   try {
-    const db = await getDatabase();
     const user = req.session.user;
-    const { context, context_id, limit = 20, offset = 0 } = req.query;
+    const { context, context_id, limit: limitParam = 20, offset: offsetParam = 0 } = req.query;
 
     let query = `
       SELECT id, filename, original_name, mimetype, size, context, context_id, created_at
@@ -284,9 +283,9 @@ router.get('/my-uploads', requireAuth, async (req, res) => {
     }
 
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
+    params.push(parseInt(limitParam), parseInt(offsetParam));
 
-    const uploads = db.prepare(query).all(...params);
+    const uploads = queryAll(query, params);
 
     const uploadsWithUrls = uploads.map(upload => ({
       ...upload,
@@ -303,14 +302,13 @@ router.get('/my-uploads', requireAuth, async (req, res) => {
 // Delete upload
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const db = await getDatabase();
     const user = req.session.user;
     const { id } = req.params;
 
     // Get upload record
-    const upload = db.prepare(`
+    const upload = queryOne(`
       SELECT * FROM uploads WHERE id = ? AND user_id = ?
-    `).get(id, user.id);
+    `, [id, user.id]);
 
     if (!upload) {
       return res.status(404).json({ error: 'Archivo no encontrado' });
@@ -322,7 +320,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     // Delete database record
-    db.prepare('DELETE FROM uploads WHERE id = ?').run(id);
+    run('DELETE FROM uploads WHERE id = ?', [id]);
 
     res.json({ success: true, message: 'Archivo eliminado' });
   } catch (error) {
