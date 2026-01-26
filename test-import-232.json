@@ -1,0 +1,25 @@
+{
+  "courses": [
+    {
+      "title": "Python: Fundamentos",
+      "slug": "python-fundamentos",
+      "description": "UPDATED DESCRIPTION - This course was imported",
+      "category": "Programacion",
+      "level": "Principiante"
+    },
+    {
+      "title": "TEST_232_NEW_COURSE",
+      "slug": "test-232-new-course",
+      "description": "Brand new course created via import",
+      "category": "Testing",
+      "level": "Intermedio"
+    },
+    {
+      "title": "Data Science con Python",
+      "slug": "data-science-python",
+      "description": "UPDATED - Data Science course",
+      "category": "Data Science",
+      "level": "Intermedio"
+    }
+  ]
+}

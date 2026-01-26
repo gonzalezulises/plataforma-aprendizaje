@@ -198,6 +198,12 @@ function parseCSVLine(line) {
   return result;
 }
 
+// Auto-mount: export a function to self-mount on an app
+export function mountOn(app) {
+  app.use('/api/quizzes/import', router);
+  console.log('[Quiz Import] Routes mounted at /api/quizzes/import');
+}
+
 /**
  * GET /api/quizzes/import/template
  * Download a sample CSV template for quiz import

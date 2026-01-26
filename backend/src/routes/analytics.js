@@ -767,4 +767,250 @@ router.get('/export-all', requireInstructor, (req, res) => {
   }
 });
 
-export default router;// trigger reload 1769394350
+/**
+ * POST /api/analytics/import
+ * Import course data from JSON file with duplicate handling (instructor only)
+ * Body: { data: {...}, duplicateAction: 'skip' | 'overwrite' }
+ */
+router.post('/import', requireInstructor, (req, res) => {
+  try {
+    const { data, duplicateAction = 'skip' } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'No data provided for import' });
+    }
+
+    // Validate duplicate action
+    if (!['skip', 'overwrite'].includes(duplicateAction)) {
+      return res.status(400).json({ error: 'Invalid duplicateAction. Use skip or overwrite.' });
+    }
+
+    const now = new Date().toISOString();
+    const results = {
+      imported: [],
+      skipped: [],
+      overwritten: [],
+      errors: []
+    };
+
+    // Handle different import formats
+    let coursesToImport = [];
+
+    // Check if it's the export-all format (has courses array)
+    if (data.courses && Array.isArray(data.courses)) {
+      coursesToImport = data.courses;
+    }
+    // Check if it's a single course export format
+    else if (data.course) {
+      coursesToImport = [data.course];
+    }
+    // Check if it's a direct array of courses
+    else if (Array.isArray(data)) {
+      coursesToImport = data;
+    }
+    else {
+      return res.status(400).json({
+        error: 'Invalid import format. Expected courses array or course object.',
+        hint: 'Use data exported from /api/analytics/export-all or /api/analytics/export/:courseId'
+      });
+    }
+
+    for (const courseData of coursesToImport) {
+      try {
+        // Validate required fields
+        if (!courseData.title || !courseData.slug) {
+          results.errors.push({
+            item: courseData.title || 'Unknown',
+            error: 'Missing required fields: title and slug are required'
+          });
+          continue;
+        }
+
+        // Check for existing course by slug
+        const existing = queryOne('SELECT * FROM courses WHERE slug = ?', [courseData.slug]);
+
+        if (existing) {
+          if (duplicateAction === 'skip') {
+            results.skipped.push({
+              id: existing.id,
+              title: existing.title,
+              slug: existing.slug,
+              reason: 'Course with this slug already exists'
+            });
+            continue;
+          } else if (duplicateAction === 'overwrite') {
+            // Update existing course
+            run(`
+              UPDATE courses SET
+                title = ?,
+                description = ?,
+                category = ?,
+                level = ?,
+                is_premium = ?,
+                is_published = ?,
+                duration_hours = ?,
+                tags = ?,
+                updated_at = ?
+              WHERE id = ?
+            `, [
+              courseData.title,
+              courseData.description || existing.description,
+              courseData.category || existing.category,
+              courseData.level || existing.level,
+              courseData.is_premium !== undefined ? (courseData.is_premium ? 1 : 0) : existing.is_premium,
+              courseData.is_published !== undefined ? (courseData.is_published ? 1 : 0) : existing.is_published,
+              courseData.duration_hours || existing.duration_hours,
+              JSON.stringify(courseData.tags || []),
+              now,
+              existing.id
+            ]);
+
+            results.overwritten.push({
+              id: existing.id,
+              title: courseData.title,
+              slug: courseData.slug
+            });
+            continue;
+          }
+        }
+
+        // Insert new course
+        const result = run(`
+          INSERT INTO courses (title, slug, description, category, level, is_premium, is_published, duration_hours, tags, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          courseData.title,
+          courseData.slug,
+          courseData.description || '',
+          courseData.category || 'General',
+          courseData.level || 'Principiante',
+          courseData.is_premium ? 1 : 0,
+          courseData.is_published !== undefined ? (courseData.is_published ? 1 : 0) : 1,
+          courseData.duration_hours || 0,
+          JSON.stringify(courseData.tags || []),
+          now,
+          now
+        ]);
+
+        results.imported.push({
+          id: result.lastInsertRowid,
+          title: courseData.title,
+          slug: courseData.slug
+        });
+
+      } catch (itemError) {
+        results.errors.push({
+          item: courseData.title || courseData.slug || 'Unknown',
+          error: itemError.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        total: coursesToImport.length,
+        imported: results.imported.length,
+        skipped: results.skipped.length,
+        overwritten: results.overwritten.length,
+        errors: results.errors.length
+      },
+      details: results,
+      message: `Import complete: ${results.imported.length} new, ${results.skipped.length} skipped, ${results.overwritten.length} overwritten, ${results.errors.length} errors`
+    });
+
+  } catch (error) {
+    console.error('Error importing data:', error);
+    res.status(500).json({ error: 'Failed to import data: ' + error.message });
+  }
+});
+
+/**
+ * POST /api/analytics/import/preview
+ * Preview import to detect duplicates before actually importing
+ */
+router.post('/import/preview', requireInstructor, (req, res) => {
+  try {
+    const { data } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'No data provided for preview' });
+    }
+
+    const preview = {
+      newItems: [],
+      duplicates: [],
+      invalid: []
+    };
+
+    // Handle different import formats
+    let coursesToImport = [];
+
+    if (data.courses && Array.isArray(data.courses)) {
+      coursesToImport = data.courses;
+    } else if (data.course) {
+      coursesToImport = [data.course];
+    } else if (Array.isArray(data)) {
+      coursesToImport = data;
+    } else {
+      return res.status(400).json({
+        error: 'Invalid import format',
+        hint: 'Use data exported from /api/analytics/export-all or /api/analytics/export/:courseId'
+      });
+    }
+
+    for (const courseData of coursesToImport) {
+      if (!courseData.title || !courseData.slug) {
+        preview.invalid.push({
+          item: courseData.title || courseData.slug || 'Unknown',
+          reason: 'Missing required fields (title, slug)'
+        });
+        continue;
+      }
+
+      // Check for existing course
+      const existing = queryOne('SELECT id, title, slug, updated_at FROM courses WHERE slug = ?', [courseData.slug]);
+
+      if (existing) {
+        preview.duplicates.push({
+          importItem: {
+            title: courseData.title,
+            slug: courseData.slug,
+            category: courseData.category,
+            level: courseData.level
+          },
+          existingItem: {
+            id: existing.id,
+            title: existing.title,
+            slug: existing.slug,
+            updatedAt: existing.updated_at
+          }
+        });
+      } else {
+        preview.newItems.push({
+          title: courseData.title,
+          slug: courseData.slug,
+          category: courseData.category,
+          level: courseData.level
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      totalItems: coursesToImport.length,
+      preview,
+      hasDuplicates: preview.duplicates.length > 0,
+      hasInvalid: preview.invalid.length > 0,
+      message: preview.duplicates.length > 0
+        ? `Found ${preview.duplicates.length} duplicate(s). Choose how to handle them before importing.`
+        : `Ready to import ${preview.newItems.length} item(s).`
+    });
+
+  } catch (error) {
+    console.error('Error previewing import:', error);
+    res.status(500).json({ error: 'Failed to preview import: ' + error.message });
+  }
+});
+
+export default router;// trigger reload feature232

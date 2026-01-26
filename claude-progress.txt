@@ -10339,3 +10339,73 @@ All 5 verification steps completed:
 - Step 4: Removed level filter - Web3 course reappeared (individual filter removal works)
 - Screenshots: feature-182-step1-no-results.png, feature-182-step4-filter-removed.png
 - Console: Only expected 401 auth errors (user not logged in)
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #229)
+
+### Feature #229: Export course data as CSV/JSON - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to course analytics** - PASS
+   - Navigated to /admin/analytics (Analytics Dashboard)
+   - Dashboard shows student activity metrics
+
+2. **Click export button** - PASS
+   - Clicked 'Exportar' button in header
+   - Export modal opened with course and format selection
+
+3. **Select format (CSV or JSON)** - PASS
+   - Selected 'Python: Fundamentos' course from dropdown
+   - Tested both CSV and JSON format options
+   - Dropdown shows all available courses
+
+4. **Download file** - PASS
+   - CSV download: export-2026-01-26.csv downloaded successfully
+   - JSON download: export-2026-01-26.json downloaded successfully
+   - Modal closes after successful download
+
+5. **Verify file contains correct data** - PASS
+   - CSV file contains:
+     - Course info section (ID, title, category, level, stats)
+     - Enrollments section (student names, emails, dates, progress)
+     - Lesson progress section (status, time spent, completion)
+   - JSON file contains:
+     - course object with full details
+     - summary with enrollment and completion stats
+     - enrollments array with student data
+     - modules and lessons arrays
+     - lesson_progress with detailed status
+     - quiz_attempts and code_submissions arrays
+
+### Bug Fixed:
+- analytics.js line 456: Changed '"order"' to 'order_index' for modules query
+- analytics.js line 473: Changed 'm."order"' to 'm.order_index' for lessons query
+- The SQL was using wrong column name causing export to fail
+
+### Console Errors: Only pre-existing WebSocket error (unrelated)
+
+### Screenshots:
+- feature-229-step1-analytics-dashboard.png
+- feature-229-step2-export-modal.png
+- feature-229-step3-csv-format-selected.png
+- feature-229-step3-json-format-selected.png
+- feature-229-step5-export-complete.png
+
+### Current Status:
+- Feature #229 marked as PASSING
+- Commit: 1de578e
+
+[Coding] 2026-01-26 Feature #229 'Export course data as CSV/JSON' verified - PASSED
+
+[Testing] 2026-01-26 Feature #130 'Analytics data from database' - VERIFIED PASSING
+- Step 1: Logged in as instructor, viewed analytics dashboard at /admin/analytics
+- Step 2: Network requests show /api/analytics/dashboard API called with 200 OK response
+- Step 3: Code review of analytics.js confirms all data from database queries (users, courses, enrollments, lesson_progress tables)
+- Step 4: No hardcoded data found - all stats computed via SQL COUNT, SUM, AVG functions
+- Step 5: Time ranges implemented via SQLite DATE functions (DATE('now', '-7 days'))
+- Screenshots: feature-130-step1-analytics-dashboard.png, feature-130-step2-analytics-data.png
+- Console: Only pre-existing WebSocket error (unrelated)
+[Testing] 2026-01-26 Feature #132 Webinar list from database - VERIFIED PASSING

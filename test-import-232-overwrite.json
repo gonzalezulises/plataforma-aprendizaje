@@ -1,0 +1,11 @@
+{
+  "courses": [
+    {
+      "title": "Python: Fundamentos",
+      "slug": "python-fundamentos",
+      "description": "OVERWRITTEN DESCRIPTION - Updated via import feature #232",
+      "category": "Programacion Avanzada",
+      "level": "Intermedio"
+    }
+  ]
+}
