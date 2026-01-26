@@ -1,4 +1,4 @@
-// Last reload: 2026-01-25T21:51:30.000Z - Feature #170
+// Last reload: 2026-01-26T01:31:00.000Z - Feature #173 CORS fix
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -102,7 +102,17 @@ app.use(cors({
       'http://localhost:5197',
       'http://localhost:5198',
       'http://localhost:5199',
-      'http://localhost:5200'
+      'http://localhost:5200',
+      'http://localhost:5201',
+      'http://localhost:5202',
+      'http://localhost:5203',
+      'http://localhost:5204',
+      'http://localhost:5205',
+      'http://localhost:5206',
+      'http://localhost:5207',
+      'http://localhost:5208',
+      'http://localhost:5209',
+      'http://localhost:5210'
     ];
 
     if (allowedOrigins.indexOf(origin) !== -1) {

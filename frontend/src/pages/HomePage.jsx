@@ -100,7 +100,7 @@ function HomePage() {
               </a>
               <a
                 href="/login"
-                className="inline-flex items-center justify-center px-8 py-4 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-400 transition-colors border-2 border-primary-400"
+                className="inline-flex items-center justify-center px-8 py-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-500 transition-colors border-2 border-primary-500"
                 data-testid="cta-start-free"
               >
                 Comenzar Gratis

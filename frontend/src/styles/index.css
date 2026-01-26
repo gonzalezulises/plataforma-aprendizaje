@@ -46,11 +46,11 @@
   }
 
   .btn-success {
-    @apply bg-success-500 text-white hover:bg-success-600 focus:ring-success-500;
+    @apply bg-success-700 text-white hover:bg-success-800 focus:ring-success-500;
   }
 
   .btn-danger {
-    @apply bg-error-500 text-white hover:bg-error-600 focus:ring-error-500;
+    @apply bg-error-600 text-white hover:bg-error-700 focus:ring-error-500;
   }
 
   .card {

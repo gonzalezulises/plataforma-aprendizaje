@@ -86,7 +86,7 @@ function NotebookPage() {
             className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
               isCompleted
                 ? 'bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300 cursor-default'
-                : 'bg-success-500 hover:bg-success-600 text-white disabled:bg-gray-400'
+                : 'bg-success-700 hover:bg-success-800 text-white disabled:bg-gray-400'
             }`}
           >
             {isCompleting ? (

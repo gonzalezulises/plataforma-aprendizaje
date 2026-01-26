@@ -237,7 +237,7 @@ function InteractiveNotebook({ notebookId }) {
             <button
               onClick={runAllCells}
               disabled={executingCells.size > 0}
-              className="px-3 py-1.5 bg-success-500 hover:bg-success-600 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-success-700 hover:bg-success-800 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -347,7 +347,7 @@ function NotebookCell({ cell, cellState, isExecuting, onExecute, onClearOutput, 
           <button
             onClick={() => onExecute(editableCode)}
             disabled={isExecuting}
-            className="px-2 py-1 bg-success-500 hover:bg-success-600 disabled:bg-gray-400 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+            className="px-2 py-1 bg-success-700 hover:bg-success-800 disabled:bg-gray-400 text-white text-sm font-medium rounded transition-colors flex items-center gap-1"
           >
             {isExecuting ? (
               <>

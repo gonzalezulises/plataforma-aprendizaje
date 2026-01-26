@@ -1104,7 +1104,7 @@ print(potencia(3, 3))   # 27 (3^3)`
                     <button
                       onClick={() => handleRunCode(currentCode)}
                       disabled={isExecutingCode}
-                      className="px-4 py-2 bg-success-500 hover:bg-success-600 disabled:bg-success-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-success-700 hover:bg-success-800 disabled:bg-success-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       {isExecutingCode ? (
                         <>

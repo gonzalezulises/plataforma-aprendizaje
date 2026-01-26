@@ -1,3 +1,53 @@
+## Session: 2026-01-25 (Coding Agent - Feature #216)
+
+### Feature #216: Form labels associated with inputs - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. Inspect form elements - PASS
+   - Inspected Login, Forum, and Course Creator pages
+
+2. Verify label elements present - PASS
+   - All forms have proper label elements
+
+3. Verify for attribute matches input id - PASS
+   - Forum: thread-title, thread-content use for-attribute
+   - Course Creator: course-title, course-description, course-category,
+     course-level, course-duration use for-attribute
+   - Course Creator checkbox: course-premium uses wrapper-label (valid pattern)
+
+4. Click label - PASS
+   - Clicked labels programmatically via browser evaluation
+
+5. Verify input receives focus - PASS
+   - Forum: inputFocused: true for thread-title
+   - Course Creator: inputFocused: true for course-title
+
+### Implementation Details
+
+**ForumPage.jsx:**
+- Added htmlFor="thread-title" to title label
+- Added id="thread-title" to title input
+- Added htmlFor="thread-content" to content label
+- Added id="thread-content" to content textarea
+- Added aria-hidden="true" to decorative SVGs in error messages
+
+**CourseCreatorPage.jsx:**
+- Added htmlFor/id associations to 15 form fields:
+  - course-title, course-description (main form)
+  - course-category, course-level, course-duration (main form)
+  - module-title, module-description, module-bloom (module modal)
+  - lesson-title, lesson-description, lesson-content-type, lesson-duration (lesson modal)
+  - content-type, content-text (content modal)
+- Checkbox (course-premium) uses wrapper-label pattern (input inside label)
+
+### Current Status
+- Feature #216 marked as PASSING
+- Commit: 812af44
+- Progress: 135/248 features passing (54.4%)
+
+---
+
 ## Session: 2026-01-25 (Coding Agent - Feature #191)
 
 ### Feature #191: Unique value validation - VERIFIED AND PASSING
@@ -9259,3 +9309,194 @@ All 5 verification steps completed:
 - Commit: 5e61bd0
 
 [Coding] 2026-01-26 Feature #213 'Screen reader compatible' verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #155)
+
+### Feature #155: Rapid forum post clicks handled - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Write a forum post** - PASS
+   - Created new thread form with test data
+   - Title: TEST_155_FIXED_2026 - Verifying rapid click prevention is now working
+   - Content included timestamp and test ID
+
+2. **Click post button multiple times rapidly** - PASS
+   - Used Playwright doubleClick to simulate rapid clicking
+   - Button was clicked twice in rapid succession
+
+3. **Verify only one post created** - PASS
+   - Only ONE thread was created (thread/42)
+   - Toast message: Hilo creado exitosamente
+   - Navigated to the new thread successfully
+
+4. **Check forum for duplicates** - PASS
+   - Forum shows only ONE copy of TEST_155_FIXED_2026
+   - Previous regression test showed 5 duplicates (threads 36-40) - proves bug existed
+   - After fix: No duplicates created
+
+### Implementation Details:
+
+The fix was already applied by another agent in useNetworkAwareSubmit.js:
+- Uses synchronous ref (isSubmittingRef) to track submission state
+- Checks ref BEFORE any async operations
+- Sets ref immediately to block subsequent clicks
+- Resets ref on both success and error paths
+- Added console log for debugging blocked submissions
+
+### Console Errors: Only expected 401 (not logged in)
+
+### Screenshots:
+- feature-155-step1-form-filled.png - Form with test data
+- feature-155-step2-thread-created.png - Single thread created
+- feature-155-step3-no-duplicates-fixed.png - Forum showing no duplicates
+
+### Current Status:
+- Feature #155 marked as PASSING
+- Commit: 418a053
+
+[Coding] 2026-01-26 Feature #155 Rapid forum post clicks handled verified - PASSED
+
+
+
+=== Session: Feature #214 - ARIA labels on icons ===
+Date: do., 25 de ene. de 2026 20:22:51
+
+COMPLETED: Feature #214 - ARIA labels on icons
+
+Description: Icon-only buttons have accessible names
+
+Steps Verified:
+1. Find icon-only buttons - PASS
+   - Found icon-only buttons in multiple files:
+     - AICourseStructureModal.jsx (close, edit, delete buttons)
+     - AIQuizGeneratorModal.jsx (close, edit, delete buttons)
+     - VideoPlayer.jsx (close alternative content button)
+     - AdminCoursesPage.jsx (view, delete course buttons)
+     - CourseCreatorPage.jsx (add content, AI quiz, edit, delete lesson buttons)
+     - ThreadDetailPage.jsx (vote button)
+     - WebinarsPage.jsx (list/calendar view toggle buttons)
+
+2. Inspect for aria-label - PASS
+   - Added aria-label attributes to all icon-only buttons
+   - Examples:
+     - aria-label="Cerrar modal" on modal close buttons
+     - aria-label="Editar modulo" on edit buttons
+     - aria-label="Eliminar curso ${course.title}" (dynamic context)
+     - aria-label="Cambiar a vista de lista" with aria-pressed state
+
+3. Verify screen reader announces purpose - PASS
+   - Browser automation accessibility snapshot shows buttons announced correctly:
+     - button "Notificaciones" (navbar bell icon)
+     - button "Menu de usuario" (navbar user menu)
+     - button "Cambiar a vista de lista" [pressed] (webinar view toggle)
+     - button "Eliminar curso TEST_144_NoEnroll_Course" (dynamic context)
+
+4. Verify tooltip on hover for sighted users - PASS
+   - Added title attributes to all icon-only buttons
+   - Tooltips show on hover (verified via screenshots)
+
+Files Modified:
+- frontend/src/components/AICourseStructureModal.jsx
+- frontend/src/components/AIQuizGeneratorModal.jsx
+- frontend/src/components/VideoPlayer.jsx
+- frontend/src/pages/AdminCoursesPage.jsx
+- frontend/src/pages/CourseCreatorPage.jsx
+- frontend/src/pages/ThreadDetailPage.jsx
+- frontend/src/pages/WebinarsPage.jsx
+
+Technical Implementation:
+- Added aria-label for screen reader accessibility
+- Added title for tooltip on hover
+- Added aria-hidden="true" on decorative SVG icons
+- Added aria-pressed for toggle buttons (list/calendar view)
+- Added role="group" with aria-label for button groups
+
+Git Commit: 5d44899 - Add ARIA labels and tooltips to icon-only buttons for accessibility
+
+Feature #214 marked as PASSING
+
+[Testing] 2026-01-25 20:27 Feature #125 'Quiz questions load from database' - VERIFIED PASSING
+- Navigated to /quiz/1
+- Quiz API called: GET /api/quizzes/1 => 200 OK
+- Questions match database (verified Q1, Q2, Q5)
+- Answer options correct
+- No client-side quiz generation (questions fetched from API)
+- No console errors
+- Screenshot: feature-125-quiz-questions.png
+[Testing] 2026-01-26 01:35 Feature #173 'Code editor reset restores original code' - VERIFIED PASSING
+- Navigated to /challenge/1
+- Modified code from starter to 4-line Python program
+- Clicked Resetear button
+- Code correctly restored to original: '# Escribe tu codigo aqui'
+- All modifications were lost as expected
+- No console errors related to reset functionality
+- Screenshots: feature-173-step1-initial-state.png, feature-173-step2-modified-code.png, feature-173-step3-after-reset.png
+[Testing] 2026-01-26 Feature #9 'OAuth callback handles successful login' - VERIFIED PASSING
+- Initiated OAuth login, received state parameter
+- Called callback endpoint with code and state
+- Session created: isAuthenticated=true, user={id:1, email:test@rizo.ma, name:Usuario de Prueba, role:student_free}
+- Frontend auth/callback page showed 'Autenticacion Exitosa'
+- User redirected to /dashboard successfully
+- Dashboard shows user profile: 'Bienvenido de vuelta, Usuario de Prueba'
+- No console errors
+- Screenshot: feature-9-auth-callback-success.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #217)
+
+### Feature #217: Error messages announced - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Submit invalid form** - PASS
+   - Navigated to login page
+   - Clicked "Iniciar sesion con email" to show email form
+   - Entered invalid credentials (invalid@test.com / wrongpassword)
+   - Submitted the form
+
+2. **Verify error appears** - PASS
+   - Error message displayed: "Credenciales incorrectas. Por favor verifica tu correo y contrasena."
+   - Red background with alert icon
+   - Error visible and clear
+
+3. **Check aria-live or role alert** - PASS
+   - Main error div: Added `role="alert"` and `aria-live="assertive"`
+   - Email validation error: Added `role="alert"` and `aria-live="polite"`
+   - SVG icons: Added `aria-hidden="true"` to hide decorative icons from screen readers
+
+4. **Verify screen reader announces error** - PASS
+   - Playwright accessibility snapshot shows `alert [ref=e123]` for both error types
+   - This confirms screen readers will automatically announce errors
+   - Tested both server error (invalid login) and inline validation error (invalid email format)
+
+### Implementation Details:
+
+**Files modified:**
+- frontend/src/pages/LoginPage.jsx
+  - Added `role="alert"` and `aria-live="assertive"` to main error message container
+  - Added `role="alert"` and `aria-live="polite"` to inline email validation error
+  - Added `aria-hidden="true"` to decorative SVG icons
+
+**Technical notes:**
+- `aria-live="assertive"` used for critical errors (login failure) - interrupts screen reader
+- `aria-live="polite"` used for inline validation - waits for pause in speech
+- ServerErrorBanner and NetworkErrorBanner already had these attributes
+
+### Console Errors: Only expected 401 (not logged in)
+
+### Screenshots:
+- feature-217-step1-error-visible.png - Error message visible after invalid login
+- feature-217-step2-error-with-alert-role.png - Error with role="alert" in accessibility tree
+- feature-217-step3-inline-email-error-alert.png - Inline email validation error with alert role
+
+### Current Status:
+- Feature #217 marked as PASSING
+- Commit: efe2357
+
+[Coding] 2026-01-26 Feature #217 'Error messages announced' verified - PASSED
