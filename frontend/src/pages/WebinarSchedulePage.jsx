@@ -4,6 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
+import { MAX_LENGTHS, getCharCountDisplay, getCharCountClasses, exceedsLimit } from '../utils/validationLimits';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -448,9 +449,14 @@ function WebinarSchedulePage() {
 
           {/* Title */}
           <div className="mb-6">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Titulo del Webinar <span className="text-red-500">*</span>
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Titulo del Webinar <span className="text-red-500">*</span>
+              </label>
+              <span className={`text-xs ${getCharCountClasses(formData.title.length, MAX_LENGTHS.WEBINAR_TITLE)}`}>
+                {getCharCountDisplay(formData.title.length, MAX_LENGTHS.WEBINAR_TITLE)}
+              </span>
+            </div>
             <input
               type="text"
               id="title"
@@ -458,9 +464,10 @@ function WebinarSchedulePage() {
               value={formData.title}
               onChange={handleChange}
               required
+              maxLength={MAX_LENGTHS.WEBINAR_TITLE}
               placeholder="Ej: Introduccion a Python para Principiantes"
               className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                fieldErrors.title
+                fieldErrors.title || exceedsLimit(formData.title.length, MAX_LENGTHS.WEBINAR_TITLE)
                   ? 'border-red-500 dark:border-red-500'
                   : 'border-gray-300 dark:border-gray-600'
               }`}
@@ -479,17 +486,27 @@ function WebinarSchedulePage() {
 
           {/* Description */}
           <div className="mb-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Descripcion
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Descripcion
+              </label>
+              <span className={`text-xs ${getCharCountClasses(formData.description.length, MAX_LENGTHS.WEBINAR_DESCRIPTION)}`}>
+                {getCharCountDisplay(formData.description.length, MAX_LENGTHS.WEBINAR_DESCRIPTION)}
+              </span>
+            </div>
             <textarea
               id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows={4}
+              maxLength={MAX_LENGTHS.WEBINAR_DESCRIPTION}
               placeholder="Describe el contenido y objetivos de la sesion..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                exceedsLimit(formData.description.length, MAX_LENGTHS.WEBINAR_DESCRIPTION)
+                  ? 'border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
             />
           </div>
 

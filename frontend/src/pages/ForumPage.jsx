@@ -5,6 +5,7 @@ import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
+import { MAX_LENGTHS, getCharCountDisplay, getCharCountClasses, exceedsLimit } from '../utils/validationLimits';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -405,17 +406,23 @@ function ForumPage() {
 
             <form onSubmit={handleCreateThread}>
               <div className="mb-4">
-                <label htmlFor="thread-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Titulo <span className="text-red-500">*</span>
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label htmlFor="thread-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Titulo <span className="text-red-500">*</span>
+                  </label>
+                  <span className={`text-xs ${getCharCountClasses(newThread.title.length, MAX_LENGTHS.FORUM_TITLE)}`}>
+                    {getCharCountDisplay(newThread.title.length, MAX_LENGTHS.FORUM_TITLE)}
+                  </span>
+                </div>
                 <input
                   type="text"
                   id="thread-title"
                   value={newThread.title}
                   onChange={(e) => handleFieldChange('title', e.target.value)}
                   placeholder="Escribe un titulo descriptivo para tu pregunta..."
+                  maxLength={MAX_LENGTHS.FORUM_TITLE}
                   className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    fieldErrors.title
+                    fieldErrors.title || exceedsLimit(newThread.title.length, MAX_LENGTHS.FORUM_TITLE)
                       ? 'border-red-500 dark:border-red-500'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
@@ -433,17 +440,23 @@ function ForumPage() {
                 )}
               </div>
               <div className="mb-4">
-                <label htmlFor="thread-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Contenido <span className="text-red-500">*</span>
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label htmlFor="thread-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Contenido <span className="text-red-500">*</span>
+                  </label>
+                  <span className={`text-xs ${getCharCountClasses(newThread.content.length, MAX_LENGTHS.FORUM_CONTENT)}`}>
+                    {getCharCountDisplay(newThread.content.length, MAX_LENGTHS.FORUM_CONTENT)}
+                  </span>
+                </div>
                 <textarea
                   id="thread-content"
                   value={newThread.content}
                   onChange={(e) => handleFieldChange('content', e.target.value)}
                   placeholder="Describe tu pregunta con detalle. Incluye codigo si es relevante..."
                   rows={6}
+                  maxLength={MAX_LENGTHS.FORUM_CONTENT}
                   className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono ${
-                    fieldErrors.content
+                    fieldErrors.content || exceedsLimit(newThread.content.length, MAX_LENGTHS.FORUM_CONTENT)
                       ? 'border-red-500 dark:border-red-500'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}

@@ -5,6 +5,7 @@ import { useNetworkAwareSubmit } from '../hooks/useNetworkAwareSubmit';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import useWebSocket from '../hooks/useWebSocket';
 import { useAuth } from '../store/AuthContext';
+import { MAX_LENGTHS, getCharCountDisplay, getCharCountClasses, exceedsLimit } from '../utils/validationLimits';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -498,7 +499,16 @@ function ThreadDetailPage() {
 
           <form onSubmit={handleAddReply}>
             <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <label htmlFor="reply-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Tu respuesta
+                </label>
+                <span className={`text-xs ${getCharCountClasses(newReply.length, MAX_LENGTHS.FORUM_REPLY)}`}>
+                  {getCharCountDisplay(newReply.length, MAX_LENGTHS.FORUM_REPLY)}
+                </span>
+              </div>
               <textarea
+                id="reply-content"
                 value={newReply}
                 onChange={(e) => {
                   setNewReply(e.target.value);
@@ -509,8 +519,9 @@ function ThreadDetailPage() {
                 }}
                 placeholder="Escribe tu respuesta aqui..."
                 rows={5}
+                maxLength={MAX_LENGTHS.FORUM_REPLY}
                 className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  replyError
+                  replyError || exceedsLimit(newReply.length, MAX_LENGTHS.FORUM_REPLY)
                     ? 'border-red-500 dark:border-red-500'
                     : 'border-gray-300 dark:border-gray-600'
                 }`}
