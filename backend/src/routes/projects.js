@@ -3,6 +3,30 @@ import { queryAll, queryOne, run, getDatabase, saveDatabase } from '../config/da
 
 const router = express.Router();
 
+/**
+ * Middleware to check if user is authenticated
+ * Feature #26: API endpoints validate authentication tokens
+ */
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
+/**
+ * Middleware to check if user is an instructor
+ */
+function requireInstructor(req, res, next) {
+  if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.session.user.role !== 'instructor_admin') {
+    return res.status(403).json({ error: 'Instructor access required' });
+  }
+  next();
+}
+
 // Ensure projects tables exist
 function ensureProjectTables() {
   try {
@@ -68,9 +92,9 @@ router.get('/', (req, res) => {
  * Get all submissions for the current user
  * MUST be before /:id routes to avoid matching "my" as an id
  */
-router.get('/my/submissions', (req, res) => {
+router.get('/my/submissions', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
     const submissions = queryAll(
       `SELECT ps.*, p.title as project_title, p.course_id
        FROM project_submissions ps
@@ -90,9 +114,9 @@ router.get('/my/submissions', (req, res) => {
  * Get pending projects for the current user (not yet submitted)
  * MUST be before /:id routes
  */
-router.get('/my/pending', (req, res) => {
+router.get('/my/pending', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
     // Get all projects that the user hasn't submitted yet
     // Only get projects from courses the user is enrolled in
     const pendingProjects = queryAll(
@@ -119,7 +143,7 @@ router.get('/my/pending', (req, res) => {
  * Get all submissions awaiting review (instructor only)
  * MUST be before /:id routes
  */
-router.get('/pending/review', (req, res) => {
+router.get('/pending/review', requireInstructor, (req, res) => {
   try {
     const submissions = queryAll(
       `SELECT ps.*, p.title as project_title, p.course_id
@@ -140,7 +164,7 @@ router.get('/pending/review', (req, res) => {
  * Get all submissions (instructor only - for review page)
  * MUST be before /:id routes
  */
-router.get('/all/submissions', (req, res) => {
+router.get('/all/submissions', requireInstructor, (req, res) => {
   try {
     const { status } = req.query;
     let query = `SELECT ps.*, p.title as project_title, p.course_id
@@ -180,9 +204,9 @@ router.get('/:id', (req, res) => {
 });
 
 /**
- * Create a new project
+ * Create a new project (instructor only)
  */
-router.post('/', (req, res) => {
+router.post('/', requireInstructor, (req, res) => {
   try {
     const { course_id, title, description, requirements, due_date } = req.body;
 
@@ -208,13 +232,13 @@ router.post('/', (req, res) => {
 /**
  * Submit a project
  */
-router.post('/:id/submit', (req, res) => {
+router.post('/:id/submit', requireAuth, (req, res) => {
   try {
     const { content, github_url } = req.body;
     const projectId = req.params.id;
 
-    // Get user from session or use a default for testing
-    const userId = req.session?.user?.id || 'test-user';
+    // Get user from session (authentication required)
+    const userId = req.session.user.id;
 
     if (!content) {
       return res.status(400).json({ error: 'content is required' });

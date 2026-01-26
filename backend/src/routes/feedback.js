@@ -4,6 +4,30 @@ import { sendFeedbackNotificationEmail, isEmailNotificationEnabled } from '../ut
 
 const router = express.Router();
 
+/**
+ * Middleware to check if user is authenticated
+ * Feature #26: API endpoints validate authentication tokens
+ */
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
+/**
+ * Middleware to check if user is an instructor
+ */
+function requireInstructor(req, res, next) {
+  if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.session.user.role !== 'instructor_admin') {
+    return res.status(403).json({ error: 'Instructor access required' });
+  }
+  next();
+}
+
 // Ensure feedback tables exist
 function ensureFeedbackTables() {
   try {
@@ -91,9 +115,9 @@ router.get('/rubrics/:id', (req, res) => {
 });
 
 /**
- * Create a new rubric
+ * Create a new rubric (instructor only)
  */
-router.post('/rubrics', (req, res) => {
+router.post('/rubrics', requireInstructor, (req, res) => {
   try {
     const { course_id, project_id, name, description, criteria } = req.body;
 
@@ -144,13 +168,13 @@ router.get('/submissions/:submissionId/feedback', (req, res) => {
 /**
  * Create feedback for a submission (instructor only)
  */
-router.post('/submissions/:submissionId/feedback', (req, res) => {
+router.post('/submissions/:submissionId/feedback', requireInstructor, (req, res) => {
   try {
     const { type, content, scores, total_score, max_score, comment, video_url } = req.body;
     const submissionId = req.params.submissionId;
 
-    // Get user from session or use a test instructor for development
-    const createdBy = req.session?.user?.id || 'instructor-test';
+    // Get user from session (authentication required)
+    const createdBy = req.session.user.id;
 
     // Verify submission exists
     const submission = queryOne(
@@ -296,9 +320,9 @@ router.post('/submissions/:submissionId/feedback', (req, res) => {
 });
 
 /**
- * Update feedback
+ * Update feedback (instructor only)
  */
-router.put('/feedback/:id', (req, res) => {
+router.put('/feedback/:id', requireInstructor, (req, res) => {
   try {
     const { type, content, scores, total_score, max_score, comment, video_url } = req.body;
     const feedbackId = req.params.id;
