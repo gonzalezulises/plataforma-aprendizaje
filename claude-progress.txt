@@ -11992,3 +11992,54 @@ All 5 verification steps completed:
 - Feature #43 marked as PASSING
 
 [Coding] 2026-01-26 Feature #43 "Dashboard link accessible when logged in" verified - PASSED
+[Testing] 2026-01-26 Feature #95 'Complete forum thread workflow' - VERIFIED PASSING
+- Step 1: Navigate to course forum - PASS (navigated to /course/python-fundamentos/forum)
+- Step 2: Create new thread with question - PASS (created thread 'Como puedo imprimir variables en Python?')
+- Step 3: Wait for or add a reply - PASS (added reply with Python print() explanation)
+- Step 4: Mark reply as helpful (upvote) - PASS (vote count changed from 0 to 1)
+- Step 5: Mark thread as resolved - PASS (clicked 'Marcar como Resuelto')
+- Step 6: Verify thread shows resolved status - PASS (status shows 'Resuelto' with green checkmark)
+- Console errors: Only expected 401/404 errors on secondary endpoints
+- Screenshots: feature-95-forum-workflow-complete.png, feature-95-forum-list-resolved.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #44)
+
+### Feature #44: Profile menu dropdown opens and closes - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as any user** - PASS
+   - Logged in as Test User (testuser@example.com)
+   - Used email login flow
+
+2. **Click on profile icon/menu** - PASS
+   - Clicked on "Menu de usuario" button in navbar
+   - Button shows user initials "TU" and name "Test User"
+
+3. **Verify dropdown menu opens** - PASS
+   - Menu displays user info: Test User, testuser@example.com, Estudiante badge
+   - Menu items: Mi Dashboard, Mi Perfil, Cerrar Sesion
+   - Button has [expanded] attribute when open
+
+4. **Click outside the menu** - PASS
+   - Clicked on main content area (dashboard heading)
+   - Menu properly detects click outside
+
+5. **Verify dropdown closes** - PASS
+   - Menu is no longer visible in DOM snapshot
+   - Button no longer has [expanded] attribute
+   - Page returns to normal state
+
+### Console Errors: Only expected 401 auth errors (from before login)
+
+### Screenshots:
+- feature-44-step3-dropdown-open.png - Dropdown showing user info and menu options
+- feature-44-step5-dropdown-closed.png - Page with dropdown closed
+
+### Current Status:
+- Feature #44 marked as PASSING
+
+[Coding] 2026-01-26 Feature #44 "Profile menu dropdown opens and closes" verified - PASSED
