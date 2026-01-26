@@ -1,0 +1,10 @@
+[Testing] 2026-01-26 Feature #178 'Special characters in search handled' - VERIFIED PASSING
+- Step 1: Search for @#$%^&*() - PASS (No error, properly URL encoded)
+- Step 2: Verify no error or crash - PASS (Search completes successfully)
+- Step 3: Verify no results or escaped search - PASS (Shows 0 curso(s) encontrado(s))
+- Step 4: Try XSS payload - PASS (XSS handled safely)
+- Step 5: Verify no XSS vulnerability - PASS (Script tags rendered as plain text)
+- Additional: SQL injection test - PASS (Treated as literal text)
+- Console errors: Only expected 401 Unauthorized (not logged in)
+- Screenshots: feature-178-step1-special-chars-search.png, feature-178-step4-xss-test.png, feature-178-sql-injection-test.png
+- No regression found
