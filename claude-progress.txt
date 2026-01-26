@@ -9981,3 +9981,125 @@ All 4 verification steps completed:
   - Respects user preferences (email_feedback_received)
 - Screenshot: feature-201-feedback-page-verified.png
 
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #226)
+
+### Feature #226: Pagination during updates stable - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to page 2 of results** - PASS
+   - Navigated to /courses?page=2
+   - Initial state: "Página 2 de 3 (13 resultados)"
+   - Courses visible: TEST_87_Curso de JavaScript Moderno, Python: Fundamentos, Data Science con Python, SQL desde Cero, Machine Learning Basico, R para Estadistica
+
+2. **Add new item** - PASS
+   - Created new course "TEST_226_PAGINATION_STABILITY_COURSE"
+   - Added module "Module 1 - Test Module"
+   - Added lesson "Lesson 1 - Test Lesson"
+   - Published the course successfully
+
+3. **Refresh current page** - PASS
+   - Refreshed page 2 (/courses?page=2)
+   - New state: "Página 2 de 3 (14 resultados)"
+   - Total count correctly increased from 13 to 14
+
+4. **Verify consistent results** - PASS
+   - Page 1: 6 courses (including new course at top)
+   - Page 2: 6 courses (consistent set, shifted by 1)
+   - Page 3: 2 courses (R para Estadistica, Web3 y Solidity)
+   - Total: 14 courses (6+6+2 = 14) ✓
+
+5. **Verify no duplicate or missing items** - PASS
+   - All 14 courses are unique - no duplicates found
+   - Pagination correctly handles the new item being added
+   - The new course appears on page 1 (sorted by creation date)
+   - No items are missing - count and visible items match
+
+### Technical Notes:
+- The pagination system uses offset-based pagination
+- Adding items shifts content naturally without breaking pagination
+- New items appear at the start of the list (most recent first)
+- Total count updates correctly across all pages
+
+### Console Errors: None
+
+### Screenshots:
+- feature-226-step1-page2-before-add.png - Page 2 with 13 results
+- feature-226-step3-page2-after-add.png - Page 2 with 14 results
+- feature-226-step5-page3-verification.png - Page 3 verification
+
+### Current Status:
+- Feature #226 marked as PASSING
+- No code changes required - pagination already implemented correctly
+
+[Coding] 2026-01-26 Feature #226 'Pagination during updates stable' verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #225)
+
+### Feature #225: Viewing deleted record handled - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **User A viewing a resource** - PASS
+   - Created test thread ID 45: 'TEST_225_IMPROVED_ERROR - Testing improved deleted thread handling'
+   - User A viewing thread at /forum/thread/45
+
+2. **User B deletes that resource** - PASS
+   - Deleted thread via API: DELETE /api/forum/thread/45
+   - Response: {success: true, message: 'Thread deleted successfully'}
+
+3. **User A tries to interact** - PASS
+   - User A typed reply text while thread was displayed
+   - User A clicked 'Publicar Respuesta' button
+
+4. **Verify graceful error message** - PASS
+   - Toast notification appeared: 'Este hilo ha sido eliminado por otro usuario'
+   - Clear Spanish message explaining the thread was deleted by another user
+   - 404 page displayed with 'Hilo no encontrado' heading
+   - Explanation: 'El hilo que buscas no existe o fue eliminado.'
+
+5. **Verify redirect to valid page** - PASS
+   - 404 page includes 'Volver a cursos' link
+   - Clicking link redirects to /courses (valid page)
+   - Course catalog loads correctly
+
+### Implementation Details:
+
+**File modified: frontend/src/pages/ThreadDetailPage.jsx**
+
+Added 404 error handling in 3 functions:
+1. `handleAddReply`: Detects 404 when posting reply to deleted thread
+2. `handleVote`: Detects 404 when voting on deleted reply/thread
+3. `handleMarkResolved`: Detects 404 when marking deleted thread as resolved
+
+All handlers:
+- Check for 404 status code
+- Show specific Spanish error message via toast
+- Set thread to null to trigger 404 page display
+
+**Technical notes:**
+- Existing 404 page already displays graceful error for deleted threads
+- Added proactive error handling when user tries to interact with deleted resource
+- Error messages are in Spanish to match app locale
+
+### Console Errors: Only expected 404 (attempting to reply to deleted thread)
+
+### Screenshots:
+- feature-225-step1-viewing-thread.png - User A viewing the thread
+- feature-225-step2-error-on-reply.png - Error toast when replying (before fix)
+- feature-225-step3-graceful-404-error.png - 404 page on refresh
+- feature-225-step4-redirect-to-courses.png - After clicking Volver a cursos
+- feature-225-step5-improved-error-handling.png - Improved 404 handling
+
+### Current Status:
+- Feature #225 marked as PASSING
+- Commit: 21c2e04
+
+[Coding] 2026-01-26 Feature #225 'Viewing deleted record handled' verified - PASSED
+
