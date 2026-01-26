@@ -350,14 +350,42 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
                               {module.lessons.map((lesson, lessonIndex) => (
                                 <div
                                   key={lessonIndex}
-                                  className="flex items-center justify-between text-sm py-1.5 px-3 bg-gray-50 dark:bg-gray-700 rounded"
+                                  className="text-sm py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded space-y-2"
                                 >
-                                  <span className="text-gray-700 dark:text-gray-300">
-                                    {lessonIndex + 1}. {lesson.title}
-                                  </span>
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    {lesson.duration_minutes} min
-                                  </span>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium">
+                                      {lessonIndex + 1}. {lesson.title}
+                                    </span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      {lesson.duration_minutes} min
+                                    </span>
+                                  </div>
+                                  {/* 4C Pedagogical Structure */}
+                                  {lesson.structure_4c && (
+                                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                      <div className="text-xs font-medium text-primary-600 dark:text-primary-400 mb-1">
+                                        Estructura 4C:
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div className="flex items-start gap-1">
+                                          <span className="text-blue-600 dark:text-blue-400">🔗</span>
+                                          <span className="text-gray-600 dark:text-gray-400">Conexiones</span>
+                                        </div>
+                                        <div className="flex items-start gap-1">
+                                          <span className="text-green-600 dark:text-green-400">💡</span>
+                                          <span className="text-gray-600 dark:text-gray-400">Conceptos</span>
+                                        </div>
+                                        <div className="flex items-start gap-1">
+                                          <span className="text-orange-600 dark:text-orange-400">🛠️</span>
+                                          <span className="text-gray-600 dark:text-gray-400">Practica</span>
+                                        </div>
+                                        <div className="flex items-start gap-1">
+                                          <span className="text-purple-600 dark:text-purple-400">🎯</span>
+                                          <span className="text-gray-600 dark:text-gray-400">Conclusion</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

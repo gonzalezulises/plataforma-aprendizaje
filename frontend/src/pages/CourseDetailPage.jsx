@@ -264,6 +264,47 @@ function CourseDetailPage() {
     }
   };
 
+
+  // Feature #246: Fetch module progress when enrolled
+  const fetchModuleProgress = async (courseId) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${API_URL}/courses/${courseId}/module-progress`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Merge progress data into modules
+        setCourse(prevCourse => {
+          if (!prevCourse || !prevCourse.modules) return prevCourse;
+          const updatedModules = prevCourse.modules.map(module => {
+            const progress = data.moduleProgress?.find(p => p.moduleId === module.id);
+            if (progress) {
+              return {
+                ...module,
+                completedLessons: progress.completedLessons,
+                totalLessons: progress.totalLessons,
+                progressPercent: progress.progressPercent
+              };
+            }
+            return module;
+          });
+          return { ...prevCourse, modules: updatedModules };
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching module progress:', error);
+    }
+  };
+
+  // Feature #246: Fetch module progress when enrollment status changes
+  useEffect(() => {
+    if (isEnrolled && course?.id) {
+      fetchModuleProgress(course.id);
+    }
+  }, [isEnrolled, course?.id]);
+
+
   const handleEnrollClick = () => {
     if (!isAuthenticated) {
       toast.error('Debes iniciar sesion para inscribirte');
@@ -632,10 +673,28 @@ function CourseDetailPage() {
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           {moduleIndex + 1}. {module.title}
                         </h3>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {module.lessons?.length || 0} lecciones
+                        <span className="text-sm text-gray-500 dark:text-gray-400" data-testid={`module-${module.id}-progress`}>
+                          {/* Feature #246: Show module progress */}
+                          {module.completedLessons !== undefined ? (
+                            <span className={module.progressPercent === 100 ? 'text-green-600 dark:text-green-400' : ''}>
+                              {module.completedLessons}/{module.totalLessons} completadas
+                              {module.progressPercent > 0 && ` (${module.progressPercent}%)`}
+                            </span>
+                          ) : (
+                            <>{module.lessons?.length || 0} lecciones</>
+                          )}
                         </span>
                       </div>
+                      {/* Feature #246: Progress bar for module */}
+                      {module.completedLessons !== undefined && module.totalLessons > 0 && (
+                        <div className="mt-2 w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div
+                            className="bg-primary-600 h-1.5 rounded-full transition-all duration-300"
+                            style={{ width: `${module.progressPercent}%` }}
+                            data-testid={`module-${module.id}-progress-bar`}
+                          />
+                        </div>
+                      )}
                       {module.description && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{module.description}</p>
                       )}

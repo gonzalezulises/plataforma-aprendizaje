@@ -1,5 +1,6 @@
 import express from 'express';
 import { queryOne, run } from '../config/database.js';
+import { addStructure4CToTemplate } from '../utils/pedagogical4C.js';
 
 const router = express.Router();
 
@@ -15,7 +16,10 @@ router.post('/generate-course-structure', (req, res) => {
       return res.status(400).json({ error: 'Topic is required' });
     }
 
-    const structure = generateCourseStructure(topic, goals, level, targetAudience);
+    let structure = generateCourseStructure(topic, goals, level, targetAudience);
+
+    // Add 4C pedagogical structure to all lessons
+    structure = addStructure4CToTemplate(structure, topic);
 
     res.json({
       success: true,
@@ -65,10 +69,10 @@ router.post('/apply-course-structure/:courseId', (req, res) => {
       if (module.lessons && Array.isArray(module.lessons)) {
         module.lessons.forEach((lesson, lessonIndex) => {
           const lessonResult = run(`
-            INSERT INTO lessons (module_id, title, description, content_type, duration_minutes, order_index, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `, [moduleId, lesson.title, lesson.description || '', lesson.content_type || 'text', lesson.duration_minutes || 15, lessonIndex, now, now]);
-          createdLessons.push({ id: lessonResult.lastInsertRowid, title: lesson.title, duration_minutes: lesson.duration_minutes });
+            INSERT INTO lessons (module_id, title, description, content_type, duration_minutes, order_index, structure_4c, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [moduleId, lesson.title, lesson.description || '', lesson.content_type || 'text', lesson.duration_minutes || 15, lessonIndex, lesson.structure_4c ? JSON.stringify(lesson.structure_4c) : '{}', now, now]);
+          createdLessons.push({ id: lessonResult.lastInsertRowid, title: lesson.title, duration_minutes: lesson.duration_minutes, structure_4c: lesson.structure_4c });
         });
       }
 
