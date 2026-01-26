@@ -10760,3 +10760,123 @@ All 5 verification steps completed:
 - Additional test: Also verified from login page - logo correctly navigates to home
 - Console: Only expected 401 auth errors (not logged in), no feature-related errors
 - Screenshots: feature-41-step1-on-courses-page.png, feature-41-step2-navigated-to-home.png, feature-41-step3-logo-from-login.png
+[Testing] 2026-01-26 Feature #155 'Rapid forum post clicks handled' - VERIFIED PASSING
+- Step 1: Wrote forum post (filled title and content)
+- Step 2: Clicked submit button 5 times rapidly via JavaScript evaluation
+- Step 3: Console logged 4x 'Blocked duplicate submission - already submitting'
+- Step 4: Only 1 thread created (thread/4), no duplicates
+- Step 5: Forum shows 4 unique threads, API confirms count=4
+- Implementation: useNetworkAwareSubmit hook with synchronous ref tracking
+- Console errors: None
+- Screenshot: feature-155-no-duplicates.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #236)
+
+### Feature #236: Course list with 100 courses performs well - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Populate database with 100 courses** - PASS
+   - Created script create-100-courses-complete.cjs
+   - Script creates courses via API with modules and lessons (required for publishing)
+   - Created 93 new courses to reach 100 total
+   - Each course has a module and lesson so it can be published
+
+2. **Navigate to catalog** - PASS
+   - Page loads showing "Página 1 de 17 (100 resultados)"
+   - 6 course cards displayed per page
+   - 17 pages total (100 courses / 6 per page)
+   - Pagination working correctly
+
+3. **Verify page loads quickly** - PASS
+   - Page loaded immediately without noticeable delay
+   - API request completed successfully in logs
+   - No loading spinners or delays visible
+   - All course cards rendered smoothly
+
+4. **Verify scrolling is smooth** - PASS
+   - Scroll to bottom of page (End key) - smooth
+   - Scroll back to top (Home key) - smooth
+   - No jank or stuttering during scroll
+   - Course cards render without flickering
+
+5. **Verify filtering is responsive** - PASS
+   - Filter by level "Avanzado": instantly showed 39 results
+   - Reset filters: instantly back to 100 results
+   - Search for "Docker": instantly showed 9 results
+   - All filters respond immediately with no delay
+
+### Technical Notes:
+- API has a max limit of 50 courses per page (enforced server-side)
+- Pagination uses 6 courses per page for display
+- Categories distributed across: Programacion, Data Science, Web Dev, ML, DevOps, Seguridad, Cloud, Mobile, Blockchain, Testing
+- Levels distributed across: Principiante, Intermedio, Avanzado
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-236-step2-catalog-100-courses.png - Full catalog with 100 courses
+- feature-236-step4-scrolled-bottom.png - Pagination at bottom
+- feature-236-step5-filtering-responsive.png - Filter by Avanzado (39 results)
+- feature-236-step5-search-responsive.png - Search for Docker (9 results)
+
+### Current Status:
+- Feature #236 marked as PASSING
+- Commit: 190afa5
+
+[Coding] 2026-01-26 Feature #236 'Course list with 100 courses performs well' verified - PASSED
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #238)
+
+### Feature #238: Search results return quickly - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Enter search query** - PASS
+   - Tested simple query: "Python" - 9 results returned
+   - Tested complex query: "Vue.js" + Avanzado filter - 5 results returned
+   - Tested multi-word query: "Docker Kubernetes rendimiento" - 0 results (correct)
+
+2. **Measure time to results** - PASS
+   - API response times measured via curl -w time_total:
+   - Query 1 (JavaScript + Intermedio): 3.2ms
+   - Query 2 (TensorFlow Machine Learning): 2.5ms
+   - Query 3 (rendimiento + Cloud Computing + Avanzado): 2.9ms
+
+3. **Verify results in under 2 seconds** - PASS
+   - All queries return in under 5 milliseconds
+   - Well under the 2-second requirement (>400x faster)
+   - UI updates instantly with no perceptible lag
+
+4. **Test with complex query** - PASS
+   - Multi-word searches: 2.5-3.5ms
+   - Search + multiple filters: 3-4ms
+   - Quoted phrase search: 3.2ms
+   - All scenarios well under 2 seconds
+
+### Technical Details:
+- Search implemented in backend/src/routes/courses.js
+- Uses SQLite LIKE queries with proper parameterization
+- Supports: simple text, multi-word, quoted phrases, filters
+- parseSearchQuery utility handles quoted phrase extraction
+- Pagination integrated (100 courses in database, 6 per page)
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-238-step1-search-python.png - Python search showing 9 results
+- feature-238-step2-complex-search.png - Vue.js + Avanzado filter showing 5 results
+
+### Current Status:
+- Feature #238 marked as PASSING
+- Commit: 1f5c562
+
+[Coding] 2026-01-26 Feature #238 'Search results return quickly' verified - PASSED
+
