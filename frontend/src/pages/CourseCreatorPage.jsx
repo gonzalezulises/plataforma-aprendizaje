@@ -846,12 +846,17 @@ export default function CourseCreatorPage() {
                                 key={lesson.id}
                                 className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg"
                               >
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm text-gray-400">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <span className="text-sm text-gray-400 flex-shrink-0">
                                     {index + 1}.{lessonIndex + 1}
                                   </span>
-                                  <div>
-                                    <p className="font-medium text-gray-900 dark:text-white">{lesson.title}</p>
+                                  <div className="min-w-0">
+                                    <p
+                                      className="font-medium text-gray-900 dark:text-white truncate"
+                                      title={lesson.title}
+                                    >
+                                      {lesson.title}
+                                    </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
                                       {lesson.content_type} &bull; {lesson.duration_minutes} min
                                     </p>

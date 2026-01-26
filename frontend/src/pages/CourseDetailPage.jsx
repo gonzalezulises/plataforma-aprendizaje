@@ -617,11 +617,16 @@ function CourseDetailPage() {
                       {module.lessons?.map((lesson) => (
                         <li key={lesson.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                           <div className="flex items-center gap-3">
-                            <span className="text-lg">{getContentTypeIcon(lesson.type)}</span>
-                            <div className="flex-grow">
-                              <span className="text-gray-900 dark:text-white">{lesson.title}</span>
+                            <span className="text-lg flex-shrink-0">{getContentTypeIcon(lesson.type)}</span>
+                            <div className="flex-grow min-w-0">
+                              <span
+                                className="text-gray-900 dark:text-white block truncate"
+                                title={lesson.title}
+                              >
+                                {lesson.title}
+                              </span>
                             </div>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{lesson.duration}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{lesson.duration}</span>
                           </div>
                         </li>
                       ))}

@@ -64,7 +64,10 @@ function CareerPathCard({ path, onStart }) {
       </div>
 
       <div className="p-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <h3
+          className="text-xl font-bold text-gray-900 dark:text-white mb-2 line-clamp-2"
+          title={path.name}
+        >
           {path.name}
         </h3>
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">

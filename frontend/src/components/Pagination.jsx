@@ -30,7 +30,7 @@ export default function Pagination({
   }
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-8" data-testid="pagination">
+    <div className="flex flex-wrap items-center justify-center gap-2 mt-8" data-testid="pagination">
       {/* Previous button */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
@@ -101,8 +101,8 @@ export default function Pagination({
         Siguiente →
       </button>
 
-      {/* Page info */}
-      <span className="ml-4 text-sm text-gray-500 dark:text-gray-400" data-testid="pagination-info">
+      {/* Page info - hidden on mobile to prevent overflow */}
+      <span className="hidden sm:inline ml-4 text-sm text-gray-500 dark:text-gray-400" data-testid="pagination-info">
         Página {currentPage} de {totalPages} ({total} resultados)
       </span>
     </div>

@@ -376,7 +376,10 @@ function WebinarsPage() {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                      <h3
+                        className="text-xl font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2"
+                        title={webinar.title}
+                      >
                         {webinar.title}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
@@ -435,7 +438,10 @@ function WebinarsPage() {
                         <div className="flex items-center gap-2 mb-2">
                           {getStatusBadge(webinar)}
                         </div>
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                        <h4
+                          className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1"
+                          title={webinar.title}
+                        >
                           {webinar.title}
                         </h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
