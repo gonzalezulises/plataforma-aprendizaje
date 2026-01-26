@@ -12675,3 +12675,12 @@ All 5 verification steps completed:
 - Commit: 44e71ad
 
 [Coding] 2026-01-26 Feature #56 "Post-logout redirect goes to home" verified - PASSED
+[Testing] 2026-01-26 Feature #151 'Double-click submit creates only one submission' - VERIFIED PASSING
+- Step 1: Navigate to form - PASS (navigated to course forum, clicked 'Nueva Pregunta')
+- Step 2: Fill out form - PASS (filled title: 'Test Double Click Protection' and content)
+- Step 3: Double-click submit button rapidly - PASS (used dblclick on 'Publicar Pregunta')
+- Step 4: Verify only one submission created - PASS (only one thread created, not duplicates)
+- Step 5: Check database for duplicates - PASS (forum shows 2 threads total, network shows 1 POST request)
+- Implementation: useNetworkAwareSubmit hook with synchronous ref tracking prevents rapid double-clicks
+- Console errors: Only WebSocket reconnection (unrelated)
+- Screenshots: feature-151-forum-single-thread.png
