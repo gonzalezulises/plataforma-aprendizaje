@@ -145,18 +145,50 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware
+// Session middleware with 24-hour inactivity timeout
+// Feature #12: Session expires after 24 hours of inactivity
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Reset session expiry on each request (implements inactivity timeout)
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: SESSION_TIMEOUT, // 24 hours of inactivity
     sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
   }
 }));
+
+// Session inactivity check middleware
+// Validates that the session hasn't expired due to inactivity
+app.use((req, res, next) => {
+  if (req.session && req.session.isAuthenticated) {
+    const now = Date.now();
+    const lastActivity = req.session.lastActivity || now;
+
+    // Check if session has been inactive for more than 24 hours
+    if (now - lastActivity > SESSION_TIMEOUT) {
+      console.log('[Session] Session expired due to inactivity after', Math.round((now - lastActivity) / 1000 / 60 / 60), 'hours');
+
+      // Clear session data but regenerate session to avoid middleware issues
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('[Session] Error regenerating expired session:', err);
+        }
+        // Session is now clean/unauthenticated
+        next();
+      });
+      return; // Don't call next() twice
+    }
+
+    // Update last activity timestamp
+    req.session.lastActivity = now;
+  }
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -204,6 +236,38 @@ if (process.env.NODE_ENV !== 'production') {
         timestamp: new Date().toISOString()
       });
     }, delayMs);
+  });
+
+  // Feature #12: Test endpoint for simulating session inactivity timeout
+  // This sets the lastActivity timestamp to simulate 24+ hours of inactivity
+  app.post('/api/test/simulate-session-inactivity', (req, res) => {
+    if (!req.session || !req.session.isAuthenticated) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Simulate 25 hours of inactivity (more than 24 hour timeout)
+    const hoursOfInactivity = req.body.hours || 25;
+    const inactivityMs = hoursOfInactivity * 60 * 60 * 1000;
+    req.session.lastActivity = Date.now() - inactivityMs;
+
+    console.log(`[Session Test] Simulated ${hoursOfInactivity} hours of inactivity for session`);
+    res.json({
+      success: true,
+      message: `Session lastActivity set to ${hoursOfInactivity} hours ago`,
+      lastActivity: req.session.lastActivity,
+      sessionTimeoutMs: SESSION_TIMEOUT
+    });
+  });
+
+  // Feature #12: Get session info for testing
+  app.get('/api/test/session-info', (req, res) => {
+    res.json({
+      isAuthenticated: req.session?.isAuthenticated || false,
+      lastActivity: req.session?.lastActivity || null,
+      lastActivityAgo: req.session?.lastActivity ? Date.now() - req.session.lastActivity : null,
+      sessionTimeoutMs: SESSION_TIMEOUT,
+      user: req.session?.user || null
+    });
   });
 }
 
@@ -454,3 +518,5 @@ export default app;
 // Feature #229 export reload: 1769394381
 // Fix order column: 1769394687
 // Feature #26 auth fix: 2026-01-26T01:29:22-05:00
+// Feature #12 session inactivity timeout: 2026-01-26T10:21:30
+// Feature #12 fix session regenerate: 2026-01-26T10:24:00

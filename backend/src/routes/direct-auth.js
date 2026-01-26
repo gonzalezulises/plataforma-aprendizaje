@@ -152,6 +152,7 @@ router.post('/login', loginRateLimiter, (req, res) => {
       role: user.role,
     };
     req.session.isAuthenticated = true;
+    req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
 
     // Feature #33: Clear rate limit on successful login
     recordSuccessfulLogin(req);

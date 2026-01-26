@@ -113,6 +113,7 @@ router.get('/callback', async (req, res) => {
     };
 
     req.session.isAuthenticated = true;
+    req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
 
     // Clear OAuth state
     delete req.session.oauthState;
@@ -204,6 +205,7 @@ router.post('/dev-login', (req, res) => {
   };
 
   req.session.isAuthenticated = true;
+  req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
 
   console.log('[Auth] Dev login successful, user:', req.session.user);
 
