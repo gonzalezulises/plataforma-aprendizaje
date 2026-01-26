@@ -13834,3 +13834,78 @@ All 6 verification steps completed:
 - Console errors: None
 - Screenshots: feature-191-*.png (3 files)
 - No regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #76)
+
+### Feature #76: Notification preferences are saved - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as user** - PASS
+   - Logged in as Usuario de Prueba via OAuth
+   - Redirected to /profile page
+
+2. **Navigate to notification settings** - PASS
+   - Profile page (/profile) contains "Preferencias de Notificacion" section
+   - All 6 email notification toggles visible:
+     - Nuevos cursos disponibles
+     - Confirmacion de inscripcion
+     - Retroalimentacion recibida
+     - Recordatorios de webinars
+     - Reporte semanal de progreso
+     - Respuestas en el foro
+
+3. **Toggle email preferences** - PASS
+   - Turned ON: "Nuevos cursos disponibles" (was OFF)
+   - Turned OFF: "Reporte semanal de progreso" (was ON)
+   - Toast showed "Preferencias actualizadas" after each toggle
+
+4. **Save settings** - PASS
+   - Settings auto-save on toggle (no separate save button needed)
+   - API PUT /api/notifications/preferences called successfully
+
+5. **Refresh the page** - PASS
+   - Hard refresh (navigate to same URL)
+   - Session expired, re-logged in via OAuth
+   - Page reloaded completely
+
+6. **Verify settings match what was saved** - PASS
+   - "Nuevos cursos disponibles" - still ON (persisted)
+   - "Reporte semanal de progreso" - still OFF (persisted)
+   - API verification confirms:
+     ```json
+     {
+       "email_new_course": true,
+       "email_enrollment_confirmed": true,
+       "email_feedback_received": true,
+       "email_webinar_reminder": true,
+       "email_weekly_progress": false,
+       "email_forum_replies": true
+     }
+     ```
+
+### Implementation Details:
+- Backend: GET/PUT /api/notifications/preferences endpoints in notifications.js
+- Frontend: ProfilePage.jsx with toggle switches and optimistic updates
+- Storage: users.preferences JSON column in database
+- Auto-save on toggle with toast notifications
+
+### Console Errors:
+- Only 401 errors before login (expected for unauthenticated state)
+- No JavaScript errors during feature use
+
+### Screenshots:
+- feature-76-step2-notification-settings.png - Profile page with notification section
+- feature-76-step3-before-toggle.png - Before toggling preferences
+- feature-76-step4-after-toggle.png - After toggling preferences
+- feature-76-final-notification-preferences-persisted.png - Settings persisted after refresh
+
+### Current Status:
+- Feature #76 marked as PASSING
+- Progress: 211/248 features passing (85.1%)
+- Commit: e8ca5eb
+
+[Coding] 2026-01-26 Feature #76 "Notification preferences are saved" verified - PASSED
