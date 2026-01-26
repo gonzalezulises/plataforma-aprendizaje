@@ -14208,3 +14208,64 @@ All 6 verification steps completed:
 - Console errors: Only expected 401s for unauthenticated user
 - Screenshots: feature-178-step1-special-chars-search.png, feature-178-step4-xss-test.png, feature-178-sql-injection-test.png
 - No regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #10)
+
+### Feature #10: User can logout - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as a user** - PASS
+   - Logged in as Usuario de Prueba via OAuth (rizo.ma)
+   - Role: student_free
+
+2. **Click on profile menu** - PASS
+   - Clicked user avatar button in navbar
+   - Dropdown menu opened showing:
+     - Name: Usuario de Prueba
+     - Email: test@rizo.ma
+     - Role: Estudiante
+
+3. **Click logout option** - PASS
+   - Clicked 'Cerrar Sesion' button in user menu
+   - Button has red styling to indicate destructive action
+
+4. **Verify session is destroyed** - PASS
+   - API call to /api/auth/me returns: {"error":"No autenticado","isAuthenticated":false}
+   - Session cookie cleared
+
+5. **Verify user is redirected to home page** - PASS
+   - URL changed from /dashboard to / (home page)
+   - Navbar shows 'Iniciar Sesion' link instead of user menu
+
+6. **Verify protected routes are no longer accessible** - PASS
+   - Navigating to /dashboard redirects to /login
+   - Navigating to /profile redirects to /login
+   - Protected routes properly block unauthenticated access
+
+### Console Errors:
+- Only expected 401 Unauthorized responses from /api/auth/me (expected for logged out state)
+- No JavaScript errors
+
+### Screenshots:
+- feature-10-logout-protected-route-redirect.png - Login page after trying to access protected route
+
+### Implementation Details:
+- Backend: POST /api/auth/logout endpoint in backend/src/routes/auth.js
+  - Destroys session with req.session.destroy()
+  - Clears connect.sid cookie
+  - Returns success message
+- Frontend: logout() function in AuthContext.jsx
+  - Calls backend logout endpoint
+  - Clears user state and isAuthenticated flag
+- Navbar: handleLogout() navigates to home before calling logout
+  - Prevents race condition with protected route redirects
+
+### Current Status:
+- Feature #10 marked as PASSING
+- Commit: 4e2af2e
+
+[Coding] 2026-01-26 Feature #10 'User can logout' verified - PASSED
