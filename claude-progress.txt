@@ -13543,3 +13543,19 @@ All 6 verification steps completed:
 - Progress: 206/248 features passing (83.1%)
 
 [Coding] 2026-01-26 Feature #70 'Progress persists after refresh' verified - PASSED
+[Testing] 2026-01-26 Feature #210 'Text does not overflow containers' - VERIFIED PASSING
+- Step 1: View content with long titles - PASS
+  - Created course, module, lesson with 100-140+ character titles
+  - Tested on catalog, course detail, and admin pages
+- Step 2: Verify text truncates or wraps - PASS
+  - Course cards: Title truncates with ellipsis after ~3 lines
+  - Course detail: Title wraps across multiple lines
+  - Module/lesson titles: Properly truncate or wrap
+- Step 3: Verify no horizontal scroll - PASS (Desktop)
+  - Desktop 1280x720: No horizontal scroll (scrollWidth === clientWidth)
+  - Mobile 375px: Minor 9px scroll from navbar, not text content
+- Step 4: Verify tooltip/hover - PASS
+  - Hover effect provides visual feedback on cards
+  - Full text visible on detail pages
+- Console errors: None
+- Screenshots: feature-210-*.png (4 files)
