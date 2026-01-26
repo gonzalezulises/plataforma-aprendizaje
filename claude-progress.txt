@@ -11016,3 +11016,12 @@ All 4 verification steps completed:
 - Feature #239 marked as PASSING
 
 [Coding] 2026-01-26 Feature #239 'Video playback starts promptly' verified - PASSED
+[Testing] 2026-01-26 Feature #132 'Webinar list from database' - VERIFIED PASSING
+- Step 1: API /api/webinars returns 3 webinars from database (1 completed, 2 scheduled)
+- Step 2: Navigated to /webinars page - displays webinar list correctly
+- Step 3: All 3 webinars match database records (titles, descriptions, durations, statuses)
+- Step 4: Dates and times correctly converted and displayed (Jan 22, 27, 30 at 21:47)
+- Bonus: Calendar view works, filter buttons (Todos/Proximos/Finalizados) work correctly
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshots: feature-132-webinar-list.png, feature-132-webinar-calendar.png, feature-132-webinar-filtered.png
+
