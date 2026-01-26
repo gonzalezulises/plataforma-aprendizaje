@@ -12684,3 +12684,54 @@ All 5 verification steps completed:
 - Implementation: useNetworkAwareSubmit hook with synchronous ref tracking prevents rapid double-clicks
 - Console errors: Only WebSocket reconnection (unrelated)
 - Screenshots: feature-151-forum-single-thread.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #55)
+
+### Feature #55: Post-login redirect returns to intended page - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **While logged out, navigate to /dashboard** - PASS
+   - Clicked Dashboard link while logged out
+   - Redirected to /login page
+   - Return URL `/dashboard` stored in sessionStorage
+
+2. **Complete login flow** - PASS
+   - Used email/password direct login
+   - Credentials: instructor@test.com / password123
+
+3. **Verify redirect to /dashboard (not home)** - PASS
+   - After successful login, URL is http://localhost:5173/dashboard
+   - Dashboard page displayed with "Mi Dashboard" heading
+   - sessionStorage cleared after redirect
+
+4. **Repeat with deep link to course** - PASS
+   - Navigated to /course/python-fundamentos while logged out
+   - Clicked "Inscribirse Gratis" button
+   - Redirected to /login with return URL stored
+   - After login, redirected back to /course/python-fundamentos
+   - Course page displayed with "Python: Fundamentos" and enrollment options
+
+### Implementation Details:
+- Updated LoginPage.jsx to read return URL from BOTH sources:
+  - URL search params: `searchParams.get('returnUrl')`
+  - React Router location state: `location.state?.from`
+- Added `loginInitiated` state flag to prevent race condition:
+  - Problem: The useEffect for `isAuthenticated` was firing after `refreshAuth()` and clearing sessionStorage before login handler could read it
+  - Solution: Set `loginInitiated = true` when login starts, useEffect skips redirect if `loginInitiated` is true
+- All three login handlers updated: handleDirectLogin, handleDevLogin, handleLoginWithRizoMa
+
+### Console Errors: 
+- Only expected 401 errors from /api/auth/me when not logged in
+
+### Screenshots:
+- feature-55-deep-link-redirect-success.png - Course page after deep link redirect
+
+### Current Status:
+- Feature #55 marked as PASSING
+- Commit: dfcaaff
+
+[Coding] 2026-01-26 Feature #55 "Post-login redirect returns to intended page" verified - PASSED
