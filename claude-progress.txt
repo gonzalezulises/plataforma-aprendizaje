@@ -12349,3 +12349,51 @@ All 6 verification steps completed:
 - Commit: 874212e
 
 [Coding] 2026-01-26 Feature #49 "Clicking module in sidebar expands lessons" verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #50)
+
+### Feature #50: Clicking lesson in sidebar navigates to that lesson - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to course player** - PASS
+   - Navigated to http://localhost:5173/course/python-fundamentos/lesson/1
+   - Sidebar visible with 3 modules and their lessons
+   - Module 1 expanded showing lessons 1, 2, 3
+
+2. **Click on a different lesson in sidebar** - PASS
+   - Clicked on "Instalacion de Python" (lesson 2) in the sidebar
+   - Also tested clicking "Tu primer programa" (lesson 3)
+
+3. **Verify navigation to that lesson** - PASS
+   - URL changed from /lesson/1 to /lesson/2 correctly
+   - URL changes correctly for all sidebar lesson clicks
+
+4. **Verify content loads correctly** - PASS
+   - Title updated to "Leccion 2: Practica"
+   - Description updated to "Segunda leccion del modulo"
+   - Duration changed from 10 min to 15 min
+   - Breadcrumbs updated to show "Leccion 2: Practica"
+   - Navigation buttons updated (both "Anterior" and "Siguiente" visible)
+
+5. **Verify sidebar updates highlighting** - PASS
+   - Current lesson shows blue filled circle indicator
+   - Previous lesson shows empty circle
+   - Highlighting updates correctly with each navigation
+
+### Console Errors: Only expected 404s for optional API endpoints (gracefully handled)
+
+### Screenshots:
+- feature-50-step1-lesson1-sidebar.png - Initial state on lesson 1
+- feature-50-step2-lesson2-navigated.png - After clicking lesson 2 in sidebar
+- feature-50-step3-lesson3-navigation.png - Sidebar highlighting lesson 3
+- feature-50-final-sidebar-navigation.png - Final verification
+
+### Current Status:
+- Feature #50 marked as PASSING
+- Progress: 185/248 features passing (74.6%)
+
+[Coding] 2026-01-26 Feature #50 "Clicking lesson in sidebar navigates to that lesson" verified - PASSED
