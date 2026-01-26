@@ -53,6 +53,25 @@ function LoginPage() {
     }
   }, [isAuthenticated, loginInitiated, navigate]);
 
+  // Feature #33: Rate limit countdown timer
+  useEffect(() => {
+    if (rateLimitInfo && rateLimitInfo.remainingSeconds > 0) {
+      const timer = setInterval(() => {
+        setRateLimitInfo(prev => {
+          if (!prev || prev.remainingSeconds <= 1) {
+            clearInterval(timer);
+            return null; // Clear rate limit info when countdown reaches 0
+          }
+          return {
+            ...prev,
+            remainingSeconds: prev.remainingSeconds - 1
+          };
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [rateLimitInfo?.remainingSeconds > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Check for OAuth callback params and location state (Feature #55)
   useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -166,8 +185,16 @@ function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Display error message from server
-        setError(data.error || 'Error al iniciar sesion');
+        // Feature #33: Handle rate limiting error with countdown
+        if (response.status === 429 && data.rateLimited) {
+          setRateLimitInfo({
+            remainingSeconds: data.retryAfter || 60,
+            message: data.error
+          });
+        } else {
+          // Display error message from server
+          setError(data.error || 'Error al iniciar sesion');
+        }
         setIsLoading(false);
         return;
       }
@@ -224,8 +251,29 @@ function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+          {/* Feature #33: Rate Limit Warning Message */}
+          {rateLimitInfo && (
+            <div
+              className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-start gap-3"
+              role="alert"
+              aria-live="assertive"
+            >
+              <svg className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                  Demasiados intentos de inicio de sesion
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-300 mt-1">
+                  Por favor espera <span className="font-bold">{rateLimitInfo.remainingSeconds}</span> segundos antes de intentar nuevamente.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Error Message - Screen reader accessible */}
-          {error && (
+          {error && !rateLimitInfo && (
             <div
               className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3"
               role="alert"
@@ -369,7 +417,7 @@ function LoginPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading || emailError}
+                  disabled={isLoading || emailError || rateLimitInfo}
                   className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   {isLoading ? (
