@@ -309,7 +309,7 @@ function ForumPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
-        <nav className="mb-6">
+        <nav className="mb-6" aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <li><Link to="/courses" className="hover:text-primary-600">Cursos</Link></li>
             <li><span className="mx-2">/</span></li>
@@ -332,9 +332,10 @@ function ForumPage() {
 
           <button
             onClick={() => setShowNewThread(true)}
+            aria-label="Crear nueva pregunta en el foro"
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Nueva Pregunta
@@ -342,10 +343,11 @@ function ForumPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
+        <div className="flex flex-wrap gap-4 mb-6" role="group" aria-label="Filtros del foro">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
+            aria-label="Filtrar por estado"
             className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="all">Todos los hilos</option>
@@ -356,6 +358,7 @@ function ForumPage() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
+            aria-label="Ordenar por"
             className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="newest">Mas recientes</option>
