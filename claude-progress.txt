@@ -1,3 +1,53 @@
+## Session: 2026-01-26 (Coding Agent - Features #17-21)
+
+### Features #17-21: Security & Access Control - ALL VERIFIED AND PASSING
+
+**Progress: 226/248 features passing (91.1%)**
+
+---
+
+### Feature #18: Students cannot access analytics dashboard - VERIFIED AND PASSING
+
+1. **Log in as a student** - PASS (testuser@example.com, student_free)
+2. **Navigate directly to /admin/analytics** - PASS
+3. **Verify access is denied** - PASS (redirected to /dashboard)
+4. **Verify no analytics data is exposed** - PASS
+
+---
+
+### Feature #19: Students cannot create courses - VERIFIED AND PASSING (BUG FIXED)
+
+**BUG FOUND**: The `requireInstructor` middleware had role check commented out!
+
+1. **Log in as a student** - PASS
+2. **Navigate to /admin/courses/new** - PASS (UI blocked with toast)
+3. **Verify access is denied** - PASS
+4. **Attempt to POST /api/courses** - PASS (403 Forbidden after fix)
+5. **Verify API rejects with 403** - PASS
+
+**Fix Applied**: Enabled role check in `requireInstructor` middleware (backend/src/routes/courses.js)
+
+---
+
+### Feature #20: Students cannot edit courses - VERIFIED AND PASSING
+
+1. **Log in as a student** - PASS
+2. **Navigate to /admin/courses/1/edit** - PASS (redirected to dashboard)
+3. **Verify access is denied** - PASS
+4. **Attempt to PUT /api/courses/:id** - PASS (403 Forbidden)
+5. **Verify API rejects with 403** - PASS
+
+---
+
+### Feature #21: Students cannot delete courses - VERIFIED AND PASSING
+
+1. **Log in as a student** - PASS
+2. **Attempt to DELETE /api/courses/:id** - PASS (403 Forbidden)
+3. **Verify API rejects with 403** - PASS
+4. **Verify course still exists** - PASS
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #17)
 
 ### Feature #17: Students cannot access instructor admin panel - VERIFIED AND PASSING
