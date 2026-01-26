@@ -97,7 +97,12 @@ app.use(cors({
       'http://localhost:5192',
       'http://localhost:5193',
       'http://localhost:5194',
-      'http://localhost:5195'
+      'http://localhost:5195',
+      'http://localhost:5196',
+      'http://localhost:5197',
+      'http://localhost:5198',
+      'http://localhost:5199',
+      'http://localhost:5200'
     ];
 
     if (allowedOrigins.indexOf(origin) !== -1) {

@@ -420,7 +420,9 @@ print(potencia(3, 3))   # 27 (3^3)`
     setCodeOutput('>>> Ejecutando codigo...');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/execute`, {
+      // Use challenges endpoint for code execution (Feature #126)
+      // This provides real backend execution instead of mocked results
+      const response = await fetch(`${API_BASE_URL}/challenges/1/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
