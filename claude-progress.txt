@@ -12974,3 +12974,113 @@ All 5 verification steps completed:
 - Console errors: None
 - Screenshots: feature-123-dashboard-25-percent.png, feature-123-module-progress-detail.png
 
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #62)
+
+### Feature #62: Search results navigation works - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Use the search bar to search for a course** - PASS
+   - Navigated to /courses page
+   - Typed 'Python' in search textbox
+   - Clicked 'Buscar' button
+   - URL changed to /courses?search=Python
+
+2. **Verify search results appear** - PASS
+   - Results message: 'Resultados para: "Python" - 2 curso(s) encontrado(s)'
+   - Two matching courses displayed:
+     - Python: Fundamentos (Principiante, 20 horas)
+     - Data Science con Python (Intermedio, Premium, 35 horas)
+
+3. **Click on a search result** - PASS
+   - Clicked on 'Python: Fundamentos' course card
+   - Navigation triggered successfully
+
+4. **Verify navigation to course detail page** - PASS
+   - URL changed to /course/python-fundamentos
+   - Course detail page displayed with full information:
+     - Title: Python: Fundamentos
+     - Description, level badge, category
+     - Instructor: Carlos Rodriguez
+     - Duration: 20 horas
+     - Rating: 4.8 (324 resenas)
+     - 'Inscribirse Gratis' button
+     - Course content modules
+
+### Additional Testing:
+- Also tested clicking second search result 'Data Science con Python'
+- Navigated correctly to /course/data-science-python
+- Course detail page displayed properly with Premium badge
+
+### Console Errors: Only expected 401s for /api/auth/me (user not logged in)
+
+### Screenshots:
+- feature-62-step2-search-results.png - Search results showing 2 Python courses
+- feature-62-step4-course-detail.png - Python: Fundamentos course detail page
+
+### Current Status:
+- Feature #62 marked as PASSING
+- Progress: 198/248 features passing (79.8%)
+- Commit: 5b43db5
+
+[Coding] 2026-01-26 Feature #62 'Search results navigation works' verified - PASSED
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #61)
+
+### Feature #61: Category filter in catalog updates URL - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Navigate to course catalog** - PASS
+   - Navigated to http://localhost:5173/courses
+   - All 6 courses displayed initially
+
+2. **Click on a category filter** - PASS
+   - Selected "Programacion" from category dropdown
+   - Filter applied immediately
+
+3. **Verify URL updates with filter parameter** - PASS
+   - URL changed from /courses to /courses?category=Programacion
+   - Fixed race condition where URL wasn't updating due to separate setSearchParams calls
+
+4. **Verify filtered results are shown** - PASS
+   - Only "Python: Fundamentos" course displayed (the only Programacion course)
+   - Other categories filtered out
+
+5. **Copy URL and open in new tab** - PASS
+   - Opened http://localhost:5173/courses?category=Programacion in new tab
+   - Page loaded successfully
+
+6. **Verify same filter is applied** - PASS
+   - Category dropdown shows "Programacion" selected
+   - Only Python course displayed
+   - URL is shareable and preserves filter state
+
+### Bug Fix Applied:
+- Issue: URL wasn't updating when category filter changed
+- Root Cause: Race condition between two setSearchParams calls
+  - handleCategoryChange called updateURLParams({ category: value })
+  - Then resetPaginationOnFilterChange called updateURLParams({ page: '' })
+  - The second call was overwriting the first due to React batching
+- Solution: Combined both updates into single call: updateURLParams({ category: value, page: '' })
+- Same fix applied to handleLevelChange, handlePriceChange, handleSearchSubmit, handleClearSearch
+
+### Console Errors: Only expected 401s for /api/auth/me (user not logged in)
+
+### Screenshots:
+- feature-61-step2-category-filter-url.png - Catalog filtered by Programacion
+- feature-61-step5-shareable-url.png - Same filter applied in new tab
+
+### Current Status:
+- Feature #61 marked as PASSING
+- Progress: 198/248 features passing (79.8%)
+
+[Coding] 2026-01-26 Feature #61 "Category filter in catalog updates URL" verified - PASSED
