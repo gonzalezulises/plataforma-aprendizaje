@@ -12624,3 +12624,54 @@ All 7 verification steps completed:
 - Step 4: Verify estimate seems reasonable - PASS (20h for beginner, 35h for intermediate)
 - Console errors: Only expected 401 (user not logged in)
 - Screenshots: feature-245-python-duration.png, feature-245-data-science-duration.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #56)
+
+### Feature #56: Post-logout redirect goes to home - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as any user** - PASS
+   - Logged in as instructor@test.com via email login form
+   - Redirected to /dashboard after successful login
+
+2. **Navigate to any protected page** - PASS
+   - Already on /dashboard (protected page requiring authentication)
+   - User menu showing "Test Instructor" with profile options
+
+3. **Click logout** - PASS
+   - Opened user menu dropdown
+   - Clicked "Cerrar Sesion" button
+
+4. **Verify redirect to home page** - PASS
+   - URL changed to http://localhost:5173/ (home page)
+   - "Aprende Haciendo" hero section displayed
+   - Navigation shows "Iniciar Sesion" link (user logged out)
+
+5. **Verify no error messages** - PASS
+   - Only expected 401 Unauthorized errors (user not authenticated after logout)
+   - No JavaScript errors or unexpected behavior
+
+### Bug Fix Applied:
+- Issue: After logout from /dashboard, user was redirected to /login instead of /
+- Root Cause: Race condition - DashboardPage useEffect detected !isAuthenticated and redirected to /login before Navbar navigate could complete
+- Solution: Modified handleLogout in Navbar.jsx to navigate to home FIRST, then call logout
+- Code Change: navigate('/', { replace: true }); await logout();
+
+### Console Errors: Only expected 401s (user not logged in after logout)
+
+### Screenshots:
+- feature-56-step1-logged-in-dashboard.png - Dashboard while logged in
+- feature-56-step2-user-menu-open.png - User menu with Cerrar Sesion option
+- feature-56-step3-redirected-to-login.png - BEFORE fix (wrong redirect)
+- feature-56-step4-redirected-to-home.png - AFTER fix (correct redirect to home)
+
+### Current Status:
+- Feature #56 marked as PASSING
+- Progress: 191/248 features passing (77.0%)
+- Commit: 44e71ad
+
+[Coding] 2026-01-26 Feature #56 "Post-logout redirect goes to home" verified - PASSED
