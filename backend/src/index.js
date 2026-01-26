@@ -32,6 +32,7 @@ import aiCourseStructureRoutes from './routes/ai-course-structure.js';
 import uploadsRoutes, { initUploadsTables } from './routes/uploads.js';
 import usersRoutes from './routes/users.js';
 import instructorsRoutes from './routes/instructors.js';
+import lessonCommentsRoutes, { initLessonCommentsTables } from './routes/lesson-comments.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -58,6 +59,8 @@ initDatabase().then(db => {
   initCareerPathsTables(db);
   // Initialize uploads tables
   initUploadsTables(db);
+  // Initialize lesson comments tables
+  initLessonCommentsTables(db);
 }).catch(err => {
   console.error('Failed to initialize database:', err);
   process.exit(1);
@@ -228,6 +231,7 @@ app.use('/api/ai', aiCourseStructureRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/instructors', instructorsRoutes);
+app.use('/api/lesson-comments', lessonCommentsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {

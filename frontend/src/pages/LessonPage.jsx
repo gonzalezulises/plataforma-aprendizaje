@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import CodeBlock from '../components/CodeBlock';
 import VideoPlayer from '../components/VideoPlayer';
 import CourseSidebar from '../components/CourseSidebar';
+import LessonComments from '../components/LessonComments';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -1308,6 +1309,9 @@ print(potencia(3, 3))   # 27 (3^3)`
             </div>
           </div>
         )}
+
+        {/* Lesson Comments - Feature #74 */}
+        <LessonComments lessonId={currentLessonId} />
 
         {/* Navigation buttons */}
         <div className="mt-12 flex justify-between items-center">

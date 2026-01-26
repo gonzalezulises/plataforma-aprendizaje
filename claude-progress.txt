@@ -13824,3 +13824,13 @@ All 6 verification steps completed:
 - Commit: 478ec2d
 
 [Coding] 2026-01-26 Feature #75 'Profile updates are saved' verified - PASSED
+[Testing] 2026-01-26 Feature #191 'Unique value validation' - VERIFIED PASSING
+- Step 1: Enter existing course slug - PASS (entered 'Python: Fundamentos')
+- Step 2: Submit form - PASS (clicked Guardar Borrador)
+- Step 3: Verify uniqueness error - PASS (409 Conflict with message: 'El titulo genera un URL que ya esta en uso')
+- Step 4: Enter new unique value - PASS (entered 'Unique Test Course For Feature 191')
+- Step 5: Verify acceptance - PASS (course created successfully, redirected to edit page)
+- Cleanup: Test course deleted
+- Console errors: None
+- Screenshots: feature-191-*.png (3 files)
+- No regression found
