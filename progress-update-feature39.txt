@@ -1,0 +1,83 @@
+## Session: 2026-01-26 (Coding Agent - Feature #39)
+
+### Feature #39: API returns appropriate error codes for authorization failures - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Make request without token (expect 401)** - PASS
+   - GET /api/analytics/dashboard: 401 "Authentication required"
+   - GET /api/analytics/my-progress: 401 "Authentication required"
+   - GET /api/notifications: 401 "Authentication required" (FIXED - was returning 200)
+   - GET /api/auth/me: 401 "No autenticado"
+
+2. **Make request with valid token but insufficient role (expect 403)** - PASS
+   - Logged in as student_free user
+   - GET /api/analytics/dashboard: 403 "Instructor access required"
+   - GET /api/analytics/student/1: 403 "Instructor access required"
+   - GET /api/analytics/export/1: 403 "Instructor access required"
+
+3. **Verify error messages are appropriate** - PASS
+   - 401 messages clearly indicate authentication is needed
+   - 403 messages clearly indicate permission/role requirements
+   - Messages are helpful but not overly specific
+
+4. **Verify no sensitive info in error responses** - PASS
+   - No passwords, secrets, tokens in responses
+   - No stack traces or file paths exposed
+   - No session or internal implementation details
+   - 500 errors return generic message without sensitive data
+
+### Bug Fixed:
+- **notifications.js**: All routes were using `req.session?.user?.id || 'test-user'` fallback
+  - This caused routes to return 200 for unauthenticated requests
+  - Added `requireAuth` middleware to all notification endpoints
+  - Changed fallback pattern to require explicit authentication
+
+### Implementation Details:
+
+**Backend Changes (backend/src/routes/notifications.js):**
+- Added requireAuth middleware function (returns 401 if not authenticated)
+- Applied requireAuth to: GET /, GET /unread/count, PUT /:id/read, PUT /read-all, POST /create, DELETE /:id
+- Removed 'test-user' fallback pattern - users must be authenticated
+
+**Error Code Usage Patterns Verified:**
+| Scenario | Expected | Actual | Status |
+|----------|----------|--------|--------|
+| No auth token | 401 | 401 | ✓ |
+| Invalid/expired token | 401 | 401 | ✓ |
+| Auth'd but wrong role | 403 | 403 | ✓ |
+| Auth'd and authorized | 200 | 200 | ✓ |
+
+### Test Results:
+```
+=== SUMMARY ===
+Passed: 12/12
+  PASS: Unauthenticated Analytics dashboard (expected: 401, actual: 401)
+  PASS: Unauthenticated My progress (expected: 401, actual: 401)
+  PASS: Unauthenticated Notifications (expected: 401, actual: 401)
+  PASS: Unauthenticated Current user (expected: 401, actual: 401)
+  PASS: Student Analytics dashboard (expected: 403, actual: 403)
+  PASS: Student View other student analytics (expected: 403, actual: 403)
+  PASS: Student Export course data (expected: 403, actual: 403)
+  PASS: 401 message is appropriate
+  PASS: 403 message is appropriate
+  PASS: 401 response has no sensitive info
+  PASS: 403 response has no sensitive info
+  PASS: 500 response has no sensitive info
+
+Overall: ALL TESTS PASSED
+```
+
+### Console Errors: None (only expected auth failures)
+
+### Screenshots:
+- feature-39-step1-student-dashboard.png - Logged in as student
+- feature-39-step2-403-forbidden-verified.png - 403 for instructor endpoint
+- feature-39-step3-401-unauthenticated-verified.png - 401 after logout
+
+### Current Status:
+- Feature #39 marked as PASSING
+- Progress: 239/248 features passing (96.4%)
+- Commit: 8bfdea3
+
+[Coding] 2026-01-26 Feature #39 'API returns appropriate error codes for authorization failures' verified - PASSED
