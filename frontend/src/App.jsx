@@ -40,6 +40,7 @@ import ProfilePage from './pages/ProfilePage';
 import CourseCatalogPage from './pages/CourseCatalogPage';
 import RaceConditionTestPage from './pages/RaceConditionTestPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
+import ConfirmDeletionPage from './pages/ConfirmDeletionPage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -581,6 +582,7 @@ function App() {
             <Route path="/test-race-condition" element={<RaceConditionTestPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/:tab" element={<ProfilePage />} />
+            <Route path="/confirm-deletion/:token" element={<ConfirmDeletionPage />} />
             <Route path="/instructor/:id" element={<InstructorProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

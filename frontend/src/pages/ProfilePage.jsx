@@ -55,6 +55,11 @@ function ProfilePage() {
   const [badges, setBadges] = useState([]);
   const [badgesLoading, setBadgesLoading] = useState(false);
 
+  // Feature #28: Account deletion state
+  const [deletionStatus, setDeletionStatus] = useState({ hasPendingRequest: false });
+  const [isDeletionLoading, setIsDeletionLoading] = useState(false);
+  const [showDeletionConfirm, setShowDeletionConfirm] = useState(false);
+
   // Feature #230: Export progress function
   const handleExportProgress = async () => {
     setIsExporting(true);
@@ -290,6 +295,83 @@ function ProfilePage() {
       fetchBadges();
     }
   }, [isAuthenticated, activeTab, navigate]);
+
+  // Feature #28: Fetch deletion request status
+  useEffect(() => {
+    async function fetchDeletionStatus() {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await fetch(`${API_URL}/users/me/deletion-status`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setDeletionStatus(data);
+        }
+      } catch (err) {
+        console.error('Error fetching deletion status:', err);
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchDeletionStatus();
+    }
+  }, [isAuthenticated]);
+
+  // Feature #28: Request account deletion
+  const handleRequestDeletion = async () => {
+    setIsDeletionLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me/request-deletion`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al solicitar eliminacion');
+      }
+
+      toast.success(data.message || 'Se ha enviado un correo de confirmacion');
+      setDeletionStatus({ hasPendingRequest: true, requestedAt: new Date().toISOString() });
+      setShowDeletionConfirm(false);
+    } catch (err) {
+      console.error('Error requesting deletion:', err);
+      toast.error(err.message || 'Error al solicitar eliminacion de cuenta');
+    } finally {
+      setIsDeletionLoading(false);
+    }
+  };
+
+  // Feature #28: Cancel pending deletion request
+  const handleCancelDeletion = async () => {
+    setIsDeletionLoading(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me/cancel-deletion`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al cancelar eliminacion');
+      }
+
+      toast.success(data.message || 'Solicitud de eliminacion cancelada');
+      setDeletionStatus({ hasPendingRequest: false });
+    } catch (err) {
+      console.error('Error canceling deletion:', err);
+      toast.error(err.message || 'Error al cancelar la solicitud');
+    } finally {
+      setIsDeletionLoading(false);
+    }
+  };
 
   // Initialize default preferences
   const initializeDefaults = async () => {
@@ -628,6 +710,110 @@ function ProfilePage() {
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-600 border-t-transparent mr-2"></div>
             Guardando...
           </div>
+        )}
+      </div>
+
+      {/* Feature #28: Account Deletion Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mt-6 border border-red-200 dark:border-red-900">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Eliminar Cuenta
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Eliminar tu cuenta es permanente e irreversible. Todos tus datos seran borrados.
+          </p>
+        </div>
+
+        {deletionStatus.hasPendingRequest ? (
+          // Show pending deletion request status
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h3 className="font-medium text-yellow-800 dark:text-yellow-200">
+                  Solicitud de eliminacion pendiente
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  Se ha enviado un correo de confirmacion a tu email. Haz clic en el enlace del correo para confirmar la eliminacion.
+                </p>
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                  El enlace expira en 24 horas. Revisa tu carpeta de spam si no lo encuentras.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleCancelDeletion}
+              disabled={isDeletionLoading}
+              className={`mt-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isDeletionLoading
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+              }`}
+            >
+              {isDeletionLoading ? 'Cancelando...' : 'Cancelar solicitud'}
+            </button>
+          </div>
+        ) : showDeletionConfirm ? (
+          // Show confirmation dialog
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+            <h3 className="font-medium text-red-800 dark:text-red-200 mb-2">
+              ¿Estas seguro que deseas eliminar tu cuenta?
+            </h3>
+            <ul className="text-sm text-red-700 dark:text-red-300 mb-4 space-y-1">
+              <li>• Se eliminaran todos tus cursos inscritos</li>
+              <li>• Se borraran tus envios y calificaciones</li>
+              <li>• Se eliminaran tus certificados e insignias</li>
+              <li>• Esta accion no se puede deshacer</li>
+            </ul>
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              Se enviara un correo de confirmacion a tu email. Debes hacer clic en el enlace para completar la eliminacion.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleRequestDeletion}
+                disabled={isDeletionLoading}
+                className={`px-4 py-2 rounded-lg text-white font-medium transition-colors ${
+                  isDeletionLoading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {isDeletionLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Enviando...
+                  </span>
+                ) : (
+                  'Si, enviar correo de confirmacion'
+                )}
+              </button>
+              <button
+                onClick={() => setShowDeletionConfirm(false)}
+                className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          // Show initial deletion button
+          <button
+            onClick={() => setShowDeletionConfirm(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Solicitar eliminacion de cuenta
+          </button>
         )}
       </div>
     </>

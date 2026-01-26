@@ -344,6 +344,24 @@ function createTables() {
   // Create indexes for notifications
   db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, is_read)`);
+
+  // Feature #28: Account deletion requests table - requires email confirmation
+  db.run(`
+    CREATE TABLE IF NOT EXISTS account_deletion_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      token TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL,
+      requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      confirmed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for account deletion requests
+  db.run(`CREATE INDEX IF NOT EXISTS idx_deletion_requests_user ON account_deletion_requests(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_deletion_requests_token ON account_deletion_requests(token)`);
 }
 
 /**

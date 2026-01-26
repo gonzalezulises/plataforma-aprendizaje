@@ -1,10 +1,43 @@
 import express from 'express';
+import crypto from 'crypto';
 import { queryOne, queryAll, run } from '../config/database.js';
 // Feature #162: User deletion cascade
 // Feature #230: Export student progress report - Reloaded 2026-01-26T02:23
 // Feature #75: Profile updates are saved
+// Feature #28: Account deletion requires email confirmation
 
 const router = express.Router();
+
+// Helper function to generate a secure random token
+function generateDeletionToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Helper function to send confirmation email (logs to console in dev mode)
+function sendDeletionConfirmationEmail(email, token, userName) {
+  const confirmUrl = `http://localhost:5173/confirm-deletion/${token}`;
+
+  console.log('\n========================================');
+  console.log('   ACCOUNT DELETION CONFIRMATION EMAIL');
+  console.log('========================================');
+  console.log(`To: ${email}`);
+  console.log(`Subject: Confirma la eliminacion de tu cuenta`);
+  console.log('');
+  console.log(`Hola ${userName},`);
+  console.log('');
+  console.log('Has solicitado eliminar tu cuenta en cursos.rizo.ma.');
+  console.log('Si no solicitaste esto, ignora este correo.');
+  console.log('');
+  console.log('Para confirmar la eliminacion de tu cuenta, haz clic en el siguiente enlace:');
+  console.log(`  ${confirmUrl}`);
+  console.log('');
+  console.log('Este enlace expira en 24 horas.');
+  console.log('');
+  console.log('ADVERTENCIA: Esta accion es irreversible. Todos tus datos seran eliminados.');
+  console.log('========================================\n');
+
+  return { success: true, confirmUrl };
+}
 
 /**
  * GET /api/users/me
@@ -415,9 +448,314 @@ router.get('/:id', (req, res) => {
 });
 
 /**
+ * POST /api/users/me/request-deletion
+ * Request account deletion - sends confirmation email
+ * Feature #28: Account deletion requires email confirmation
+ */
+router.post('/me/request-deletion', (req, res) => {
+  const currentUser = req.session?.user;
+
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const userId = currentUser.id;
+    const user = queryOne('SELECT id, email, name FROM users WHERE id = ?', [userId]);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    // Check for existing pending request
+    const existingRequest = queryOne(
+      'SELECT id, expires_at FROM account_deletion_requests WHERE user_id = ? AND confirmed_at IS NULL',
+      [userId]
+    );
+
+    const now = new Date();
+
+    if (existingRequest) {
+      const expiresAt = new Date(existingRequest.expires_at);
+      if (expiresAt > now) {
+        // Still valid, resend the email
+        const token = queryOne('SELECT token FROM account_deletion_requests WHERE id = ?', [existingRequest.id]).token;
+        sendDeletionConfirmationEmail(user.email, token, user.name);
+        return res.json({
+          success: true,
+          message: 'Se ha reenviado el correo de confirmacion a tu email',
+          emailSent: true
+        });
+      } else {
+        // Expired, delete and create new
+        run('DELETE FROM account_deletion_requests WHERE id = ?', [existingRequest.id]);
+      }
+    }
+
+    // Generate new token and set expiration to 24 hours
+    const token = generateDeletionToken();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Insert deletion request
+    run(
+      'INSERT INTO account_deletion_requests (user_id, token, email, requested_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+      [userId, token, user.email, now.toISOString(), expiresAt]
+    );
+
+    // Send confirmation email (logs to console in dev mode)
+    sendDeletionConfirmationEmail(user.email, token, user.name);
+
+    console.log('[Users] Account deletion requested for user', userId, '- confirmation email sent');
+
+    res.json({
+      success: true,
+      message: 'Se ha enviado un correo de confirmacion a tu email',
+      emailSent: true
+    });
+  } catch (err) {
+    console.error('[Users] Request deletion error:', err);
+    res.status(500).json({ success: false, error: 'Error al solicitar la eliminacion de la cuenta' });
+  }
+});
+
+/**
+ * GET /api/users/confirm-deletion/:token
+ * Verify a deletion token is valid (used by frontend to show confirmation page)
+ * Feature #28: Account deletion requires email confirmation
+ */
+router.get('/confirm-deletion/:token', (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const request = queryOne(
+      'SELECT adr.*, u.name, u.email FROM account_deletion_requests adr JOIN users u ON adr.user_id = u.id WHERE adr.token = ?',
+      [token]
+    );
+
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Token de eliminacion no valido', valid: false });
+    }
+
+    if (request.confirmed_at) {
+      return res.status(400).json({ success: false, error: 'Esta solicitud ya fue procesada', valid: false });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(request.expires_at);
+
+    if (expiresAt < now) {
+      return res.status(400).json({ success: false, error: 'El enlace de confirmacion ha expirado', valid: false, expired: true });
+    }
+
+    res.json({
+      success: true,
+      valid: true,
+      userName: request.name,
+      userEmail: request.email,
+      expiresAt: request.expires_at
+    });
+  } catch (err) {
+    console.error('[Users] Verify deletion token error:', err);
+    res.status(500).json({ success: false, error: 'Error al verificar el token' });
+  }
+});
+
+/**
+ * POST /api/users/confirm-deletion/:token
+ * Confirm account deletion via email token - actually deletes the account
+ * Feature #28: Account deletion requires email confirmation
+ */
+router.post('/confirm-deletion/:token', (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const request = queryOne(
+      'SELECT adr.*, u.name, u.email FROM account_deletion_requests adr JOIN users u ON adr.user_id = u.id WHERE adr.token = ?',
+      [token]
+    );
+
+    if (!request) {
+      return res.status(404).json({ success: false, error: 'Token de eliminacion no valido' });
+    }
+
+    if (request.confirmed_at) {
+      return res.status(400).json({ success: false, error: 'Esta solicitud ya fue procesada' });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(request.expires_at);
+
+    if (expiresAt < now) {
+      return res.status(400).json({ success: false, error: 'El enlace de confirmacion ha expirado' });
+    }
+
+    const userId = request.user_id;
+    const userEmail = request.email;
+    const userName = request.name;
+
+    console.log('[Users] Confirming account deletion for user', userId, '(', userEmail, ')');
+
+    // Mark the request as confirmed
+    run('UPDATE account_deletion_requests SET confirmed_at = ? WHERE token = ?', [now.toISOString(), token]);
+
+    // Delete all user data (cascade delete)
+    const deletedData = { userId, email: userEmail, deletedRecords: {} };
+
+    // Delete code_submissions
+    try {
+      const subResult = run('DELETE FROM code_submissions WHERE user_id = ?', [String(userId)]);
+      deletedData.deletedRecords.code_submissions = subResult.changes;
+    } catch (e) { deletedData.deletedRecords.code_submissions = 0; }
+
+    // Delete quiz_attempts
+    try {
+      const quizResult = run('DELETE FROM quiz_attempts WHERE user_id = ?', [String(userId)]);
+      deletedData.deletedRecords.quiz_attempts = quizResult.changes;
+    } catch (e) { deletedData.deletedRecords.quiz_attempts = 0; }
+
+    // Delete project_submissions
+    try {
+      const projResult = run('DELETE FROM project_submissions WHERE user_id = ?', [String(userId)]);
+      deletedData.deletedRecords.project_submissions = projResult.changes;
+    } catch (e) { deletedData.deletedRecords.project_submissions = 0; }
+
+    // Delete forum_replies first
+    try {
+      const repliesResult = run('DELETE FROM forum_replies WHERE user_id = ?', [String(userId)]);
+      deletedData.deletedRecords.forum_replies = repliesResult.changes;
+    } catch (e) { deletedData.deletedRecords.forum_replies = 0; }
+
+    // Delete forum_threads
+    try {
+      const threadsResult = run('DELETE FROM forum_threads WHERE user_id = ?', [String(userId)]);
+      deletedData.deletedRecords.forum_threads = threadsResult.changes;
+    } catch (e) { deletedData.deletedRecords.forum_threads = 0; }
+
+    // Delete enrollments
+    try {
+      deletedData.deletedRecords.enrollments = run('DELETE FROM enrollments WHERE user_id = ?', [userId]).changes;
+    } catch (e) { deletedData.deletedRecords.enrollments = 0; }
+
+    // Delete lesson progress
+    try {
+      deletedData.deletedRecords.lesson_progress = run('DELETE FROM lesson_progress WHERE user_id = ?', [String(userId)]).changes;
+    } catch (e) { deletedData.deletedRecords.lesson_progress = 0; }
+
+    // Delete video progress
+    try {
+      deletedData.deletedRecords.video_progress = run('DELETE FROM video_progress WHERE user_id = ?', [String(userId)]).changes;
+    } catch (e) { deletedData.deletedRecords.video_progress = 0; }
+
+    // Delete notifications
+    try {
+      deletedData.deletedRecords.notifications = run('DELETE FROM notifications WHERE user_id = ?', [String(userId)]).changes;
+    } catch (e) { deletedData.deletedRecords.notifications = 0; }
+
+    // Delete the deletion request
+    run('DELETE FROM account_deletion_requests WHERE user_id = ?', [userId]);
+
+    // Finally delete the user
+    deletedData.deletedRecords.user = run('DELETE FROM users WHERE id = ?', [userId]).changes;
+    console.log('[Users] Account deleted via email confirmation for user', userId);
+
+    // Destroy current session if this was the logged-in user
+    if (req.session?.user?.id === userId) {
+      req.session.destroy(() => {});
+    }
+
+    res.json({
+      success: true,
+      message: 'Tu cuenta ha sido eliminada permanentemente',
+      deletedData
+    });
+  } catch (err) {
+    console.error('[Users] Confirm deletion error:', err);
+    res.status(500).json({ success: false, error: 'Error al eliminar la cuenta' });
+  }
+});
+
+/**
+ * GET /api/users/me/deletion-status
+ * Check if there's a pending deletion request for the current user
+ * Feature #28: Account deletion requires email confirmation
+ */
+router.get('/me/deletion-status', (req, res) => {
+  const currentUser = req.session?.user;
+
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const request = queryOne(
+      'SELECT id, requested_at, expires_at FROM account_deletion_requests WHERE user_id = ? AND confirmed_at IS NULL',
+      [currentUser.id]
+    );
+
+    if (!request) {
+      return res.json({ success: true, hasPendingRequest: false });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(request.expires_at);
+
+    if (expiresAt < now) {
+      // Expired, clean up
+      run('DELETE FROM account_deletion_requests WHERE id = ?', [request.id]);
+      return res.json({ success: true, hasPendingRequest: false });
+    }
+
+    res.json({
+      success: true,
+      hasPendingRequest: true,
+      requestedAt: request.requested_at,
+      expiresAt: request.expires_at
+    });
+  } catch (err) {
+    console.error('[Users] Get deletion status error:', err);
+    res.status(500).json({ success: false, error: 'Error al verificar estado de eliminacion' });
+  }
+});
+
+/**
+ * DELETE /api/users/me/cancel-deletion
+ * Cancel a pending deletion request
+ * Feature #28: Account deletion requires email confirmation
+ */
+router.delete('/me/cancel-deletion', (req, res) => {
+  const currentUser = req.session?.user;
+
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const result = run(
+      'DELETE FROM account_deletion_requests WHERE user_id = ? AND confirmed_at IS NULL',
+      [currentUser.id]
+    );
+
+    if (result.changes === 0) {
+      return res.status(404).json({ success: false, error: 'No hay solicitud de eliminacion pendiente' });
+    }
+
+    console.log('[Users] Deletion request cancelled for user', currentUser.id);
+
+    res.json({
+      success: true,
+      message: 'La solicitud de eliminacion ha sido cancelada'
+    });
+  } catch (err) {
+    console.error('[Users] Cancel deletion error:', err);
+    res.status(500).json({ success: false, error: 'Error al cancelar la solicitud' });
+  }
+});
+
+/**
  * DELETE /api/users/:id
  * Delete a user account and cascade to all related data
  * Feature #162: Deleting user removes their submissions
+ * NOTE: This direct deletion is kept for admin use - regular users should use request-deletion
  */
 router.delete('/:id', (req, res) => {
   const userId = parseInt(req.params.id);
