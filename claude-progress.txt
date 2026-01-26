@@ -8419,3 +8419,84 @@ All 5 verification steps completed:
 - feature-156-step5-form-empty-after-back.png
 
 
+[Testing] 2026-01-26 Feature #42 'Course catalog link works' regression test - PASSED
+
+### Verification Steps:
+1. **Navigate to home page** - PASS
+   - Home page loaded at http://localhost:5173/
+   
+2. **Click on 'Cursos' link** - PASS
+   - Clicked the 'Cursos' navigation link in the navbar
+   
+3. **Verify navigation to /courses** - PASS
+   - URL changed to http://localhost:5173/courses
+   
+4. **Verify course listing is displayed** - PASS
+   - Page title: 'Catalogo de Cursos'
+   - Search bar with filters (category, level, price)
+   - 12 courses displayed across 2 pages
+   - Pagination controls working
+   - Course cards show: icon, level, duration, title, description, instructor, rating, students
+
+### Console Errors: Only expected 401 on /api/auth/me (unauthenticated user)
+
+### Screenshot: feature-42-courses-catalog.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #205)
+
+### Feature #205: Tablet layout at 768px works correctly - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Set viewport to 768px wide** - PASS
+   - Browser resized to 768x1024 pixels for tablet simulation
+
+2. **Verify hamburger menu appears** - PASS
+   - Hamburger menu icon (☰) now visible in top left corner
+   - Desktop navigation links (Cursos, Dashboard) hidden at this width
+   - Implementation: Changed breakpoint from md (640px) to lg (1024px)
+
+3. **Click hamburger menu** - PASS
+   - Hamburger button is clickable with proper hover states
+   - aria-expanded attribute toggles correctly
+
+4. **Verify navigation drawer opens** - PASS
+   - Drawer slides in below navbar with border separator
+   - Contains: Cursos link, Dashboard link, Iniciar Sesion link
+   - Hamburger icon changes to X (close icon) when open
+   - Drawer closes on link click and outside click
+
+5. **Verify content reflows correctly** - PASS
+   - Course catalog displays in 2-column grid at 768px
+   - Search bar and filters stack appropriately
+   - No horizontal scroll (verified via JS: hasHorizontalScroll: false)
+   - Footer and all sections properly sized
+
+### Implementation Details:
+
+**Changes to Navbar.jsx:**
+- Added showMobileMenu state and mobileMenuRef
+- Added hamburger button with lg:hidden class (visible below 1024px)
+- Changed desktop nav from hidden sm:flex to hidden lg:flex
+- Added mobile drawer component that renders when showMobileMenu is true
+- Drawer auto-closes on navigation (via useEffect on location.pathname)
+- Added click-outside handler to close drawer
+
+### Console Errors: Only expected 401 for /api/auth/me (not logged in)
+
+### Screenshots:
+- feature-205-step2-hamburger-visible.png - Hamburger menu at 768px
+- feature-205-step3-drawer-open.png - Navigation drawer open
+- feature-205-step4-courses-page-768px.png - Course catalog at 768px
+- feature-205-final-verification.png - Full page layout verification
+
+### Current Status:
+- Feature #205 marked as PASSING
+- Commit: acbc230
+
+[Coding] 2026-01-26 Feature #205 'Tablet layout at 768px works correctly' - PASSED
+
