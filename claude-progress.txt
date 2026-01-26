@@ -12448,3 +12448,44 @@ All 5 verification steps completed:
 - Feature #51 marked as PASSING
 
 [Coding] 2026-01-26 Feature #51 "404 page displays for invalid URLs" verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #52)
+
+### Feature #52: 404 for non-existent course shows proper error - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Navigate to /course/non-existent-course-12345** - PASS
+   - URL: http://localhost:5173/course/non-existent-course-12345
+   - Page loaded with proper 404 handling
+
+2. **Verify 404 or 'course not found' error** - PASS
+   - Heading shows "Curso no encontrado" (Course not found)
+   - API returns 404 error for non-existent course slug
+
+3. **Verify user-friendly message** - PASS
+   - Message: "El curso que buscas no existe o ha sido eliminado."
+   - (The course you're looking for doesn't exist or has been deleted)
+   - Clear, helpful error message in Spanish
+
+4. **Verify navigation options are provided** - PASS
+   - "Ver Catalogo" button links to /courses and works correctly
+   - Navigation bar still shows: Cursos, Dashboard, Iniciar Sesion
+   - Logo links to home page
+   - Footer navigation also available
+
+### Console Errors: Only expected 404 (the feature being tested) and 401 (user not logged in)
+
+### Screenshots:
+- feature-52-step1-404-page.png - 404 page with error message
+- feature-52-step4-navigation-to-catalog.png - Successful navigation to catalog
+
+### Current Status:
+- Feature #52 marked as PASSING
+- Progress: 188/248 features passing (75.8%)
+- Commit: 7a1f494
+
+[Coding] 2026-01-26 Feature #52 "404 for non-existent course shows proper error" verified - PASSED
