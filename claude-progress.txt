@@ -15424,3 +15424,79 @@ All 7 verification steps completed:
 - Screenshots: feature-164-step1/2/3-*.png
 - No regression found - Feature still PASSING
 
+[Testing] 2026-01-26 Feature #6 'Typography uses Inter font family' - REGRESSION TEST PASSED
+- Step 1: Navigate to home page - PASS (http://localhost:5173)
+- Step 2: Inspect heading elements - PASS (h1, h2, h3 inspected)
+- Step 3: Verify font-family includes Inter (headings) - PASS
+  - h1: Inter, system-ui, sans-serif
+  - h2: Inter, system-ui, sans-serif
+  - h3: Inter, system-ui, sans-serif
+- Step 4: Inspect body text - PASS (paragraph elements inspected)
+- Step 5: Verify font-family includes Inter (body) - PASS
+  - Body: Inter, system-ui, sans-serif
+  - Paragraphs: Inter, system-ui, sans-serif
+- Inter font properly loaded (4 variants)
+- Console errors: Only expected 401 (not logged in)
+- Screenshot: feature-6-inter-font-verification.png
+- No regression found - Feature still PASSING
+
+
+[Testing] 2026-01-26 Feature #140 'Unsaved changes warning' - REGRESSION TEST PASSED
+- Step 1: Start editing content - PASS (modified course title in editor)
+- Step 2: Attempt to navigate away - PASS (clicked Cursos link)
+- Step 3: Verify warning dialog appears - PASS (dialog showed 'Cambios sin guardar')
+- Step 4: Cancel navigation - PASS (clicked 'Seguir editando', stayed on page)
+- Step 5: Verify content is preserved - PASS (modified title still present)
+- Step 6: Save and navigate without warning - PASS (no warning when no changes)
+- Console errors: None
+- Screenshot: feature-140-verification-complete.png
+- No regression found - Feature still PASSING
+
+[Testing] 2026-01-26 Feature #127 'Submission history from database' - REGRESSION TEST PASSED
+- Step 1: View submission history - PASS (History tab shows all attempts)
+- Step 2: Verify API call to get attempts - PASS (GET /api/challenges/1/attempts called)
+- Step 3: Verify displayed attempts match database - PASS (2 attempts correctly displayed)
+- Step 4: Verify timestamps are correct - PASS (26 ene 2026, 06:21:22 and 06:21:54)
+- Step 5: Verify code content is accurate - PASS (print statements preserved exactly)
+- Console errors: None
+- Screenshot: feature-127-submission-history.png
+- No regression found - Feature still PASSING
+
+[Testing] 2026-01-26 Feature #5 'Primary color scheme matches design system' - REGRESSION TEST PASSED
+- Step 1: Navigate to home page - PASS (http://localhost:5173)
+- Step 2: Inspect primary buttons - PASS
+- Step 3: Verify primary blue #2563EB - PASS
+  - 'Comenzar Gratis' button: background #2563EB
+  - 'Ver todos los cursos' link: text color #2563EB
+  - 13 elements using primary blue on home page
+- Step 4: Check links and interactive elements - PASS
+  - Login page 'Iniciar Sesion con rizo.ma' button: #2563EB
+  - Login page 'Registrate en rizo.ma' link: #2563EB
+- Tailwind config confirms primary-600: #2563eb
+- Console errors: Only expected 401 (not logged in)
+- Screenshots: feature-5-home-primary-blue.png, feature-5-login-primary-blue.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #5 verified, no regression found
+[Testing] 2026-01-26 Feature #203 'Desktop layout at 1920px works correctly' - REGRESSION TEST PASSED
+- Step 1: Set viewport to 1920px wide - PASS (1920x1080)
+- Step 2: Navigate through main pages - PASS (home, courses, login, dashboard, course detail, lesson)
+- Step 3: Verify sidebar visible - PASS (sidebar width=320px, visible=true on lesson page)
+- Step 4: Verify content area sized correctly - PASS (content properly positioned next to sidebar)
+- Step 5: Verify no horizontal scroll - PASS (scrollWidth <= clientWidth on all pages)
+- Console errors: Only expected 401/404 errors (not related to layout)
+- Screenshots: feature-203-step1-home-1920px.png, feature-203-step2-courses-1920px.png, feature-203-step3-dashboard-1920px.png, feature-203-step4-course-detail-1920px.png, feature-203-step5-lesson-sidebar-1920px.png
+- No regression found - Feature still PASSING
+
+[Testing] 2026-01-26 Feature #235 'Page loads within 3 seconds' - REGRESSION TEST PASSED
+- Step 1: Clear browser cache - PASS (browser closed and reopened)
+- Step 2: Navigate to home page - PASS (http://localhost:5173)
+- Step 3: Measure time to interactive - PASS
+  - Home page: DOM Interactive 15ms, FCP 728ms, Load Complete 257ms
+  - Courses page: DOM Interactive 13ms, FCP 128ms, Load Complete 65ms
+- Step 4: Verify under 3 seconds - PASS (all metrics well under 3000ms threshold)
+- Step 5: Test additional pages - PASS (courses page also fast)
+- Console errors: Only expected 401 (not logged in)
+- Screenshot: feature-235-page-load-performance.png
+- No regression found - Feature still PASSING
+

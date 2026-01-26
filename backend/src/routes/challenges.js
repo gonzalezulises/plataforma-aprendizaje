@@ -1,6 +1,7 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 import { executeCode } from '../utils/code-executor.js';
+import { codeExecutionRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -403,8 +404,9 @@ router.get('/:id', (req, res) => {
 
 /**
  * POST /api/challenges/:id/run - Run code without submitting
+ * Feature #34: Rate limited to prevent abuse
  */
-router.post('/:id/run', async (req, res) => {
+router.post('/:id/run', codeExecutionRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { code, language = 'python' } = req.body;
@@ -445,8 +447,9 @@ router.post('/:id/run', async (req, res) => {
 
 /**
  * POST /api/challenges/:id/submit - Submit solution for grading
+ * Feature #34: Rate limited to prevent abuse
  */
-router.post('/:id/submit', async (req, res) => {
+router.post('/:id/submit', codeExecutionRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { code, language = 'python' } = req.body;

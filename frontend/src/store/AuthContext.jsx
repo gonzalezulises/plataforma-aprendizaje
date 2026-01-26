@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { fetchCsrfToken, clearCsrfToken } from '../utils/csrf';
 
 const AuthContext = createContext(null);
 
@@ -23,6 +24,8 @@ export function AuthProvider({ children }) {
         if (data.isAuthenticated && data.user) {
           setUser(data.user);
           setIsAuthenticated(true);
+          // Feature #32: Fetch CSRF token when authenticated
+          fetchCsrfToken();
           return data.user;
         }
       }
@@ -58,6 +61,8 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setIsAuthenticated(false);
+      // Feature #32: Clear CSRF token on logout
+      clearCsrfToken();
     }
   }, []);
 

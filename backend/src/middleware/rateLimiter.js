@@ -174,11 +174,208 @@ export function clearAllRateLimits() {
   console.log('[RateLimiter] Cleared all rate limits');
 }
 
+/**
+ * =========================================
+ * CODE EXECUTION RATE LIMITER
+ * Feature #34: Rate limiting on code execution
+ * =========================================
+ *
+ * Implements rate limiting for code execution endpoints to prevent abuse.
+ * Tracks execution requests per user/IP and enforces a limit to protect
+ * server resources.
+ */
+
+// In-memory store for tracking code execution requests
+// Key: user_id or IP address, Value: { requests: number[], windowStart: timestamp }
+const codeExecutionAttempts = new Map();
+
+// Configuration for code execution rate limiting
+const CODE_EXEC_MAX_REQUESTS = 20; // Maximum requests in the time window
+const CODE_EXEC_WINDOW_MS = 60 * 1000; // Time window: 60 seconds (1 minute)
+const CODE_EXEC_BLOCK_DURATION_MS = 30 * 1000; // Block duration: 30 seconds
+const CODE_EXEC_CLEANUP_INTERVAL_MS = 60 * 1000; // Cleanup every minute
+
+/**
+ * Clean up old code execution entries
+ */
+function cleanupCodeExecutionEntries() {
+  const now = Date.now();
+  for (const [key, data] of codeExecutionAttempts.entries()) {
+    // Remove entries older than window + block duration
+    const expireTime = Math.max(
+      (data.windowStart || 0) + CODE_EXEC_WINDOW_MS + CODE_EXEC_BLOCK_DURATION_MS,
+      (data.blockedUntil || 0)
+    );
+    if (now > expireTime) {
+      codeExecutionAttempts.delete(key);
+    }
+  }
+}
+
+// Run cleanup periodically
+setInterval(cleanupCodeExecutionEntries, CODE_EXEC_CLEANUP_INTERVAL_MS);
+
+/**
+ * Get identifier for rate limiting (user ID or IP)
+ * @param {Request} req - Express request object
+ * @returns {string} Identifier for rate limiting
+ */
+function getCodeExecIdentifier(req) {
+  // Prefer user ID if authenticated, fall back to IP
+  if (req.session?.user?.id) {
+    return `user_${req.session.user.id}`;
+  }
+  return `ip_${getClientIP(req)}`;
+}
+
+/**
+ * Rate limiter middleware for code execution endpoints
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @param {Function} next - Express next function
+ */
+export function codeExecutionRateLimiter(req, res, next) {
+  const identifier = getCodeExecIdentifier(req);
+  const now = Date.now();
+
+  console.log(`[CodeExecRateLimiter] Request from: ${identifier}`);
+
+  // Get or create entry for this identifier
+  let entry = codeExecutionAttempts.get(identifier);
+
+  if (!entry) {
+    // First request from this identifier
+    entry = {
+      requests: [now],
+      windowStart: now,
+      blockedUntil: null
+    };
+    codeExecutionAttempts.set(identifier, entry);
+    console.log(`[CodeExecRateLimiter] First request from ${identifier}`);
+    next();
+    return;
+  }
+
+  // Check if currently blocked
+  if (entry.blockedUntil && now < entry.blockedUntil) {
+    const remainingSeconds = Math.ceil((entry.blockedUntil - now) / 1000);
+    console.log(`[CodeExecRateLimiter] ${identifier} is blocked. Remaining: ${remainingSeconds}s`);
+
+    return res.status(429).json({
+      success: false,
+      error: `Demasiadas solicitudes de ejecucion de codigo. Por favor espera ${remainingSeconds} segundos antes de intentar nuevamente.`,
+      error_en: `Too many code execution requests. Please wait ${remainingSeconds} seconds before trying again.`,
+      retryAfter: remainingSeconds,
+      rateLimited: true,
+      limit: CODE_EXEC_MAX_REQUESTS,
+      window: CODE_EXEC_WINDOW_MS / 1000
+    });
+  }
+
+  // Clean up old requests outside the window
+  const windowStart = now - CODE_EXEC_WINDOW_MS;
+  entry.requests = entry.requests.filter(timestamp => timestamp > windowStart);
+
+  // Check if limit exceeded
+  if (entry.requests.length >= CODE_EXEC_MAX_REQUESTS) {
+    entry.blockedUntil = now + CODE_EXEC_BLOCK_DURATION_MS;
+    codeExecutionAttempts.set(identifier, entry);
+
+    const remainingSeconds = Math.ceil(CODE_EXEC_BLOCK_DURATION_MS / 1000);
+    console.log(`[CodeExecRateLimiter] ${identifier} RATE LIMITED! ${entry.requests.length} requests in ${CODE_EXEC_WINDOW_MS/1000}s. Blocked for ${remainingSeconds}s`);
+
+    return res.status(429).json({
+      success: false,
+      error: `Has excedido el limite de ${CODE_EXEC_MAX_REQUESTS} ejecuciones por minuto. Por favor espera ${remainingSeconds} segundos.`,
+      error_en: `You have exceeded the limit of ${CODE_EXEC_MAX_REQUESTS} executions per minute. Please wait ${remainingSeconds} seconds.`,
+      retryAfter: remainingSeconds,
+      rateLimited: true,
+      limit: CODE_EXEC_MAX_REQUESTS,
+      window: CODE_EXEC_WINDOW_MS / 1000,
+      requestCount: entry.requests.length
+    });
+  }
+
+  // Record this request
+  entry.requests.push(now);
+  entry.blockedUntil = null;
+  codeExecutionAttempts.set(identifier, entry);
+
+  const remaining = CODE_EXEC_MAX_REQUESTS - entry.requests.length;
+  console.log(`[CodeExecRateLimiter] ${identifier}: ${entry.requests.length}/${CODE_EXEC_MAX_REQUESTS} requests (${remaining} remaining)`);
+
+  // Add rate limit headers to response
+  res.setHeader('X-RateLimit-Limit', CODE_EXEC_MAX_REQUESTS);
+  res.setHeader('X-RateLimit-Remaining', remaining);
+  res.setHeader('X-RateLimit-Reset', Math.ceil((windowStart + CODE_EXEC_WINDOW_MS) / 1000));
+
+  next();
+}
+
+/**
+ * Get code execution rate limit status for an identifier (for testing/debugging)
+ * @param {string} identifier - User ID or IP identifier
+ * @returns {Object} Rate limit status
+ */
+export function getCodeExecRateLimitStatus(identifier) {
+  const entry = codeExecutionAttempts.get(identifier);
+  const now = Date.now();
+
+  if (!entry) {
+    return {
+      requests: 0,
+      blocked: false,
+      remainingRequests: CODE_EXEC_MAX_REQUESTS,
+      maxRequests: CODE_EXEC_MAX_REQUESTS,
+      windowSeconds: CODE_EXEC_WINDOW_MS / 1000
+    };
+  }
+
+  const blocked = entry.blockedUntil && now < entry.blockedUntil;
+  const remainingSeconds = blocked ? Math.ceil((entry.blockedUntil - now) / 1000) : 0;
+
+  // Clean up old requests outside the window for accurate count
+  const windowStart = now - CODE_EXEC_WINDOW_MS;
+  const activeRequests = entry.requests.filter(timestamp => timestamp > windowStart).length;
+
+  return {
+    requests: activeRequests,
+    blocked,
+    remainingRequests: Math.max(0, CODE_EXEC_MAX_REQUESTS - activeRequests),
+    remainingSeconds,
+    maxRequests: CODE_EXEC_MAX_REQUESTS,
+    windowSeconds: CODE_EXEC_WINDOW_MS / 1000,
+    blockDurationSeconds: CODE_EXEC_BLOCK_DURATION_MS / 1000
+  };
+}
+
+/**
+ * Clear code execution rate limit for an identifier (for testing)
+ * @param {string} identifier - User ID or IP identifier
+ */
+export function clearCodeExecRateLimit(identifier) {
+  codeExecutionAttempts.delete(identifier);
+  console.log(`[CodeExecRateLimiter] Cleared rate limit for: ${identifier}`);
+}
+
+/**
+ * Clear all code execution rate limits (for testing)
+ */
+export function clearAllCodeExecRateLimits() {
+  codeExecutionAttempts.clear();
+  console.log('[CodeExecRateLimiter] Cleared all code execution rate limits');
+}
+
 export default {
   loginRateLimiter,
   recordFailedAttempt,
   recordSuccessfulLogin,
   getRateLimitStatus,
   clearRateLimit,
-  clearAllRateLimits
+  clearAllRateLimits,
+  // Code execution rate limiter exports
+  codeExecutionRateLimiter,
+  getCodeExecRateLimitStatus,
+  clearCodeExecRateLimit,
+  clearAllCodeExecRateLimits
 };

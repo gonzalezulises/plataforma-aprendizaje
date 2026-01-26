@@ -1,6 +1,7 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
 import { executeCode } from '../utils/code-executor.js';
+import { codeExecutionRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -405,8 +406,9 @@ function getNavigationInfo(lessonId, moduleId) {
 /**
  * POST /api/lessons/:id/execute
  * Execute code from a lesson's code block (Feature #126)
+ * Feature #34: Rate limited to prevent abuse
  */
-router.post('/:id/execute', async (req, res) => {
+router.post('/:id/execute', codeExecutionRateLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const { code, language = 'python' } = req.body;

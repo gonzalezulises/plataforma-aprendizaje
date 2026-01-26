@@ -1,4 +1,4 @@
-// Last reload: 2026-01-26T10:15:00.000Z - Feature #33 rate limiting on login attempts
+// Last reload: 2026-01-26T11:15:00.000Z - Feature #32 CSRF protection
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,6 +7,9 @@ import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
+
+// Import CSRF middleware
+import { csrfTokenGenerator, csrfProtection, getCsrfTokenHandler } from './middleware/csrf.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -189,6 +192,18 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Feature #32: CSRF Token Generator Middleware
+// Generates CSRF token for authenticated sessions
+app.use(csrfTokenGenerator);
+
+// Feature #32: CSRF Protection Middleware
+// Validates CSRF token on state-changing requests (POST, PUT, DELETE, PATCH)
+app.use(csrfProtection);
+
+// Feature #32: CSRF Token Endpoint
+// Returns the CSRF token for the current session
+app.get('/api/csrf-token', getCsrfTokenHandler);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -469,6 +484,56 @@ if (process.env.NODE_ENV !== 'production') {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Feature #34: Test endpoint for code execution rate limiting
+  app.get('/api/test/code-exec-rate-limit-status', async (req, res) => {
+    const { getCodeExecRateLimitStatus } = await import('./middleware/rateLimiter.js');
+
+    // Get identifier (same logic as rate limiter)
+    let identifier;
+    if (req.session?.user?.id) {
+      identifier = `user_${req.session.user.id}`;
+    } else {
+      const forwarded = req.headers['x-forwarded-for'];
+      const clientIP = forwarded ? forwarded.split(',')[0].trim() : (req.ip || req.connection?.remoteAddress || 'unknown');
+      identifier = `ip_${clientIP}`;
+    }
+
+    const status = getCodeExecRateLimitStatus(identifier);
+    res.json({
+      identifier,
+      ...status
+    });
+  });
+
+  // Feature #34: Clear code execution rate limit for testing
+  app.post('/api/test/clear-code-exec-rate-limit', async (req, res) => {
+    const { clearAllCodeExecRateLimits, clearCodeExecRateLimit } = await import('./middleware/rateLimiter.js');
+
+    const { identifier, clearAll } = req.body;
+
+    if (clearAll) {
+      clearAllCodeExecRateLimits();
+      return res.json({ success: true, message: 'Cleared all code execution rate limits' });
+    }
+
+    if (identifier) {
+      clearCodeExecRateLimit(identifier);
+      return res.json({ success: true, message: `Cleared rate limit for ${identifier}` });
+    }
+
+    // Clear for current user/IP
+    let currentIdentifier;
+    if (req.session?.user?.id) {
+      currentIdentifier = `user_${req.session.user.id}`;
+    } else {
+      const forwarded = req.headers['x-forwarded-for'];
+      const clientIP = forwarded ? forwarded.split(',')[0].trim() : (req.ip || req.connection?.remoteAddress || 'unknown');
+      currentIdentifier = `ip_${clientIP}`;
+    }
+    clearCodeExecRateLimit(currentIdentifier);
+    res.json({ success: true, message: `Cleared rate limit for ${currentIdentifier}` });
+  });
 }
 
 // API Routes
@@ -720,3 +785,6 @@ export default app;
 // Feature #26 auth fix: 2026-01-26T01:29:22-05:00
 // Feature #12 session inactivity timeout: 2026-01-26T10:21:30
 // Feature #12 fix session regenerate: 2026-01-26T10:24:00
+// Feature #32 CSRF protection: 2026-01-26T11:25:00 - fixed length check
+// Feature #34 code execution rate limiting: lu., 26 de ene. de 2026  6:13:52
+// Feature #34 ES modules fix: 1769426123
