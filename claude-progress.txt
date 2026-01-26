@@ -11898,3 +11898,55 @@ All 4 verification steps completed:
 - Modal has max-w-md w-full with p-4 padding container
 - Console errors: None
 - Screenshots: feature-209-step1-modal-desktop.png, feature-209-step3-modal-mobile.png, feature-209-step5-modal-small-screen.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #31)
+
+### Feature #31: SQL injection prevention in search queries - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Enter SQL injection payload in search field** - PASS
+   - Tested: ' OR '1'='1 (classic OR injection)
+   - Tested: '; DROP TABLE courses; -- (destructive injection)
+   - Tested: ' UNION SELECT password FROM users -- (data extraction)
+   - All payloads entered via UI search field
+
+2. **Submit the search** - PASS
+   - Submitted via "Buscar" button
+   - Also tested via direct API calls with URL-encoded payloads
+
+3. **Verify no SQL error is returned** - PASS
+   - All searches returned clean JSON: {"courses":[],"pagination":{...}}
+   - No SQL syntax errors or stack traces exposed
+   - No 500 server errors
+
+4. **Verify database is not affected** - PASS
+   - After DROP TABLE injection: all 6 courses still intact
+   - After UNION SELECT injection: no password data exposed
+   - Normal search still works correctly
+
+5. **Verify parameterized queries are used** - PASS
+   - backend/src/routes/courses.js: Uses params array with LIKE ? placeholders
+   - backend/src/config/database.js: queryAll/queryOne/run use stmt.bind(params)
+   - SQL.js library properly escapes all parameters via bind()
+
+### Technical Implementation:
+- All search inputs passed through parseSearchQuery() utility
+- LIKE conditions built with ? placeholders: (title LIKE ? OR description LIKE ?)
+- Values pushed to params array: params.push(%phrase%, %phrase%)
+- Database layer uses stmt.bind(params) for safe parameter binding
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-31-sql-injection-union-test.png - UNION injection attempt
+- feature-31-database-intact-after-tests.png - Database intact after all tests
+
+### Current Status:
+- Feature #31 marked as PASSING
+- Commit: 7f51a0c
+
+[Coding] 2026-01-26 Feature #31 "SQL injection prevention in search queries" verified - PASSED
