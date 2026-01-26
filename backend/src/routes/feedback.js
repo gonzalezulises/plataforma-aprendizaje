@@ -167,6 +167,7 @@ router.get('/submissions/:submissionId/feedback', (req, res) => {
 
 /**
  * Create feedback for a submission (instructor only)
+ * Feature #25: Instructor can only provide feedback for submissions in their own courses
  */
 router.post('/submissions/:submissionId/feedback', requireInstructor, (req, res) => {
   try {
@@ -176,14 +177,24 @@ router.post('/submissions/:submissionId/feedback', requireInstructor, (req, res)
     // Get user from session (authentication required)
     const createdBy = req.session.user.id;
 
-    // Verify submission exists
-    const submission = queryOne(
-      'SELECT * FROM project_submissions WHERE id = ?',
-      [submissionId]
-    );
+    // Verify submission exists and get course ownership info
+    // Feature #25: Check if instructor owns the course
+    const submission = queryOne(`
+      SELECT ps.*, p.course_id, c.instructor_id
+      FROM project_submissions ps
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE ps.id = ?
+    `, [submissionId]);
 
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    // Feature #25: Verify instructor owns the course
+    const isCourseInstructor = submission.instructor_id === createdBy || submission.instructor_id === String(createdBy);
+    if (!isCourseInstructor) {
+      return res.status(403).json({ error: 'Access denied: You can only provide feedback for submissions in your own courses' });
     }
 
     const now = new Date().toISOString();
@@ -321,16 +332,33 @@ router.post('/submissions/:submissionId/feedback', requireInstructor, (req, res)
 
 /**
  * Update feedback (instructor only)
+ * Feature #25: Instructor can only update feedback for submissions in their own courses
  */
 router.put('/feedback/:id', requireInstructor, (req, res) => {
   try {
     const { type, content, scores, total_score, max_score, comment, video_url } = req.body;
     const feedbackId = req.params.id;
+    const instructorId = req.session.user.id;
 
-    // Check if feedback exists
-    const existingFeedback = queryOne('SELECT * FROM feedback WHERE id = ?', [feedbackId]);
+    // Check if feedback exists and get course ownership info
+    // Feature #25: Join to check course ownership
+    const existingFeedback = queryOne(`
+      SELECT f.*, ps.project_id, c.instructor_id
+      FROM feedback f
+      JOIN project_submissions ps ON f.submission_id = ps.id
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE f.id = ?
+    `, [feedbackId]);
+
     if (!existingFeedback) {
       return res.status(404).json({ error: 'Feedback not found' });
+    }
+
+    // Feature #25: Verify instructor owns the course
+    const isCourseInstructor = existingFeedback.instructor_id === instructorId || existingFeedback.instructor_id === String(instructorId);
+    if (!isCourseInstructor) {
+      return res.status(403).json({ error: 'Access denied: You can only update feedback for submissions in your own courses' });
     }
 
     const now = new Date().toISOString();

@@ -416,6 +416,13 @@ router.put('/:id', requireInstructor, (req, res) => {
       params.push(duration_hours);
     }
 
+    // Feature #25: Allow setting instructor_id for course ownership
+    const { instructor_id } = req.body;
+    if (instructor_id !== undefined) {
+      updates.push('instructor_id = ?');
+      params.push(instructor_id);
+    }
+
     if (updates.length > 0) {
       updates.push('updated_at = ?');
       params.push(new Date().toISOString());
