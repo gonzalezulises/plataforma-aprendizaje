@@ -926,39 +926,100 @@ print(potencia(3, 3))   # 27 (3^3)`
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Progress bar */}
-      <div className="bg-gray-200 dark:bg-gray-700 h-1">
-        <div
-          className="bg-primary-600 h-1 transition-all duration-300"
-          style={{ width: `${lessonProgress.isCompleted ? 100 : lessonProgress.videoProgress}%` }}
-        />
-      </div>
-
-      {/* Breadcrumb navigation - Feature #45: Home > Course > Module > Lesson */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-5xl mx-auto px-4 py-3">
-          <nav className="flex items-center gap-2 text-sm flex-wrap" aria-label="Breadcrumb">
-            <Link to="/" className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
-              Inicio
-            </Link>
-            <span className="text-gray-400" aria-hidden="true">/</span>
-            <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
-              {lesson.course}
-            </Link>
-            <span className="text-gray-400" aria-hidden="true">/</span>
-            <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
-              {lesson.module}
-            </Link>
-            <span className="text-gray-400" aria-hidden="true">/</span>
-            <span className="text-gray-700 dark:text-gray-300 font-medium" aria-current="page">{lesson.title}</span>
-          </nav>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      {/* Feature #46: Course Sidebar Navigation */}
+      {isSidebarOpen && (
+        <div className="hidden lg:block w-80 flex-shrink-0 transition-all duration-300">
+          <div className="fixed top-0 left-0 h-screen w-80 pt-16 z-40">
+            <CourseSidebar
+              courseSlug={lesson.courseSlug || slug}
+              currentLessonId={currentLessonId}
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Lesson header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Mobile sidebar toggle */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="lg:hidden fixed bottom-4 left-4 z-50 p-3 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-colors"
+        aria-label={isSidebarOpen ? 'Cerrar menu de navegacion' : 'Abrir menu de navegacion'}
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile sidebar overlay */}
+      {isSidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-80 pt-16">
+            <CourseSidebar
+              courseSlug={lesson.courseSlug || slug}
+              currentLessonId={currentLessonId}
+              isOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main content area */}
+      <div className="flex-1 min-w-0">
+        {/* Progress bar */}
+        <div className="bg-gray-200 dark:bg-gray-700 h-1">
+          <div
+            className="bg-primary-600 h-1 transition-all duration-300"
+            style={{ width: `${lessonProgress.isCompleted ? 100 : lessonProgress.videoProgress}%` }}
+          />
+        </div>
+
+        {/* Breadcrumb navigation - Feature #45: Home > Course > Module > Lesson */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-5xl mx-auto px-4 py-3">
+            <div className="flex items-center gap-2">
+              {/* Sidebar toggle button for desktop */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="hidden lg:flex items-center justify-center p-2 -ml-2 mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label={isSidebarOpen ? 'Ocultar navegacion' : 'Mostrar navegacion'}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isSidebarOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+              <nav className="flex items-center gap-2 text-sm flex-wrap" aria-label="Breadcrumb">
+                <Link to="/" className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+                  Inicio
+                </Link>
+                <span className="text-gray-400" aria-hidden="true">/</span>
+                <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+                  {lesson.course}
+                </Link>
+                <span className="text-gray-400" aria-hidden="true">/</span>
+                <Link to={`/course/${lesson.courseSlug || slug}`} className="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400">
+                  {lesson.module}
+                </Link>
+                <span className="text-gray-400" aria-hidden="true">/</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium" aria-current="page">{lesson.title}</span>
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        {/* Lesson header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3 mb-3">
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
               {lesson.bloomLevel}
@@ -1294,6 +1355,7 @@ print(potencia(3, 3))   # 27 (3^3)`
           )}
         </div>
       </div>
+      </div>{/* End of main content area */}
     </div>
   );
 }

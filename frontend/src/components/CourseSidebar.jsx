@@ -48,7 +48,7 @@ function CourseSidebar({ courseSlug, currentLessonId, onClose, isOpen = true }) 
             if (modulesResponse.ok && isMounted) {
               const modulesData = await modulesResponse.json();
 
-              // If API returns modules with lessons, use them
+              // If API returns modules, try to fetch their lessons
               if (modulesData.modules && modulesData.modules.length > 0) {
                 // Fetch lessons for each module
                 const modulesWithLessons = await Promise.all(
@@ -68,7 +68,15 @@ function CourseSidebar({ courseSlug, currentLessonId, onClose, isOpen = true }) 
                     return { ...mod, lessons: [] };
                   })
                 );
-                setModules(modulesWithLessons);
+
+                // Check if any module has lessons - if not, use sample data
+                const hasAnyLessons = modulesWithLessons.some(mod => mod.lessons && mod.lessons.length > 0);
+                if (hasAnyLessons) {
+                  setModules(modulesWithLessons);
+                } else {
+                  // No lessons in database, use sample data for demo
+                  setModules(getSampleModules());
+                }
               } else {
                 // Fallback to sample module data for demo purposes
                 setModules(getSampleModules());
