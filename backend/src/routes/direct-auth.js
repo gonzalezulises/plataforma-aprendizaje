@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { queryOne, run, getDatabase, saveDatabase } from '../config/database.js';
+import { loginRateLimiter, recordFailedAttempt, recordSuccessfulLogin, getRateLimitStatus, clearRateLimit } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -80,8 +81,12 @@ setTimeout(ensurePasswordColumns, 1000);
  * POST /api/direct-auth/login
  * Direct email/password login endpoint
  * Used when OAuth is not available or as an alternative login method
+ *
+ * Feature #33: Rate limiting on login attempts
+ * - Uses loginRateLimiter middleware to block excessive failed attempts
+ * - 5 failed attempts within 15 minutes triggers a 60-second block
  */
-router.post('/login', (req, res) => {
+router.post('/login', loginRateLimiter, (req, res) => {
   const { email, password } = req.body || {};
 
   console.log('[DirectAuth] Login attempt for email:', email);
@@ -111,6 +116,7 @@ router.post('/login', (req, res) => {
     // This prevents email enumeration attacks - attacker cannot determine if email exists
     if (!user) {
       console.log('[DirectAuth] Login failed: user not found');
+      recordFailedAttempt(req); // Feature #33: Record failed attempt for rate limiting
       return res.status(401).json({
         success: false,
         error: 'Credenciales incorrectas. Por favor verifica tu correo y contrasena.'
@@ -131,6 +137,7 @@ router.post('/login', (req, res) => {
 
     if (!isValid) {
       console.log('[DirectAuth] Login failed: invalid password');
+      recordFailedAttempt(req); // Feature #33: Record failed attempt for rate limiting
       return res.status(401).json({
         success: false,
         error: 'Credenciales incorrectas. Por favor verifica tu correo y contrasena.'
@@ -145,6 +152,9 @@ router.post('/login', (req, res) => {
       role: user.role,
     };
     req.session.isAuthenticated = true;
+
+    // Feature #33: Clear rate limit on successful login
+    recordSuccessfulLogin(req);
 
     console.log('[DirectAuth] Login successful for user:', user.email);
 
@@ -166,6 +176,48 @@ router.post('/login', (req, res) => {
       error: 'Error al procesar la solicitud. Intenta de nuevo mas tarde.'
     });
   }
+});
+
+/**
+ * GET /api/direct-auth/rate-limit-status
+ * Development endpoint to check rate limit status for current IP
+ * Feature #33: For testing rate limiting
+ */
+router.get('/rate-limit-status', (req, res) => {
+  // Only allow in development mode
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' });
+  }
+
+  const forwarded = req.headers['x-forwarded-for'];
+  const clientIP = forwarded ? forwarded.split(',')[0].trim() : (req.ip || req.connection?.remoteAddress || 'unknown');
+
+  const status = getRateLimitStatus(clientIP);
+  res.json({
+    ip: clientIP,
+    ...status
+  });
+});
+
+/**
+ * POST /api/direct-auth/clear-rate-limit
+ * Development endpoint to clear rate limit for current IP
+ * Feature #33: For testing rate limiting
+ */
+router.post('/clear-rate-limit', (req, res) => {
+  // Only allow in development mode
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Not available in production' });
+  }
+
+  const forwarded = req.headers['x-forwarded-for'];
+  const clientIP = forwarded ? forwarded.split(',')[0].trim() : (req.ip || req.connection?.remoteAddress || 'unknown');
+
+  clearRateLimit(clientIP);
+  res.json({
+    success: true,
+    message: `Rate limit cleared for IP: ${clientIP}`
+  });
 });
 
 export default router;

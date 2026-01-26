@@ -15,6 +15,7 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [rateLimitInfo, setRateLimitInfo] = useState(null); // Feature #33: Rate limit countdown
 
   // Email validation regex
   const isValidEmail = (emailToValidate) => {

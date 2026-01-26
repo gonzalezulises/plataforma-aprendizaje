@@ -283,6 +283,38 @@ function ThreadDetailPage() {
     }
   };
 
+  const handleDeleteThread = async () => {
+    // Show confirmation dialog
+    if (!window.confirm('¿Estás seguro de que quieres eliminar este hilo? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete thread');
+      }
+
+      toast.success('Hilo eliminado correctamente');
+
+      // Navigate back to forum
+      if (course) {
+        navigate(`/course/${course.slug}/forum`);
+      } else {
+        navigate('/courses');
+      }
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+      toast.error('Error al eliminar el hilo');
+    }
+  };
+
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -371,16 +403,28 @@ function ThreadDetailPage() {
             </div>
 
             {(isOwner || isInstructor) && (
-              <button
-                onClick={handleMarkResolved}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  thread.is_resolved
-                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800'
-                    : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800'
-                }`}
-              >
-                {thread.is_resolved ? 'Reabrir Hilo' : 'Marcar como Resuelto'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleMarkResolved}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    thread.is_resolved
+                      ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800'
+                      : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800'
+                  }`}
+                >
+                  {thread.is_resolved ? 'Reabrir Hilo' : 'Marcar como Resuelto'}
+                </button>
+                <button
+                  onClick={handleDeleteThread}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 flex items-center gap-1"
+                  title="Eliminar hilo"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Eliminar
+                </button>
+              </div>
             )}
           </div>
 
