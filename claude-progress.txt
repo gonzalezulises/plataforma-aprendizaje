@@ -1,3 +1,54 @@
+## Session: 2026-01-26 (Coding Agent - Feature #38)
+
+### Feature #38: Certificate verification links are public but limited - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Get a certificate verification URL** - PASS
+   - URL: http://localhost:5173/certificate/verify/E036CF47F0DF280BC634DEA2
+   - Also accessible via API: GET /api/certificates/verify/:code
+
+2. **Access it without authentication** - PASS
+   - Page accessible without login ("Iniciar Sesion" link visible)
+   - API endpoint does NOT require authentication (no `requireAuth` middleware)
+   - HTTP 200 OK returned for valid verification codes
+
+3. **Verify only certificate holder name and course are shown** - PASS
+   - Data EXPOSED (appropriate for public verification):
+     - userName: "Usuario de Prueba"
+     - courseTitle: "Python: Fundamentos"
+     - courseCategory: "Programacion"
+     - courseLevel: "Principiante"
+     - courseDuration: 20 hours
+     - issuedAt: "2026-01-25T09:05:12.515Z"
+     - verificationCode: "E036CF47F0DF280BC634DEA2"
+
+4. **Verify no sensitive user data is exposed** - PASS
+   - Data NOT EXPOSED (properly protected):
+     - user_id - NOT in response
+     - email - NOT in response
+     - external_id - NOT in response
+     - password_hash - NOT in response
+     - password_salt - NOT in response
+     - preferences - NOT in response
+     - avatar_url - NOT in response
+     - bio - NOT in response
+     - course_id - NOT in response (internal reference)
+
+**Implementation verified in:** backend/src/routes/certificates.js (lines 152-192)
+- Explicit whitelist of fields returned (lines 178-186)
+- No authentication middleware on /verify/:code endpoint
+
+**Screenshots:** feature-38-certificate-verification-public.png, feature-38-full-verification.png
+
+**Console errors:** Only expected HTTP 401 for /api/auth/me (not logged in)
+
+**Commit:** 683ed09
+
+Feature #38 marked as PASSING.
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #34)
 
 ### Feature #34: Rate limiting on code execution - VERIFIED AND PASSING
