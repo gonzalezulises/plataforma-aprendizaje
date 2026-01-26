@@ -12801,3 +12801,48 @@ All 6 verification steps completed:
 - Progress: 193/248 features passing (77.8%)
 
 [Coding] 2026-01-26 Feature #57 "Hamburger menu works on mobile" verified - PASSED
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #58)
+
+### Feature #58: Forum navigation shows thread list - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Navigate to course forum** - PASS
+   - Navigated to http://localhost:5173/course/python-fundamentos/forum
+   - Page loaded with 'Foro del Curso' heading
+   - Breadcrumbs show: Cursos > Python: Fundamentos > Foro
+
+2. **Verify list of threads is displayed** - PASS
+   - 2 threads displayed in list format
+   - Thread 1: 'Test Double Click Protection' (unresolved)
+   - Thread 2: 'Como puedo imprimir variables en Python?' (resolved)
+
+3. **Verify thread titles are visible** - PASS
+   - Titles shown as h3 headings in bold
+   - Each thread shows: title, content preview, author, timestamp, reply count
+   - Resolved threads show green 'Resuelto' badge
+
+4. **Verify sort/filter options are available** - PASS
+   - Filter dropdown: 'Todos los hilos', 'Sin resolver', 'Resueltos'
+   - Sort dropdown: 'Mas recientes', 'Mas antiguos', 'Mas respuestas'
+   - Filter tested - works correctly (selecting 'Resueltos' shows only resolved threads)
+
+### Additional Features Verified:
+- 'Nueva Pregunta' button available to create new threads
+- Threads are clickable links to /forum/thread/:id
+- No console errors
+
+### Screenshots:
+- feature-58-forum-thread-list.png - Full forum page with thread list
+- feature-58-forum-filtered.png - Forum with 'Resueltos' filter applied
+
+### Current Status:
+- Feature #58 marked as PASSING
+- Progress: 193/248 features passing (77.8%)
+- Commit: 11d3e26
+
+[Coding] 2026-01-26 Feature #58 'Forum navigation shows thread list' verified - PASSED
+
