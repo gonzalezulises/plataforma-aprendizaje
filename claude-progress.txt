@@ -9902,3 +9902,62 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #224 'Concurrent edits show conflict' verified - PASSED
 
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #223)
+
+### Feature #223: Date sorting works correctly - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Create items with different dates** - PASS
+   - Created TEST_223_DATE_A_FEB3_0001 at 00:01 on Feb 3, 2026
+   - Created TEST_223_DATE_B_FEB2_1000 at 10:00 on Feb 2, 2026
+   - Existing TEST_223_MIDNIGHT_BOUNDARY_SORTING at 23:59 on Feb 2, 2026
+
+2. **Sort by date** - PASS
+   - Webinars page shows dates in chronological order (ascending by scheduled_at)
+   - Forum page has sort dropdown (Mas recientes / Mas antiguos / Mas respuestas)
+   - Both list view and calendar view work correctly
+
+3. **Verify chronological order** - PASS
+   - Webinars: Jan 22 → Jan 26 → Jan 27 → ... → Feb 1 → Feb 2 → Feb 3 → Feb 15 → 2030
+   - Forum threads sorted correctly by created_at (newest first by default)
+   - Same-day items sorted by time (10:00 before 23:59 on Feb 2)
+
+4. **Test dates across midnight boundaries** - PASS
+   - Feb 2 at 23:59 correctly appears BEFORE Feb 3 at 00:01
+   - Calendar view correctly groups webinars by LOCAL date
+   - Midnight boundary properly handled in both list and calendar views
+   - UTC timestamps stored in database correctly converted to local time for display
+
+### Technical Implementation:
+
+**Backend (already implemented correctly):**
+- All dates stored in ISO 8601 UTC format (e.g., 2026-02-02T23:59:00.000Z)
+- SQL ORDER BY on datetime columns works correctly
+- Webinars: ORDER BY scheduled_at ASC
+- Forum: ORDER BY created_at DESC (newest) or ASC (oldest)
+
+**Frontend (already implemented correctly):**
+- WebinarsPage.jsx uses: .sort(([a], [b]) => new Date(a) - new Date(b)) for calendar grouping
+- Date parsing uses JavaScript Date constructor which handles UTC correctly
+- toLocaleDateString and toLocaleTimeString convert to user's local timezone
+
+### Console Errors: None
+
+### Screenshots:
+- feature-223-step1-webinars-sorted.png - List view with chronological order
+- feature-223-step2-midnight-boundary-sorted.png - Shows Feb 2 23:59 before Feb 3 00:01
+- feature-223-step3-calendar-view-sorted.png - Calendar view top
+- feature-223-step4-calendar-midnight-boundary.png - Calendar view midnight boundary
+- feature-223-step5-forum-oldest-sort.png - Forum with 'Mas antiguos' sort
+
+### Current Status:
+- Feature #223 marked as PASSING
+- Commit: 7a118c0
+
+[Coding] 2026-01-26 Feature #223 'Date sorting works correctly' verified - PASSED
+
