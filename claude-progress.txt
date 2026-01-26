@@ -13298,3 +13298,138 @@ All 6 verification steps completed:
 - Console errors: Only expected 401s for auth check
 - Screenshots: feature-193-client-validation-errors.png, feature-193-login-validation-error.png
 
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #67)
+
+### Feature #67: Created module appears in course structure - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as instructor@test.com
+   - Verified instructor role with access to admin panel
+
+2. **Create a module with name TEST_MODULE_ABC** - PASS
+   - Navigated to /admin/courses/1/edit
+   - Clicked "2. Modulos y Lecciones" tab
+   - Clicked "Agregar Modulo" button
+   - Entered title "TEST_MODULE_ABC"
+   - Clicked "Crear Modulo" - toast showed "Modulo creado"
+   - Module appeared as #3 with "0 lecciones"
+
+3. **Navigate to the course as a student would** - PASS
+   - Navigated to /course/python-fundamentos
+   - Course detail page loaded
+
+4. **Verify TEST_MODULE_ABC appears in sidebar** - PASS
+   - "Contenido del curso" section showed "3 modulos • 4 lecciones • 20 horas"
+   - Module "3. TEST_MODULE_ABC" displayed with "0/0 completadas"
+   - Module visible in course structure as students would see it
+
+5. **Delete the test module** - PASS
+   - Navigated back to /admin/courses/1/edit
+   - Clicked delete button for TEST_MODULE_ABC
+   - Confirmed deletion in browser dialog
+   - Toast showed "Modulo eliminado"
+   - Module list returned to original 2 modules
+
+### Console Errors: None
+
+### Screenshots:
+- feature-67-step2-module-created.png - Module created in admin panel
+- feature-67-step3-module-in-course-structure.png - Course page header
+- feature-67-step4-module-in-sidebar.png - Module visible in course content structure
+- feature-67-step5-module-deleted.png - Module deleted, back to 2 modules
+
+### Current Status:
+- Feature #67 marked as PASSING
+- Progress: 202/248 features passing (81.5%)
+- Commit: bd0470a
+
+[Coding] 2026-01-26 Feature #67 "Created module appears in course structure" verified - PASSED
+[Testing] 2026-01-26 Feature #161 'Deleting lesson removes progress entries' - VERIFIED PASSING
+- Step 1: Create lesson and complete as student - PASS
+  - Created TEST_CASCADE_161 course with Test Module 161 and Test Lesson 161 Cascade
+  - Enrolled and completed the lesson
+  - Progress entry confirmed: status=completed, completedAt=2026-01-26T07:36:35.394Z
+- Step 2: Delete the lesson - PASS
+  - Deleted lesson via admin panel with confirmation dialog
+- Step 3: Check lesson_progress table - PASS
+  - After deletion: status=not_started, timeSpentSeconds=0, completedAt=null
+  - Confirms cascade delete removed progress entry
+- Step 4: Verify progress entries removed - PASS
+  - Backend cascade delete working (courses.js:1013)
+- Step 5: Verify overall progress recalculates - PASS
+  - Before: progress_percent=100
+  - After: progress_percent=0
+- Console errors: None
+- Screenshot: feature-161-lesson-deleted.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #68)
+
+### Feature #68: Created lesson appears in module - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as instructor@test.com
+   - Verified instructor role with access to admin panel
+
+2. **Create a lesson named TEST_LESSON_XYZ** - PASS
+   - Navigated to /admin/courses/1/edit
+   - Clicked '2. Modulos y Lecciones' tab
+   - Expanded 'Introduccion a Python' module
+   - Clicked 'Agregar leccion' button
+   - Entered title 'TEST_LESSON_XYZ' and description
+   - Clicked 'Crear Leccion' - toast showed 'Leccion creada'
+   - Module count changed from '2 lecciones' to '3 lecciones'
+   - Lesson appeared as 1.3 with 'text • 15 min'
+
+3. **Navigate to the module** - PASS
+   - Navigated to /course/python-fundamentos
+   - Course page loaded showing all modules
+
+4. **Verify TEST_LESSON_XYZ appears** - PASS
+   - Module '1. Introduccion a Python' showed '1/3 completadas (33%)'
+   - Lesson list showed: 'Leccion 1: Introduccion', 'Leccion 2: Practica', 'TEST_LESSON_XYZ'
+   - Course summary showed '5 lecciones' total
+
+5. **Navigate to the lesson** - PASS
+   - Navigated to /course/python-fundamentos/lesson/7
+   - Lesson page loaded successfully
+
+6. **Verify content loads** - PASS
+   - Breadcrumb: Inicio / Python: Fundamentos / Introduccion a Python / TEST_LESSON_XYZ
+   - Heading: TEST_LESSON_XYZ
+   - Description: 'This is a test lesson created for Feature #68 verification'
+   - Duration: 15 min
+   - 'Marcar como completada' button available
+   - 'Siguiente leccion' navigation button available
+
+### Cleanup:
+- Deleted TEST_LESSON_XYZ via admin panel
+- Module returned to '2 lecciones'
+- Toast showed 'Leccion eliminada'
+
+### Console Errors:
+- 404 errors for /api/modules/1/lessons and /api/enrollments/progress (legacy endpoints, non-critical)
+- No JavaScript errors
+
+### Screenshots:
+- feature-68-step2-lesson-created.png - Lesson created in admin panel (3 lecciones)
+- feature-68-step4-lesson-in-module.png - Course page header
+- feature-68-step5-lesson-content-loads.png - Lesson page with content
+- feature-68-cleanup-lesson-deleted.png - After deletion (2 lecciones)
+
+### Current Status:
+- Feature #68 marked as PASSING
+- Progress: 204/248 features passing (82.3%)
+
+[Coding] 2026-01-26 Feature #68 'Created lesson appears in module' verified - PASSED
+
