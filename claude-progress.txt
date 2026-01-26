@@ -11198,3 +11198,21 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #243 'Course level indicator visible' verified - PASSED
 
+[Testing] 2026-01-26 Feature #177 'Whitespace-only search handled' - VERIFIED PASSING
+- Step 1: Entered whitespace-only input ('     ') in search box
+- Step 2: Submitted search via button click and Enter key
+- Step 3: Page shows all 100 courses (Page 1 of 17) - treated as empty search
+- Step 4: No JavaScript errors related to search functionality
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshots: feature-177-whitespace-search-test.png
+
+[Testing] 2026-01-26 Feature #205 'Tablet layout at 768px works correctly' - VERIFIED PASSING
+- Step 1: Set viewport to 768px wide - PASS
+- Step 2: Hamburger menu appears in navbar - PASS
+- Step 3: Clicked hamburger menu successfully - PASS
+- Step 4: Navigation drawer opens with Cursos, Dashboard, Iniciar Sesion links - PASS
+- Step 5: Content reflows correctly - 2-column course card grid, proper spacing - PASS
+- Also verified on /courses page - layout works correctly
+- Console errors: Only expected 401 auth errors (user not logged in)
+- Screenshots: feature-205-tablet-layout-menu-open.png, feature-205-tablet-courses-page.png
+

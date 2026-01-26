@@ -221,6 +221,7 @@ router.get('/levels', (req, res) => {
 
 /**
  * GET /api/courses/:id - Get course by ID or slug with full details
+ * Feature #244: Includes instructor name and avatar
  */
 router.get('/:identifier', (req, res) => {
   try {
@@ -240,6 +241,15 @@ router.get('/:identifier', (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
+    // Feature #244: Get instructor information if instructor_id is set
+    let instructor = null;
+    if (course.instructor_id) {
+      instructor = queryOne(
+        'SELECT id, name, avatar_url, bio FROM users WHERE id = ?',
+        [course.instructor_id]
+      );
+    }
+
     // Get modules with lessons
     const modules = queryAll(
       'SELECT * FROM modules WHERE course_id = ? ORDER BY order_index',
@@ -254,7 +264,7 @@ router.get('/:identifier', (req, res) => {
       );
     }
 
-    res.json({ course: { ...course, modules } });
+    res.json({ course: { ...course, modules, instructor } });
   } catch (error) {
     console.error('Error fetching course:', error);
     res.status(500).json({ error: 'Failed to fetch course' });

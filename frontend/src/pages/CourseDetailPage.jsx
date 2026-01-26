@@ -190,6 +190,13 @@ function CourseDetailPage() {
             ? apiCourse.modules
             : sampleCourse?.modules || [];
 
+          // Feature #244: Use instructor data from API if available
+          const instructor = apiCourse.instructor || sampleCourse?.instructor || {
+            name: 'Instructor',
+            bio: 'Instructor del curso',
+            avatar: null
+          };
+
           const mergedCourse = {
             ...sampleCourse,
             id: apiCourse.id, // Use actual database ID!
@@ -201,6 +208,12 @@ function CourseDetailPage() {
             duration: `${apiCourse.duration_hours || 0} horas`,
             modules: modulesToUse, // For display purposes
             _hasRealLessons: hasApiModules, // Flag to indicate if navigation is safe
+            instructor: {
+              id: instructor.id,
+              name: instructor.name,
+              bio: instructor.bio,
+              avatar: instructor.avatar_url || instructor.avatar || null
+            },
           };
 
           setCourse(mergedCourse);
@@ -453,14 +466,26 @@ function CourseDetailPage() {
                 <span>{totalLessons} lecciones</span>
               </div>
 
-              {/* Instructor */}
-              <div className="mt-6 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
-                  {(course.instructor?.name || "I").charAt(0)}
-                </div>
+              {/* Instructor - Feature #244 */}
+              <div className="mt-6 flex items-center gap-3" data-testid="instructor-info">
+                {course.instructor?.avatar ? (
+                  <img
+                    src={course.instructor.avatar}
+                    alt={`Avatar de ${course.instructor.name}`}
+                    className="w-10 h-10 rounded-full object-cover"
+                    data-testid="instructor-avatar"
+                  />
+                ) : (
+                  <div
+                    className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg"
+                    data-testid="instructor-avatar-placeholder"
+                  >
+                    {(course.instructor?.name || "I").charAt(0)}
+                  </div>
+                )}
                 <div>
-                  <p className="font-medium">{course.instructor?.name || "Instructor"}</p>
-                  <p className="text-sm text-primary-200">{course.instructor?.bio || "Instructor del curso"}</p>
+                  <p className="font-medium" data-testid="instructor-name">{course.instructor?.name || "Instructor"}</p>
+                  <p className="text-sm text-primary-200" data-testid="instructor-bio">{course.instructor?.bio || "Instructor del curso"}</p>
                 </div>
               </div>
             </div>
