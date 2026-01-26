@@ -4,6 +4,17 @@ import { emitGlobalBroadcast, WS_EVENTS } from '../utils/websocket-events.js';
 
 const router = express.Router();
 
+/**
+ * Middleware to check if user is authenticated
+ * Feature #39: Returns 401 for unauthenticated requests
+ */
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.isAuthenticated || !req.session.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
 // Ensure notifications table exists
 function ensureNotificationsTable() {
   try {
@@ -38,9 +49,9 @@ setTimeout(ensureNotificationsTable, 1200);
 /**
  * Get all notifications for the current user
  */
-router.get('/', (req, res) => {
+router.get('/', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
     const notifications = queryAll(
       `SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
       [userId]
@@ -62,9 +73,9 @@ router.get('/', (req, res) => {
 /**
  * Get unread notifications count
  */
-router.get('/unread/count', (req, res) => {
+router.get('/unread/count', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
     const result = queryOne(
       `SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0`,
       [userId]
@@ -79,10 +90,10 @@ router.get('/unread/count', (req, res) => {
 /**
  * Mark a notification as read
  */
-router.put('/:id/read', (req, res) => {
+router.put('/:id/read', requireAuth, (req, res) => {
   try {
     const notificationId = req.params.id;
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
 
     // Verify the notification belongs to this user
     const notification = queryOne(
@@ -106,9 +117,9 @@ router.put('/:id/read', (req, res) => {
 /**
  * Mark all notifications as read for current user
  */
-router.put('/read-all', (req, res) => {
+router.put('/read-all', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
 
     run(`UPDATE notifications SET is_read = 1 WHERE user_id = ?`, [userId]);
 
@@ -122,9 +133,9 @@ router.put('/read-all', (req, res) => {
 /**
  * Create a new notification (for testing and internal use)
  */
-router.post('/create', (req, res) => {
+router.post('/create', requireAuth, (req, res) => {
   try {
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
     const { type, title, message, content } = req.body;
 
     if (!type || !title) {
@@ -170,10 +181,10 @@ router.post('/create', (req, res) => {
 /**
  * Delete a notification
  */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireAuth, (req, res) => {
   try {
     const notificationId = req.params.id;
-    const userId = req.session?.user?.id || 'test-user';
+    const userId = req.session.user.id;
 
     // Verify the notification belongs to this user
     const notification = queryOne(

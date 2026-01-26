@@ -1,0 +1,66 @@
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #37)
+
+### Feature #37: Video feedback URLs are protected - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Get a video feedback URL** - PASS
+   - Logged in as student (submission owner)
+   - Retrieved feedback with video_url via GET /api/feedback/submissions/1/feedback
+   - Video URL returned: /api/feedback/video/1/feature37-instructor-video.mp4
+   - video_url_protected flag: true
+
+2. **Log out of the application** - PASS
+   - Tested unauthenticated access (no session cookie)
+
+3. **Attempt to access the video URL directly** - PASS
+   - GET /api/feedback/submissions/1/feedback (no auth) → 401 Authentication required
+   - GET /api/feedback/feedback/1 (no auth) → 401 Authentication required
+   - GET /api/feedback/video/1/feature37-instructor-video.mp4 (no auth) → 401 Authentication required
+
+4. **Verify access is denied or requires authentication** - PASS
+   - All unauthenticated attempts return 401
+   - Non-owner (User ID 999) returns 403: "Access denied: You can only view feedback for your own submissions"
+   - Submission owner (User ID 1) gets 200 OK with feedback data
+   - Course instructor (User ID 2) gets 200 OK with feedback data
+
+### Implementation Details:
+
+**Backend Changes (backend/src/routes/feedback.js):**
+- Added `requireAuth` middleware to GET /submissions/:submissionId/feedback
+- Added `requireAuth` middleware to GET /feedback/:id
+- Added ownership verification: user must own submission OR be course instructor
+- Created new protected video endpoint: GET /video/:feedbackId/:filename
+  - Validates authentication
+  - Validates feedback ownership (submission owner or course instructor)
+  - Validates filename matches feedback's video_url
+  - Serves file securely
+
+**Security Model:**
+- Unauthenticated users: 401 Authentication required
+- Authenticated but not owner: 403 Access denied
+- Submission owner: Full access
+- Course instructor: Full access to their course's submissions
+- Video URLs converted to protected endpoint format
+
+### Test Results:
+```
+✓ PASS - Step 1: Get video feedback URL as owner
+✓ PASS - Step 3: Feedback endpoint requires auth
+✓ PASS - Step 3: Single feedback endpoint requires auth
+✓ PASS - Step 4: Video endpoint requires auth
+✓ PASS - Step security: Non-owner denied access
+✓ PASS - Step security: Instructor can access feedback
+✓ PASS - Step security: Owner can access feedback
+```
+
+### Console Errors: None
+
+### Current Status:
+- Feature #37 marked as PASSING
+- Commit: 20f4c84
+
+[Coding] 2026-01-26 Feature #37 'Video feedback URLs are protected' verified - PASSED
