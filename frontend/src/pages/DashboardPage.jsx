@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { ServerErrorBanner } from '../components/ServerErrorBanner';
 import { isServerError, formatApiError } from '../utils/apiErrorHandler';
+import { DueCountdownBadge } from '../components/DueCountdown';
 
 function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState([]);
+  const [pendingProjects, setPendingProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [serverError, setServerError] = useState(null);
@@ -58,6 +60,20 @@ function DashboardPage() {
 
         const data = await response.json();
         setEnrollments(data.enrollments || []);
+
+        // Also fetch pending projects
+        try {
+          const projectsResponse = await fetch(`${API_BASE}/projects/my/pending`, {
+            credentials: 'include'
+          });
+          if (projectsResponse.ok) {
+            const projectsData = await projectsResponse.json();
+            setPendingProjects(projectsData.projects || []);
+          }
+        } catch (projectErr) {
+          console.error('Error fetching pending projects:', projectErr);
+          // Don't fail the whole page if projects fail
+        }
       } catch (err) {
         console.error('Error fetching enrollments:', err);
         setError(err.message);
@@ -218,6 +234,58 @@ function DashboardPage() {
                 </svg>
               </div>
               <span className="font-medium">Tienes acceso Premium - Disfruta de todos los cursos y funciones exclusivas</span>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Projects Section */}
+        {pendingProjects.length > 0 && (
+          <div className="mb-8" data-testid="pending-projects-section">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Entregables Pendientes ({pendingProjects.length})
+              </h2>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {pendingProjects.map((project) => (
+                  <Link
+                    key={project.id}
+                    to={`/project/submit/${project.id}`}
+                    className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group"
+                    data-testid={`pending-project-${project.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                        {project.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {project.course_title || `Curso: ${project.course_id}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 ml-4">
+                      {project.due_date ? (
+                        <DueCountdownBadge dueDate={project.due_date} />
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          Sin fecha limite
+                        </span>
+                      )}
+                      <svg
+                        className="w-5 h-5 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         )}

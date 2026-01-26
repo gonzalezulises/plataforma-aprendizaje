@@ -6,6 +6,7 @@ import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import { FileUpload } from '../components/FileUpload';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
+import { DueCountdownCard } from '../components/DueCountdown';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -226,9 +227,11 @@ export default function ProjectSubmissionPage() {
               </div>
             )}
             {project.due_date && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Due: {new Date(project.due_date).toLocaleDateString()}
-              </div>
+              <DueCountdownCard
+                dueDate={project.due_date}
+                title="Fecha de Entrega"
+                className="mt-4"
+              />
             )}
           </div>
         )}

@@ -87,6 +87,35 @@ router.get('/my/submissions', (req, res) => {
 });
 
 /**
+ * Get pending projects for the current user (not yet submitted)
+ * MUST be before /:id routes
+ */
+router.get('/my/pending', (req, res) => {
+  try {
+    const userId = req.session?.user?.id || 'test-user';
+    // Get all projects that the user hasn't submitted yet
+    // Only get projects from courses the user is enrolled in
+    const pendingProjects = queryAll(
+      `SELECT p.*, c.title as course_title, c.slug as course_slug
+       FROM projects p
+       JOIN courses c ON p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT)
+       JOIN enrollments e ON e.course_id = c.id
+       WHERE e.user_id = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM project_submissions ps
+         WHERE ps.project_id = p.id AND ps.user_id = ?
+       )
+       ORDER BY p.due_date ASC NULLS LAST, p.created_at DESC`,
+      [userId, userId]
+    );
+    res.json({ projects: pendingProjects });
+  } catch (error) {
+    console.error('Error fetching pending projects:', error);
+    res.status(500).json({ error: 'Failed to fetch pending projects' });
+  }
+});
+
+/**
  * Get all submissions awaiting review (instructor only)
  * MUST be before /:id routes
  */
@@ -249,3 +278,4 @@ router.get('/submissions/:submissionId', (req, res) => {
 });
 
 export default router;
+// trigger reload do., 25 de ene. de 2026 20:51:33
