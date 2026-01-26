@@ -958,25 +958,25 @@ function CodeChallengePage() {
             </div>
 
             {/* Code editor */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative overflow-hidden">
               <textarea
                 value={code}
                 onChange={handleCodeChange}
-                className={`w-full h-[400px] p-4 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none ${
+                className={`w-full h-[300px] sm:h-[350px] lg:h-[400px] p-4 pl-12 font-mono text-sm bg-gray-900 text-green-400 resize-none focus:outline-none overflow-auto ${
                   syntaxError ? 'border-2 border-red-500' : ''
                 }`}
                 spellCheck={false}
                 placeholder="Escribe tu codigo aqui..."
               />
-              {/* Line numbers overlay with syntax error highlighting */}
-              <div className="absolute left-0 top-0 p-4 font-mono text-sm pointer-events-none select-none">
+              {/* Line numbers overlay - responsive height contained within editor (Feature #208) */}
+              <div className="absolute left-0 top-0 p-4 font-mono text-sm pointer-events-none select-none h-[300px] sm:h-[350px] lg:h-[400px] overflow-hidden">
                 {code.split('\n').map((_, idx) => {
                   const lineNum = idx + 1;
                   const isErrorLine = syntaxError && syntaxError.line === lineNum;
                   return (
                     <div
                       key={idx}
-                      className={`h-5 text-right pr-4 w-8 ${
+                      className={`h-5 text-right pr-2 w-10 ${
                         isErrorLine
                           ? 'text-red-400 font-bold bg-red-900/30 rounded-l'
                           : 'text-gray-500'
@@ -984,7 +984,7 @@ function CodeChallengePage() {
                     >
                       {lineNum}
                       {isErrorLine && (
-                        <span className="absolute left-10 text-red-400" title={syntaxError.message}>
+                        <span className="absolute left-12 text-red-400" title={syntaxError.message}>
                           ⚠
                         </span>
                       )}

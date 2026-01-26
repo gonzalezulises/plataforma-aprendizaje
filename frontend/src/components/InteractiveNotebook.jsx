@@ -165,7 +165,20 @@ function InteractiveNotebook({ notebookId }) {
     }
   };
 
-  // Run all cells
+  // Feature #136: Handle code changes in cells - persist edited code
+  const handleCellCodeChange = useCallback((cellId, newCode) => {
+    const newCellStates = {
+      ...cellStates,
+      [cellId]: {
+        ...cellStates[cellId],
+        editedCode: newCode
+      }
+    };
+    setCellStates(newCellStates);
+    saveState(newCellStates);
+  }, [cellStates, saveState]);
+
+  // Run all cells - Feature #136: Use edited code if available
   const runAllCells = async () => {
     if (!notebook?.cells) return;
 
@@ -174,7 +187,9 @@ function InteractiveNotebook({ notebookId }) {
       .sort((a, b) => a.order - b.order);
 
     for (const cell of codeCells) {
-      await executeCell(cell.id, cell.content);
+      // Use edited code from cellStates if available, otherwise use original content
+      const codeToExecute = cellStates[cell.id]?.editedCode || cell.content;
+      await executeCell(cell.id, codeToExecute);
     }
   };
 
@@ -252,6 +267,7 @@ function InteractiveNotebook({ notebookId }) {
               isExecuting={executingCells.has(cell.id)}
               onExecute={(code) => executeCell(cell.id, code)}
               onClearOutput={() => clearCellOutput(cell.id)}
+              onCodeChange={handleCellCodeChange}
               cellNumber={index + 1}
             />
           ))}
@@ -262,14 +278,27 @@ function InteractiveNotebook({ notebookId }) {
 
 /**
  * NotebookCell - Individual cell component (markdown or code)
+ * Feature #136: Code editor content survives navigation
  */
-function NotebookCell({ cell, cellState, isExecuting, onExecute, onClearOutput, cellNumber }) {
-  const [editableCode, setEditableCode] = useState(cell.content);
+function NotebookCell({ cell, cellState, isExecuting, onExecute, onClearOutput, onCodeChange, cellNumber }) {
+  // Feature #136: Initialize with saved edited code if available, otherwise use original content
+  const [editableCode, setEditableCode] = useState(cellState?.editedCode || cell.content);
 
-  // Reset editable code when cell content changes
+  // Reset editable code when cell content changes (but not if we have saved edited code)
   useEffect(() => {
-    setEditableCode(cell.content);
-  }, [cell.content]);
+    // Only reset to cell.content if there's no saved edited code
+    if (!cellState?.editedCode) {
+      setEditableCode(cell.content);
+    }
+  }, [cell.content, cellState?.editedCode]);
+
+  // Feature #136: Save code changes to parent for persistence
+  const handleCodeChange = (newCode) => {
+    setEditableCode(newCode);
+    if (onCodeChange) {
+      onCodeChange(cell.id, newCode);
+    }
+  };
 
   if (cell.type === 'markdown') {
     return (
@@ -347,7 +376,7 @@ function NotebookCell({ cell, cellState, isExecuting, onExecute, onClearOutput, 
       <div className="relative">
         <textarea
           value={editableCode}
-          onChange={(e) => setEditableCode(e.target.value)}
+          onChange={(e) => handleCodeChange(e.target.value)}
           className="w-full p-4 bg-gray-900 dark:bg-gray-950 text-gray-100 font-mono text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
           rows={Math.max(3, editableCode.split('\n').length)}
           spellCheck={false}
