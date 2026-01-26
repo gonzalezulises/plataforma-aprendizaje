@@ -1,3 +1,53 @@
+## Session: 2026-01-26 (Coding Agent - Feature #22)
+
+### Feature #22: Users can only view their own profile details - VERIFIED AND PASSING
+
+**Progress: 227/248 features passing (91.5%)**
+
+All 5 verification steps completed:
+
+1. **Log in as User A** - PASS
+   - Logged in as: testuser@example.com (Test User)
+   - User ID: 1, Role: student_free
+
+2. **Note private profile fields (email, preferences)** - PASS
+   - Email: testuser@example.com (PRIVATE)
+   - Preferences: notification settings (PRIVATE)
+   - Bio: TEST_BIO_UNIQUE_12345 (PUBLIC)
+   - Via /api/users/me: Full data returned including email and preferences
+
+3. **Log in as User B** - PASS
+   - Logged in as: instructor@test.com (Test Instructor)
+   - User ID: 2, Role: instructor_admin
+
+4. **Attempt to access User A's profile API** - PASS
+   - Called: GET /api/users/1 (User A's profile)
+   - Response: isOwnProfile: false
+   - Response included ONLY public data: id, name, avatar_url, role, bio, created_at
+
+5. **Verify private data is not exposed** - PASS
+   - NO email field in response (testuser@example.com NOT visible)
+   - NO preferences field in response (notification settings NOT visible)
+   - User B's own profile (/api/users/2) correctly shows their email and preferences
+
+### Implementation Details:
+- Backend: Added GET /api/users/:id endpoint in backend/src/routes/users.js
+- Returns full profile (email, preferences) ONLY if isOwnProfile is true
+- Returns public profile only (name, avatar, bio, role) for other users
+- Endpoint requires authentication (401 if not logged in)
+
+### Console Errors: Only expected 401/404 responses (before login, non-existent users)
+
+### Screenshots:
+- feature-22-step2-user-a-dashboard.png - User A logged in
+- feature-22-step5-user-b-cannot-see-user-a-private-data.png - User B cannot see private data
+
+### Commit: Already committed in f21433a (Feature #23 implementation)
+
+[Coding] 2026-01-26 Feature #22 'Users can only view their own profile details' verified - PASSED
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #18 Re-verification)
 
 ### Feature #18: Students cannot access analytics dashboard - RE-VERIFIED AND PASSING
