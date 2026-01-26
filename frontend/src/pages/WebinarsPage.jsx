@@ -308,7 +308,7 @@ function WebinarsPage() {
             </button>
           </div>
 
-          <div className="flex gap-2 sm:ml-auto">
+          <div className="flex gap-2 sm:ml-auto" role="group" aria-label="Vista de webinars">
             <button
               onClick={() => setView('list')}
               className={`p-2 rounded-lg transition-colors ${
@@ -317,8 +317,10 @@ function WebinarsPage() {
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title="Vista de lista"
+              aria-label="Cambiar a vista de lista"
+              aria-pressed={view === 'list'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
             </button>
@@ -330,8 +332,10 @@ function WebinarsPage() {
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
               title="Vista de calendario"
+              aria-label="Cambiar a vista de calendario"
+              aria-pressed={view === 'calendar'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </button>
