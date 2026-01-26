@@ -467,7 +467,11 @@ function CourseDetailPage() {
               </div>
 
               {/* Instructor - Feature #244 */}
-              <div className="mt-6 flex items-center gap-3" data-testid="instructor-info">
+              <Link
+                to={course.instructor?.id ? `/instructor/${course.instructor.id}` : '#'}
+                className="mt-6 flex items-center gap-3 hover:bg-white/10 rounded-lg p-2 -ml-2 transition-colors"
+                data-testid="instructor-info"
+              >
                 {course.instructor?.avatar ? (
                   <img
                     src={course.instructor.avatar}
@@ -484,10 +488,10 @@ function CourseDetailPage() {
                   </div>
                 )}
                 <div>
-                  <p className="font-medium" data-testid="instructor-name">{course.instructor?.name || "Instructor"}</p>
+                  <p className="font-medium underline-offset-2 hover:underline" data-testid="instructor-name">{course.instructor?.name || "Instructor"}</p>
                   <p className="text-sm text-primary-200" data-testid="instructor-bio">{course.instructor?.bio || "Instructor del curso"}</p>
                 </div>
-              </div>
+              </Link>
             </div>
 
             {/* Enrollment Card */}

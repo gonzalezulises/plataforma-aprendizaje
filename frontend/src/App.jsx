@@ -37,6 +37,7 @@ import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import CourseCatalogPage from './pages/CourseCatalogPage';
 import RaceConditionTestPage from './pages/RaceConditionTestPage';
+import InstructorProfilePage from './pages/InstructorProfilePage';
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -574,6 +575,7 @@ function App() {
             <Route path="/test-video" element={<VideoTestPage />} />
             <Route path="/test-race-condition" element={<RaceConditionTestPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/instructor/:id" element={<InstructorProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="*" element={<NotFound />} />

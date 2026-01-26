@@ -31,6 +31,7 @@ import directAuthRoutes from './routes/direct-auth.js';
 import aiCourseStructureRoutes from './routes/ai-course-structure.js';
 import uploadsRoutes, { initUploadsTables } from './routes/uploads.js';
 import usersRoutes from './routes/users.js';
+import instructorsRoutes from './routes/instructors.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -226,6 +227,7 @@ app.use('/api/direct-auth', directAuthRoutes);
 app.use('/api/ai', aiCourseStructureRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/instructors', instructorsRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {
