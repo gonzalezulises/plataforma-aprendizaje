@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 // Feature #230: Export student progress report
 // Feature #64: Profile tabs navigate correctly
+// Feature #75: Profile updates are saved
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths for some endpoints
@@ -28,7 +29,7 @@ const TABS = [
 ];
 
 function ProfilePage() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const { tab } = useParams();
 
@@ -40,6 +41,11 @@ function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Feature #75: Profile editing state
+  const [profileData, setProfileData] = useState({ bio: '' });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Certificates state
   const [certificates, setCertificates] = useState([]);
@@ -105,6 +111,73 @@ function ProfilePage() {
       navigate('/login', { state: { from: '/profile' } });
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Feature #75: Fetch user profile data (including bio) on mount
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await fetch(`${API_URL}/users/me`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setProfileData({ bio: data.user.bio || '' });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchProfile();
+    }
+  }, [isAuthenticated]);
+
+  // Feature #75: Handle profile save
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+
+    try {
+      const response = await fetch(`${API_URL}/users/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ bio: profileData.bio })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          navigate('/login', { state: { from: '/profile' } });
+          return;
+        }
+        throw new Error('Error al guardar el perfil');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Perfil actualizado exitosamente');
+        setIsEditingProfile(false);
+        // Refresh user data in auth context if available
+        if (refreshAuth) {
+          refreshAuth();
+        }
+      } else {
+        throw new Error(data.error || 'Error al guardar el perfil');
+      }
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      toast.error(err.message || 'Error al guardar el perfil');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Fetch notification preferences on mount
   useEffect(() => {
@@ -365,6 +438,86 @@ function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Feature #75: Bio Section - Editable */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Acerca de mi
+          </h2>
+          {!isEditingProfile && (
+            <button
+              onClick={() => setIsEditingProfile(true)}
+              className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              Editar
+            </button>
+          )}
+        </div>
+
+        {isEditingProfile ? (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Biografia
+              </label>
+              <textarea
+                id="bio"
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Escribe algo sobre ti..."
+                value={profileData.bio}
+                onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+              />
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Cuenta a otros estudiantes e instructores sobre ti, tus intereses y objetivos de aprendizaje.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className={`px-4 py-2 rounded-lg text-white transition-colors ${
+                  isSavingProfile
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary-600 hover:bg-primary-700'
+                }`}
+              >
+                {isSavingProfile ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Guardando...
+                  </span>
+                ) : (
+                  'Guardar Cambios'
+                )}
+              </button>
+              <button
+                onClick={() => setIsEditingProfile(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {profileData.bio ? (
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{profileData.bio}</p>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 italic">
+                No has agregado informacion sobre ti. Haz clic en "Editar" para agregar tu biografia.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Feature #230: Export Progress Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">

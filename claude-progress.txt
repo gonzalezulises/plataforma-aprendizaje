@@ -13747,3 +13747,21 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #73 'Forum post content is saved correctly' verified - PASSED
 
+[Testing] 2026-01-26 Feature #67 'Created module appears in course structure' - VERIFIED PASSING
+- Step 1: Log in as instructor - PASS (instructor@test.com)
+- Step 2: Create module TEST_MODULE_ABC - PASS (toast: Modulo creado)
+- Step 3: Navigate to course as student - PASS (/course/python-fundamentos)
+- Step 4: Verify TEST_MODULE_ABC in course structure - PASS (module #3 visible with description)
+- Step 5: Delete test module - PASS (toast: Modulo eliminado)
+- Console errors: None
+- Feature continues to work correctly, no regression found
+[Testing] 2026-01-26 Feature #218 'Skip navigation link available' - VERIFIED PASSING
+- Step 1: Load page - PASS
+- Step 2: Press Tab immediately - PASS (skip link receives focus)
+- Step 3: Verify skip link appears - PASS ('Saltar al contenido principal' with [active] state)
+- Step 4: Activate skip link - PASS (pressed Enter)
+- Step 5: Verify focus moves to main content - PASS (main [active], URL changed to #main-content)
+- Tested on both home page (/) and courses page (/courses)
+- Console errors: Only expected 401s for unauthenticated user
+- Screenshot: feature-218-skip-link-verified.png
+- No regression found

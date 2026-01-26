@@ -2,8 +2,138 @@ import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
 // Feature #162: User deletion cascade
 // Feature #230: Export student progress report - Reloaded 2026-01-26T02:23
+// Feature #75: Profile updates are saved
 
 const router = express.Router();
+
+/**
+ * GET /api/users/me
+ * Get current user's profile including bio
+ * Feature #75: Profile updates are saved
+ */
+router.get('/me', (req, res) => {
+  const currentUser = req.session?.user;
+
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const user = queryOne(
+      'SELECT id, email, name, avatar_url, role, bio, preferences, created_at, updated_at FROM users WHERE id = ?',
+      [currentUser.id]
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url,
+        role: user.role,
+        bio: user.bio || '',
+        preferences: user.preferences ? JSON.parse(user.preferences) : {},
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }
+    });
+  } catch (err) {
+    console.error('[Users] Get profile error:', err);
+    res.status(500).json({ success: false, error: 'Error al obtener el perfil' });
+  }
+});
+
+/**
+ * PUT /api/users/me
+ * Update current user's profile (bio, name, avatar_url)
+ * Feature #75: Profile updates are saved
+ */
+router.put('/me', (req, res) => {
+  const currentUser = req.session?.user;
+
+  if (!req.session?.isAuthenticated || !currentUser) {
+    return res.status(401).json({ success: false, error: 'No autenticado' });
+  }
+
+  try {
+    const { bio, name, avatar_url } = req.body;
+    const userId = currentUser.id;
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (bio !== undefined) {
+      updates.push('bio = ?');
+      params.push(bio);
+    }
+
+    if (name !== undefined && name.trim().length > 0) {
+      updates.push('name = ?');
+      params.push(name.trim());
+    }
+
+    if (avatar_url !== undefined) {
+      updates.push('avatar_url = ?');
+      params.push(avatar_url);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, error: 'No se proporcionaron campos para actualizar' });
+    }
+
+    // Add updated_at
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(userId);
+
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+    console.log('[Users] Updating profile for user', userId, '- Fields:', updates.slice(0, -1).join(', '));
+
+    run(query, params);
+
+    // Get updated user data
+    const updatedUser = queryOne(
+      'SELECT id, email, name, avatar_url, role, bio, preferences, created_at, updated_at FROM users WHERE id = ?',
+      [userId]
+    );
+
+    // Update session user data
+    if (updatedUser) {
+      req.session.user = {
+        ...req.session.user,
+        name: updatedUser.name,
+        bio: updatedUser.bio,
+        avatar_url: updatedUser.avatar_url
+      };
+    }
+
+    console.log('[Users] Profile updated successfully for user', userId);
+
+    res.json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        avatar_url: updatedUser.avatar_url,
+        role: updatedUser.role,
+        bio: updatedUser.bio || '',
+        preferences: updatedUser.preferences ? JSON.parse(updatedUser.preferences) : {},
+        created_at: updatedUser.created_at,
+        updated_at: updatedUser.updated_at
+      }
+    });
+  } catch (err) {
+    console.error('[Users] Update profile error:', err);
+    res.status(500).json({ success: false, error: 'Error al actualizar el perfil' });
+  }
+});
 
 /**
  * GET /api/users/me/progress/export
