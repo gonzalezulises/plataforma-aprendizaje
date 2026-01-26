@@ -14799,3 +14799,68 @@ All 5 verification steps completed:
 - Step 3: Verify thread loads correctly - PASS
 - Step 4: Verify replies are visible - PASS
 - No regression found
+[Testing] 2026-01-26 Feature #149 'URL with malformed parameters handled' - VERIFIED PASSING
+- Step 1: Navigate to /courses?page=abc - PASS (page loads)
+- Step 2: Verify app doesn't crash - PASS (content displays correctly)
+- Step 3: Verify fallback to default values - PASS (dropdowns show defaults)
+- Step 4: Verify error is logged if appropriate - PASS (only expected 401 errors)
+- Additional tests: negative pages, invalid categories, XSS attempts, null bytes, invalid slugs
+- All malformed parameters handled gracefully without crashes
+- Console errors: Only expected 401 Unauthorized (not logged in)
+- Screenshot: feature-149-malformed-url-params.png
+- No regression found
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #23)
+
+### Feature #23: Users can only see their own submissions - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Log in as user A and submit code** - PASS
+   - Logged in as testuser@example.com (User A, id=1)
+   - Submitted code to challenge 1 (submission_id: 3)
+   - Submitted project to project 1 (submission_id: 1)
+
+2. **Log in as user B** - PASS
+   - Created User B via dev-login (userb@example.com, id=999)
+   - Successfully logged in with different session
+
+3. **Attempt to access user A's submissions via API** - PASS
+   - GET /api/projects/submissions/1 - Returns 403 'Access denied: You can only view your own submissions'
+   - GET /api/projects/1/submissions - Returns empty array (only shows user's own submissions)
+   - GET /api/challenges/1/attempts - Returns empty array (already protected)
+
+4. **Verify submissions are not accessible** - PASS
+   - All attempts by User B to access User A's submissions were blocked
+   - User A can still see their own submissions
+   - Instructors can see all submissions for grading
+
+### Implementation Details:
+- Fixed GET /api/projects/:id/submissions:
+  - Added requireAuth middleware
+  - Filters by user_id for regular users
+  - Instructors see all submissions for review
+- Fixed GET /api/projects/submissions/:submissionId:
+  - Added requireAuth middleware
+  - Added ownership check before returning submission
+  - Returns 403 if user doesn't own the submission
+  - Instructors can access any submission
+
+### Console Errors:
+- Only expected 401s before login (unauthenticated state)
+- No JavaScript errors during feature use
+
+### Screenshots:
+- feature-23-step1-user-a-logged-in.png - Dashboard showing logged in User A
+
+### Current Status:
+- Feature #23 marked as PASSING
+- Progress: 227/248 features passing (91.5%)
+- Commit: f21433a
+
+[Coding] 2026-01-26 Feature #23 'Users can only see their own submissions' verified - PASSED
+
