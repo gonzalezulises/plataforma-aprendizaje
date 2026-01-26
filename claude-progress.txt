@@ -14047,3 +14047,13 @@ All 6 verification steps completed:
 - Commit: 8b1da75
 
 [Coding] 2026-01-26 Feature #79 'Deleted course is removed from catalog' verified - PASSED
+[Testing] 2026-01-26 Feature #158 'Mark complete idempotent' - VERIFIED PASSING
+- Step 1: Navigate to lesson - PASS (lesson 1 of Python: Fundamentos)
+- Step 2: Click mark complete - PASS (API call succeeded)
+- Step 3: Click mark complete again - PASS (second/third API calls succeeded without error)
+- Step 4: Verify lesson marked complete once - PASS (completedAt preserved: 2026-01-26T10:05:40.108Z)
+- Step 5: Verify progress accurate - PASS (UI shows Completada badge and success message)
+- Implementation: Frontend guard (line 449) + Backend COALESCE (line 150)
+- Console errors: Only 404s for unrelated endpoints (sidebar)
+- Screenshot: feature-158-lesson-complete-verified.png
+- No regression found
