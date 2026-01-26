@@ -174,6 +174,7 @@ router.get('/all/submissions', requireInstructor, (req, res) => {
     const instructorId = req.session.user.id;
 
     // Build query to only get submissions from courses owned by this instructor
+    // Feature #24/#25: Instructors can only view submissions for their own courses
     // Projects are linked to courses via course_id (which can be slug or course id)
     let query = `
       SELECT ps.*, p.title as project_title, p.course_id, c.title as course_title
@@ -304,8 +305,15 @@ router.get('/:id/submissions', requireAuth, (req, res) => {
         return res.status(404).json({ error: 'Project not found' });
       }
 
-      // Check if instructor owns this course
-      if (project.instructor_id !== userId && project.instructor_id !== String(userId)) {
+      // Feature #25: Check if instructor owns this course
+      // Must deny access when instructor_id is null/undefined
+      const courseOwnerId = project.instructor_id;
+      const ownsThisCourse = courseOwnerId !== null &&
+                             courseOwnerId !== undefined &&
+                             String(courseOwnerId) === String(userId);
+      console.log('[Feature25] Project: instructor_id=' + courseOwnerId + ', userId=' + userId + ', owns=' + ownsThisCourse);
+      if (!ownsThisCourse) {
+        console.log('[Feature25] ACCESS DENIED - instructor does not own course');
         return res.status(403).json({ error: 'Access denied: You can only view submissions for your own courses' });
       }
 
@@ -355,9 +363,18 @@ router.get('/submissions/:submissionId', requireAuth, (req, res) => {
 
     // Check access permissions
     const isOwner = submission.user_id === userId || submission.user_id === String(userId);
-    const isCourseInstructor = submission.instructor_id === userId || submission.instructor_id === String(userId);
+
+    // Feature #25: Instructor can only access if they own the course
+    const subInstructorId = submission.instructor_id;
+    const isCourseInstructor = subInstructorId !== null &&
+                               subInstructorId !== undefined &&
+                               String(subInstructorId) === String(userId);
+
+    console.log('[Feature25] Submission: user_id=' + submission.user_id + ', instructor_id=' + subInstructorId);
+    console.log('[Feature25] isOwner=' + isOwner + ', isInstructor=' + isInstructor + ', isCourseInstructor=' + isCourseInstructor);
 
     if (!isOwner && !(isInstructor && isCourseInstructor)) {
+      console.log('[Feature25] ACCESS DENIED - cannot access submission');
       return res.status(403).json({ error: 'Access denied: You can only view your own submissions or submissions from your courses' });
     }
 
@@ -369,4 +386,5 @@ router.get('/submissions/:submissionId', requireAuth, (req, res) => {
 });
 
 export default router;
-// trigger reload do., 25 de ene. de 2026 20:51:33
+// trigger reload Feature25 test - v2 2026-01-26T20:27
+// Trigger reload Feature25 1769459351

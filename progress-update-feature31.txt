@@ -1,0 +1,21 @@
+[Testing] 2026-01-26 Feature #31 'SQL injection prevention in search queries' - REGRESSION TEST PASSED
+- Step 1: Enter SQL injection payload in search field - PASS
+  - Tested: ' OR '1'='1 - returned 0 results (not all)
+  - Tested: ' UNION SELECT * FROM users -- - returned 0 results
+  - Tested: '; DROP TABLE courses; -- - returned 0 results
+  - Tested: 1; DELETE FROM users WHERE 1=1; -- - returned 0 results
+  - Tested: 1' AND 1=1 -- - returned 0 results
+- Step 2: Submit the search - PASS (all searches completed without errors)
+- Step 3: Verify no SQL error is returned - PASS (no SQL errors in response)
+- Step 4: Verify database is not affected - PASS
+  - All 6 courses still exist after DROP TABLE attempt
+  - Database tables intact after DELETE attempt
+- Step 5: Verify parameterized queries are used - PASS
+  - Code uses db.prepare() with ? placeholders
+  - Search terms passed via params array, not string concatenation
+  - Found in backend/src/routes/courses.js lines 160-167
+- Console errors: Only expected 401s (not logged in)
+- Screenshot: feature-31-sql-injection-test.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #31 verified, no regression found

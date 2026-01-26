@@ -1,214 +1,93 @@
 {
   "exportInfo": {
-    "generatedAt": "2026-01-26T02:30:50.395Z",
+    "generatedAt": "2026-01-26T19:10:12.974Z",
     "format": "JSON",
     "version": "1.0"
   },
   "user": {
     "name": "Test User",
     "email": "testuser@example.com",
-    "role": "student_free",
-    "memberSince": "2026-01-25 09:50:53"
+    "role": "student_premium",
+    "memberSince": "2026-01-26 06:28:53"
   },
   "summary": {
-    "totalCoursesEnrolled": 14,
-    "completedCourses": 5,
-    "completionRate": 36,
-    "totalLessonsCompleted": 15,
-    "totalQuizzesTaken": 0,
-    "quizzesPassed": 0,
-    "averageQuizScore": 0,
-    "totalChallengesAttempted": 8,
-    "challengesSolved": 6,
+    "totalCoursesEnrolled": 3,
+    "completedCourses": 1,
+    "completionRate": 33,
+    "totalLessonsCompleted": 4,
+    "totalQuizzesTaken": 1,
+    "quizzesPassed": 1,
+    "averageQuizScore": 100,
+    "totalChallengesAttempted": 3,
+    "challengesSolved": 3,
     "certificatesEarned": 1
   },
   "courses": [
     {
-      "id": 24,
-      "title": "TEST_120_DevOps Fundamentals",
-      "category": "DevOps",
-      "level": "Principiante",
-      "durationHours": 0,
-      "enrolledAt": "2026-01-25T19:57:05.665Z",
-      "completedAt": "2026-01-25T19:57:53.631Z",
-      "progressPercent": 100,
-      "lastAccessedAt": "2026-01-25T19:57:53.631Z",
-      "status": "Completado"
-    },
-    {
-      "id": 3,
-      "title": "Python: Fundamentos",
-      "category": "Programacion",
-      "level": "Principiante",
-      "durationHours": 20,
-      "enrolledAt": "2026-01-25T19:52:08.351Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T19:52:08.351Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 5,
-      "title": "SQL desde Cero",
-      "category": "Bases de Datos",
-      "level": "Principiante",
-      "durationHours": 15,
-      "enrolledAt": "2026-01-25T19:47:44.579Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T19:47:44.579Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 32,
-      "title": null,
-      "category": null,
-      "level": null,
-      "durationHours": null,
-      "enrolledAt": "2026-01-25T17:11:42.067Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T17:11:42.067Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 29,
-      "title": "TEST_161_CASCADE_LESSON_DELETE",
-      "category": "Programacion",
-      "level": "Principiante",
-      "durationHours": 0,
-      "enrolledAt": "2026-01-25T16:31:01.373Z",
-      "completedAt": "2026-01-25T16:45:53.323Z",
-      "progressPercent": 100,
-      "lastAccessedAt": "2026-01-25T16:45:53.323Z",
-      "status": "Completado"
-    },
-    {
-      "id": 28,
-      "title": null,
-      "category": null,
-      "level": null,
-      "durationHours": null,
-      "enrolledAt": "2026-01-25T16:20:16.590Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T16:20:16.590Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 8,
-      "title": "Web3 y Solidity",
-      "category": "Web3",
-      "level": "Avanzado",
-      "durationHours": 30,
-      "enrolledAt": "2026-01-25T15:38:10.934Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T15:38:10.934Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 6,
-      "title": "Machine Learning Basico",
-      "category": "IA / ML",
-      "level": "Avanzado",
-      "durationHours": 40,
-      "enrolledAt": "2026-01-25T15:25:55.596Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T15:25:55.596Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 18,
-      "title": "TAB1_SAVED_FIRST_",
-      "category": "Programacion",
-      "level": "Principiante",
-      "durationHours": 10,
-      "enrolledAt": "2026-01-25T15:10:00.847Z",
-      "completedAt": "2026-01-25T17:06:08.593Z",
-      "progressPercent": 100,
-      "lastAccessedAt": "2026-01-25T17:06:08.593Z",
-      "status": "Completado"
-    },
-    {
-      "id": 20,
-      "title": "TEST_120_Curso de Testing",
-      "category": "Testing y QA",
-      "level": "Intermedio",
-      "durationHours": 15,
-      "enrolledAt": "2026-01-25T14:48:39.160Z",
-      "completedAt": "2026-01-25T16:45:36.096Z",
-      "progressPercent": 100,
-      "lastAccessedAt": "2026-01-25T16:45:36.096Z",
-      "status": "Completado"
-    },
-    {
-      "id": 7,
-      "title": "R para Estadistica",
-      "category": "Data Science",
-      "level": "Intermedio",
-      "durationHours": 25,
-      "enrolledAt": "2026-01-25T14:40:21.615Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T14:40:21.615Z",
-      "status": "En progreso"
-    },
-    {
-      "id": 4,
+      "id": 2,
       "title": "Data Science con Python",
       "category": "Data Science",
       "level": "Intermedio",
       "durationHours": 35,
-      "enrolledAt": "2026-01-25T14:37:31.910Z",
+      "enrolledAt": "2026-01-26T10:22:28.725Z",
       "completedAt": null,
       "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T14:37:31.910Z",
+      "lastAccessedAt": "2026-01-26T10:22:28.725Z",
       "status": "En progreso"
     },
     {
-      "id": 17,
-      "title": "TEST_87_Curso de JavaScript Moderno",
-      "category": "Programacion",
-      "level": "Intermedio",
-      "durationHours": 10,
-      "enrolledAt": "2026-01-25T14:18:39.602Z",
-      "completedAt": "2026-01-25T14:19:10.734Z",
-      "progressPercent": 100,
-      "lastAccessedAt": "2026-01-25T14:19:10.734Z",
-      "status": "Completado"
+      "id": 3,
+      "title": "SQL desde Cero",
+      "category": "Bases de Datos",
+      "level": "Principiante",
+      "durationHours": 15,
+      "enrolledAt": "2026-01-26T07:39:17.983Z",
+      "completedAt": null,
+      "progressPercent": 0,
+      "lastAccessedAt": "2026-01-26T07:39:17.983Z",
+      "status": "En progreso"
     },
     {
       "id": 1,
-      "title": "TEST_87_Curso de JavaScript Moderno",
+      "title": "Python: Fundamentos",
       "category": "Programacion",
-      "level": "Intermedio",
-      "durationHours": 25,
-      "enrolledAt": "2026-01-25T06:56:43.697Z",
-      "completedAt": null,
-      "progressPercent": 0,
-      "lastAccessedAt": "2026-01-25T06:56:43.697Z",
-      "status": "En progreso"
+      "level": "Principiante",
+      "durationHours": 20,
+      "enrolledAt": "2026-01-26T06:37:38.458Z",
+      "completedAt": "2026-01-26T08:12:41.983Z",
+      "progressPercent": 100,
+      "lastAccessedAt": "2026-01-26T08:12:41.983Z",
+      "status": "Completado"
     }
   ],
-  "quizScores": [],
+  "quizScores": [
+    {
+      "quizId": 1,
+      "quizTitle": "Quiz: Fundamentos de Python",
+      "score": 100,
+      "totalPoints": 10,
+      "passed": true,
+      "attemptNumber": 1,
+      "completedAt": "2026-01-26T10:37:20.830Z",
+      "timeSpentSeconds": 98
+    }
+  ],
   "challengeScores": [
     {
       "challengeId": 1,
       "challengeTitle": "Hola Mundo en Python",
       "difficulty": "easy",
       "solved": true,
-      "bestExecutionTimeMs": 0,
-      "solvedAt": "2026-01-26T01:47:34.854Z"
+      "bestExecutionTimeMs": 5,
+      "solvedAt": "2026-01-26T18:12:06.007Z"
     }
   ],
   "certificates": [
     {
-      "courseId": 3,
+      "courseId": 1,
       "courseTitle": "Python: Fundamentos",
-      "issuedAt": "2026-01-25T09:05:12.515Z",
-      "verificationCode": "E036CF47F0DF280BC634DEA2"
+      "issuedAt": "2026-01-26T10:03:51.103Z",
+      "verificationCode": "95B99E2AC8D07DB6EFBF1854"
     }
   ]
 }
