@@ -1,22 +1,43 @@
 /**
- * Code Executor Utility - Feature #126
+ * Code Executor Utility - Feature #126, Feature #27
  * Provides code execution functionality for lessons and other routes
  * Extracted from challenges.js to avoid circular dependencies
+ *
+ * Feature #27: Code execution is sandboxed and isolated
+ * - Blocks system file access
+ * - Blocks network access
+ * - Prevents access to other users' data
  */
 
 import { detectInfiniteLoop, detectMemoryOveruse, detectSyntaxError, executeWithTimeout } from '../routes/challenges-timeout.js';
+import { checkSandboxSecurity, formatSecurityError } from './sandbox-security.js';
 
 /**
  * Execute code in a sandboxed environment
  * For now, this is a simulation. In production, use Docker containers.
  */
-export async function executeCode(code, language, timeoutSeconds = 30) {
+export async function executeCode(code, language, timeoutSeconds = 30, userId = null) {
   const startTime = Date.now();
   const timeoutMs = timeoutSeconds * 1000;
 
   // For development, simulate Python execution
   if (language === 'python') {
     try {
+      // Feature #27: Check for sandbox security violations FIRST
+      const securityResult = checkSandboxSecurity(code);
+      if (securityResult.isBlocked) {
+        return {
+          output: '',
+          error: null,
+          timeout: false,
+          security_violation: true,
+          security_error: formatSecurityError(securityResult.violations),
+          violations: securityResult.violations,
+          execution_time_ms: 0,
+          sandbox_blocked: true
+        };
+      }
+
       // Check for syntax errors BEFORE execution
       const syntaxResult = detectSyntaxError(code);
       if (syntaxResult.hasSyntaxError) {

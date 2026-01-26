@@ -430,9 +430,12 @@ router.post('/:id/run', async (req, res) => {
       memory_error_message: result.memory_error_message || null,
       syntax_error: result.syntax_error || false,
       syntax_error_info: result.syntax_error_info || null,
+      security_violation: result.security_violation || false,
+      security_error: result.security_error || null,
+      sandbox_blocked: result.sandbox_blocked || false,
       container_cleaned: result.container_cleaned || false,
       execution_time_ms: result.execution_time_ms,
-      success: !result.error && !result.timeout && !result.memory_exceeded && !result.syntax_error
+      success: !result.error && !result.timeout && !result.memory_exceeded && !result.syntax_error && !result.security_violation
     });
   } catch (error) {
     console.error('Error running code:', error);

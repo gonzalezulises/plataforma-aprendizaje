@@ -216,8 +216,11 @@ function CodeChallengePage() {
 
       const data = await response.json();
 
+      // Feature #27: Handle security violations (sandbox blocked)
+      if (data.security_violation && data.security_error) {
+        setOutput(`🔒 ${data.security_error}`);
       // Feature #117: Handle syntax errors with line highlighting
-      if (data.syntax_error && data.syntax_error_info) {
+      } else if (data.syntax_error && data.syntax_error_info) {
         setSyntaxError(data.syntax_error_info);
         setOutput(''); // Clear output - syntax error panel will show
       // Feature #116: Handle memory limit exceeded

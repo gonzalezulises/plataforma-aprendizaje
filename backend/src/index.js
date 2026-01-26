@@ -411,6 +411,64 @@ if (process.env.NODE_ENV !== 'production') {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Feature #27: Test endpoint for sandbox security verification
+  app.post('/api/test/sandbox-security', async (req, res) => {
+    try {
+      const { code, language = 'python' } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: 'Code is required' });
+      }
+
+      // Import and test the security checker
+      const { checkSandboxSecurity, formatSecurityError } = await import('./utils/sandbox-security.js');
+
+      const securityResult = checkSandboxSecurity(code);
+
+      res.json({
+        isBlocked: securityResult.isBlocked,
+        violations: securityResult.violations,
+        formattedError: securityResult.isBlocked ? formatSecurityError(securityResult.violations) : null,
+        message: securityResult.isBlocked
+          ? 'Codigo bloqueado por violaciones de seguridad'
+          : 'Codigo permitido - no se detectaron violaciones'
+      });
+    } catch (error) {
+      console.error('Error testing sandbox security:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Feature #27: Execute code and verify sandbox isolation
+  app.post('/api/test/execute-with-sandbox', async (req, res) => {
+    try {
+      const { code, language = 'python', timeoutSeconds = 10 } = req.body;
+
+      if (!code) {
+        return res.status(400).json({ error: 'Code is required' });
+      }
+
+      // Import the code executor
+      const { executeCode } = await import('./utils/code-executor.js');
+
+      const result = await executeCode(code, language, timeoutSeconds);
+
+      res.json({
+        ...result,
+        sandbox_verification: {
+          security_checked: true,
+          blocked: result.security_violation || false,
+          message: result.security_violation
+            ? 'Ejecucion bloqueada por sandbox'
+            : 'Ejecucion permitida'
+        }
+      });
+    } catch (error) {
+      console.error('Error executing code with sandbox:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
 // API Routes
