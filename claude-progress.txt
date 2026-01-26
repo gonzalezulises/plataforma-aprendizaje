@@ -9674,3 +9674,73 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #220 'Submission timestamps accurate' verified - PASSED
 
+[Testing] 2026-01-26 Feature #164 'Deleted thread removes replies' - VERIFIED PASSING
+- Created test thread ID 43 with 2 replies (IDs 34, 35)
+- Deleted thread via DELETE /api/forum/thread/43
+- Verified thread deleted: API returns 404
+- Verified replies cascade deleted: database shows 0 replies for thread 43
+- Verified reply IDs 34, 35 no longer exist in forum_replies table
+- UI correctly shows 404 'Hilo no encontrado' for deleted thread
+- No unexpected console errors
+- Screenshot: feature-164-thread-deleted.png
+[Testing] 2026-01-26 Feature #183 'Search pagination works correctly' - VERIFIED PASSING
+- Searched for 'de' which returned 12 results across 2 pages
+- Navigated to page 2 via pagination button
+- Search term 'de' maintained in input field
+- Results indicator still shows 'Resultados para: "de" - 12 curso(s) encontrado(s)'
+- Page 2 displays different courses (Python: Fundamentos, Data Science, SQL desde Cero, etc.)
+- URL correctly updated to ?page=2
+- No console errors
+- Screenshots: feature-183-step1-search-page1.png, feature-183-step2-search-page2.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #222)
+
+### Feature #222: Date picker respects locale - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Check user locale setting** - PASS
+   - HTML lang attribute: es (Spanish)
+   - Browser navigator.language: es-ES
+   - All date formatting functions use es-ES locale consistently
+
+2. **Open a date picker** - PASS
+   - Date picker accessible on /webinars/schedule
+   - Shows placeholder 'dd/mm/aaaa' (Spanish format with 'aaaa' for year)
+   - Native HTML5 date input type='date'
+
+3. **Verify date format matches locale** - PASS
+   - Date input displays '15/02/2026' (day/month/year - Spanish format)
+   - Webinar dates show Spanish format: 'miércoles, 21 de enero de 2026'
+   - dateUtils.js uses es-ES locale for all formatting
+
+4. **Verify week start day correct** - PASS
+   - Intl.Locale('es-ES').weekInfo.firstDay = 1 (Monday)
+   - Weekend days = [6, 7] (Saturday, Sunday)
+   - Native HTML5 date picker inherits browser locale settings
+   - Calendar views start week on Monday for Spanish users
+
+### Implementation Details:
+- HTML document lang='es' set in index.html
+- All date formatting uses toLocaleDateString('es-ES', options)
+- dateUtils.js provides consistent Spanish locale formatting
+- WebinarsPage.jsx uses es-ES for date and time display
+- Native date input respects browser locale for format and week start
+
+### Console Errors: None
+
+### Screenshots:
+- feature-222-step1-date-picker-open.png - Date field showing dd/mm/aaaa placeholder
+- feature-222-step3-date-entered.png - Date displayed as 15/02/2026
+- feature-222-step4-calendar-view-dates.png - Calendar view with Spanish dates
+
+### Current Status:
+- Feature #222 marked as PASSING
+- No code changes required - locale support already implemented correctly
+
+[Coding] 2026-01-26 Feature #222 'Date picker respects locale' verified - PASSED
+
