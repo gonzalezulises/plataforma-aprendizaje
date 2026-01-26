@@ -13163,3 +13163,68 @@ All 5 verification steps completed:
 - Console errors: Only transient WebSocket reconnection (non-critical)
 - Screenshots: feature-187-min-length-errors.png, feature-187-validation-passes.png, feature-187-thread-created.png
 
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #64)
+
+### Feature #64: Profile tabs navigate correctly - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Navigate to user profile** - PASS
+   - Navigated to http://localhost:5173/profile
+   - Profile page loaded with tabbed navigation
+
+2. **Click on Certificates tab** - PASS
+   - Clicked "Certificados" tab
+   - URL changed to /profile/certificates
+   - No page reload - content switched dynamically
+
+3. **Verify certificates content loads** - PASS
+   - Certificates tab content displayed
+   - Empty state shows: "Aun no tienes certificados"
+   - CTA button to "Explorar Cursos" present
+
+4. **Click on Badges tab** - PASS
+   - Clicked "Insignias" tab
+   - URL changed to /profile/badges
+   - No page reload - content switched dynamically
+
+5. **Verify badges content loads** - PASS
+   - Badges tab content displayed
+   - Empty state shows: "Aun no tienes insignias"
+   - CTA button to "Ver Rutas de Carrera" present
+
+6. **Verify URL updates accordingly** - PASS
+   - /profile -> Mi Perfil tab (default)
+   - /profile/certificates -> Certificados tab
+   - /profile/badges -> Insignias tab
+   - URLs are shareable and maintain state
+
+### Implementation Details:
+- Modified ProfilePage.jsx to include tabbed navigation
+- Added route /profile/:tab in App.jsx
+- Integrated existing certificates API (/api/certificates)
+- Integrated existing badges API (/api/career-paths/user/badges)
+- Tabs use React Router Link components for navigation
+- Content switches without page reload using conditional rendering
+- Empty states provide helpful CTAs
+
+### Console Errors:
+- Only 401 errors from session expiration (before re-login)
+- No errors during tab navigation
+
+### Screenshots:
+- feature-64-step1-profile-tabs.png - Profile page with tabs
+- feature-64-step2-certificates-tab.png - Certificates tab
+- feature-64-step4-badges-tab.png - Badges tab
+- feature-64-step6-back-to-profile.png - Back to profile info
+
+### Current Status:
+- Feature #64 marked as PASSING
+- Progress: 199/248 features passing (80.2%)
+- Commit: 07604a6
+
+[Coding] 2026-01-26 Feature #64 "Profile tabs navigate correctly" verified - PASSED
