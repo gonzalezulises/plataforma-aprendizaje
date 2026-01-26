@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useSearchParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './store/AuthContext';
+import { ThemeProvider } from './store/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
@@ -505,8 +506,9 @@ function CourseCatalog() {
 
 function App() {
   return (
-    <AuthProvider>
-      <div className="flex flex-col min-h-screen">
+    <ThemeProvider>
+      <AuthProvider>
+        <div className="flex flex-col min-h-screen">
         {/* Skip navigation link for keyboard users - Feature #218 */}
         <a
           href="#main-content"
@@ -582,8 +584,9 @@ function App() {
           </Routes>
         </main>
         <Footer />
-      </div>
-    </AuthProvider>
+        </div>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

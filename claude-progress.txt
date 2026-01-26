@@ -11266,3 +11266,38 @@ All 4 verification steps completed:
 - Commit: 796d490
 
 [Coding] 2026-01-26 Feature #245 'Course duration estimate displayed' verified - PASSED
+
+=== Session: 2026-01-26T00:37:36-05:00 ===
+Feature #244: Instructor name and avatar shown on course - COMPLETED
+
+Changes made:
+- Updated backend /api/courses/:identifier to include instructor data (name, avatar_url, bio)
+- Created new /api/instructors/:id endpoint for instructor profiles
+- Updated CourseDetailPage to show instructor name and avatar from API
+- Made instructor section clickable, linking to /instructor/:id
+- Created InstructorProfilePage showing instructor info and their courses
+- Added route /instructor/:id to App.jsx
+
+Verification:
+- Instructor name 'Test User' visible on course detail page
+- Avatar placeholder showing first letter 'T' displayed
+- Clicking instructor opens profile page at /instructor/1
+- Profile page shows instructor name, bio, and 93 courses
+- No console errors related to feature
+
+[Testing] 2026-01-26 Feature #190 'Date validation' - VERIFIED PASSING
+- Step 1-2: Invalid date format - Browser HTML5 date input prevents invalid format (expected behavior)
+- Step 3-4: Past date (2026-01-25) - Error shown: 'La fecha no puede ser en el pasado' - PASS
+- Step 3-4: Future date > 1 year (2028-01-26) - Error shown: 'La fecha no puede ser mas de 1 año en el futuro' - PASS
+- Step 5-6: Valid date (2026-02-15) - Accepted, no error message - PASS
+- Console errors: Only expected 401 auth errors (user session validation)
+- Screenshots: feature-190-past-date-error.png, feature-190-future-date-error.png, feature-190-valid-date-accepted.png
+
+[Testing] 2026-01-26 Feature #109 'API 500 error shows user-friendly message' - VERIFIED PASSING
+- Step 1: Triggered server error via /api/test/error-500 endpoint - PASS
+- Step 2: Error banner shows 'Error del Servidor' with user-friendly message - PASS
+- Step 3: No stack traces or technical details exposed to user - PASS
+- Step 4: Retry ('Reintentar'), Refresh ('Refrescar'), Go Home ('Ir al Inicio') buttons available - PASS
+- Full-page /server-error page also tested and working
+- Console errors: Only expected 401 auth + intentional 500 test error
+- Screenshots: feature-109-step1-error-test-page.png, feature-109-step2-error-banner.png, feature-109-step4-full-error-page-top.png
