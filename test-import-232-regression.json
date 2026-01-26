@@ -1,0 +1,28 @@
+{
+  "courses": [
+    {
+      "title": "Python: Fundamentos",
+      "slug": "python-fundamentos",
+      "description": "Updated description for existing Python course",
+      "category": "Programacion",
+      "level": "Principiante",
+      "is_premium": false
+    },
+    {
+      "title": "Data Science con Python",
+      "slug": "data-science-python",
+      "description": "Updated description for existing Data Science course",
+      "category": "Data Science",
+      "level": "Intermedio",
+      "is_premium": true
+    },
+    {
+      "title": "NEW_COURSE_232_Regression_Test",
+      "slug": "new-course-232-regression-test",
+      "description": "This is a brand new course to test import functionality",
+      "category": "Testing",
+      "level": "Principiante",
+      "is_premium": false
+    }
+  ]
+}
