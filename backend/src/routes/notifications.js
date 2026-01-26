@@ -1,5 +1,6 @@
 import express from 'express';
 import { queryAll, queryOne, run, getDatabase, saveDatabase } from '../config/database.js';
+import { emitGlobalBroadcast, WS_EVENTS } from '../utils/websocket-events.js';
 
 const router = express.Router();
 
@@ -136,17 +137,29 @@ router.post('/create', (req, res) => {
       [userId, type, title, message || '', JSON.stringify(content || {})]
     );
 
+    const newNotification = {
+      id: result.lastInsertRowid,
+      user_id: userId,
+      type,
+      title,
+      message,
+      content: content || {},
+      is_read: 0,
+      created_at: new Date().toISOString()
+    };
+
+    // Broadcast the new notification via WebSocket
+    emitGlobalBroadcast({
+      type: WS_EVENTS.NOTIFICATION_NEW,
+      userId: userId,
+      notification: newNotification
+    });
+
+    console.log('[Notifications] Broadcasted new notification via WebSocket for user:', userId);
+
     res.status(201).json({
       success: true,
-      notification: {
-        id: result.lastInsertRowid,
-        user_id: userId,
-        type,
-        title,
-        message,
-        content: content || {},
-        is_read: 0
-      }
+      notification: newNotification
     });
   } catch (error) {
     console.error('Error creating notification:', error);

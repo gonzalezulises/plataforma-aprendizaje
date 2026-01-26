@@ -177,11 +177,83 @@ function Navbar() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchUnreadCount();
-      // Poll for new notifications every 30 seconds
+      // Poll for new notifications every 30 seconds (fallback)
       const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated, fetchUnreadCount]);
+
+  // WebSocket for real-time notification updates
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = API_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+    const wsUrl = `${wsProtocol}://${wsHost}/ws`;
+
+    let ws = null;
+    let reconnectTimeout = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+
+    const connect = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log('[Navbar WebSocket] Connected for notifications');
+          reconnectAttempts = 0;
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            // Handle new notification event
+            if (data.type === 'notification:new' && data.userId === user.id) {
+              console.log('[Navbar WebSocket] New notification received:', data.notification);
+              // Increment unread count immediately
+              setUnreadCount(prev => prev + 1);
+              // Add to notifications list if dropdown is open
+              if (showNotifications) {
+                setNotifications(prev => [data.notification, ...prev]);
+              }
+            }
+          } catch (e) {
+            console.error('[Navbar WebSocket] Parse error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('[Navbar WebSocket] Disconnected');
+          // Attempt to reconnect with exponential backoff
+          if (reconnectAttempts < maxReconnectAttempts) {
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            reconnectTimeout = setTimeout(() => {
+              reconnectAttempts++;
+              connect();
+            }, delay);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('[Navbar WebSocket] Error:', error);
+        };
+      } catch (error) {
+        console.error('[Navbar WebSocket] Connection error:', error);
+      }
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (ws) {
+        ws.close();
+      }
+    };
+  }, [isAuthenticated, user, showNotifications]);
 
   // Fetch notifications when dropdown opens
   useEffect(() => {

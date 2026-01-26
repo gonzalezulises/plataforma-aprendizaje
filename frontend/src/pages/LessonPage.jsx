@@ -412,16 +412,61 @@ print(potencia(3, 3))   # 27 (3^3)`
     }
   };
 
-  const handleRunCode = (code) => {
-    setCodeOutput(`>>> Ejecutando codigo...
-Nombre: Maria
-Edad: 25
-Altura: 1.65m
-Es estudiante: True
-<class 'str'>
-<class 'int'>
-<class 'float'>
-<class 'bool'>`);
+  // Feature #126: Execute code via backend API (not mocked)
+  const [isExecutingCode, setIsExecutingCode] = useState(false);
+
+  const handleRunCode = async (code) => {
+    setIsExecutingCode(true);
+    setCodeOutput('>>> Ejecutando codigo...');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/lessons/${lessonId}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ code, language: 'python' }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setCodeOutput(`>>> Error: ${result.error || 'Error al ejecutar el codigo'}`);
+        return;
+      }
+
+      // Build output string based on result
+      let output = '';
+
+      if (result.syntax_error) {
+        output = `>>> Error de sintaxis:\n${result.syntax_error_info?.message || 'Error de sintaxis en el codigo'}`;
+        if (result.syntax_error_info?.line) {
+          output += `\nLinea: ${result.syntax_error_info.line}`;
+        }
+      } else if (result.timeout) {
+        output = `>>> ${result.timeout_message || 'Tiempo de ejecucion excedido'}`;
+      } else if (result.memory_exceeded) {
+        output = `>>> ${result.memory_error_message || 'Limite de memoria excedido'}`;
+      } else if (result.error) {
+        output = `>>> Error: ${result.error}`;
+      } else if (result.output) {
+        output = `>>> Salida:\n${result.output}`;
+      } else {
+        output = '>>> Codigo ejecutado (sin salida)';
+      }
+
+      if (result.execution_time_ms !== undefined) {
+        output += `\n\n[Tiempo de ejecucion: ${result.execution_time_ms}ms]`;
+      }
+
+      setCodeOutput(output);
+    } catch (error) {
+      console.error('Error executing code:', error);
+      setCodeOutput(`>>> Error de conexion: ${error.message}`);
+    } finally {
+      setIsExecutingCode(false);
+    }
   };
 
   // Loading state
@@ -921,13 +966,26 @@ Es estudiante: True
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => handleRunCode(block.code)}
-                      className="px-4 py-2 bg-success-500 hover:bg-success-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      disabled={isExecutingCode}
+                      className="px-4 py-2 bg-success-500 hover:bg-success-600 disabled:bg-success-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Ejecutar
+                      {isExecutingCode ? (
+                        <>
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Ejecutando...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Ejecutar
+                        </>
+                      )}
                     </button>
                     <button className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
                       Resetear

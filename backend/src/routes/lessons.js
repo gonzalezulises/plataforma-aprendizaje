@@ -1,5 +1,6 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
+import { executeCode } from '../utils/code-executor.js';
 
 const router = express.Router();
 
@@ -385,5 +386,39 @@ function getNavigationInfo(lessonId, moduleId) {
     return { previous: null, next: null };
   }
 }
+
+/**
+ * POST /api/lessons/:id/execute
+ * Execute code from a lesson's code block (Feature #126)
+ */
+router.post('/:id/execute', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { code, language = 'python' } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Code is required' });
+    }
+
+    // Execute code using the shared executeCode function from challenges
+    const result = await executeCode(code, language, 30);
+
+    res.json({
+      output: result.output,
+      error: result.error,
+      timeout: result.timeout || false,
+      timeout_message: result.timeout_message || null,
+      memory_exceeded: result.memory_exceeded || false,
+      memory_error_message: result.memory_error_message || null,
+      syntax_error: result.syntax_error || false,
+      syntax_error_info: result.syntax_error_info || null,
+      execution_time_ms: result.execution_time_ms,
+      success: !result.error && !result.timeout && !result.memory_exceeded && !result.syntax_error
+    });
+  } catch (error) {
+    console.error('Error executing code:', error);
+    res.status(500).json({ error: 'Failed to execute code' });
+  }
+});
 
 export default router;
