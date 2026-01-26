@@ -841,7 +841,6 @@ function AnalyticsDashboardPage() {
         </div>
       )}
       </div>
-      </div>
     </AdminLayout>
   );
 }

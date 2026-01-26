@@ -13228,3 +13228,73 @@ All 6 verification steps completed:
 - Commit: 07604a6
 
 [Coding] 2026-01-26 Feature #64 "Profile tabs navigate correctly" verified - PASSED
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #66)
+
+### Feature #66: Created course appears in catalog - VERIFIED AND PASSING
+
+All 6 verification steps completed:
+
+1. **Log in as instructor** - PASS
+   - Logged in as instructor@test.com
+   - Verified instructor role with access to admin panel
+
+2. **Create a new course with unique title TEST_COURSE_12345** - PASS
+   - Navigated to /admin/courses/new
+   - Created course with title: TEST_COURSE_12345
+   - Added description for Feature #66 verification
+   - Created module: 'Test Module for Feature 66'
+   - Created lesson: 'Test Lesson for Feature 66'
+   - Published course successfully
+
+3. **Navigate to course catalog** - PASS
+   - Navigated to /courses
+   - Course catalog loaded with all courses
+
+4. **Search for TEST_COURSE_12345** - PASS
+   - Used search box to search for TEST_COURSE_12345
+   - Search results showed: '1 curso(s) encontrado(s)'
+   - Course appeared with correct title and description
+
+5. **Verify course appears in results** - PASS
+   - Course card displayed with:
+     - Title: TEST_COURSE_12345
+     - Description: 'This is a test course created to verify Feature #66...'
+     - Level: Principiante
+     - Link to /course/test-course-12345
+
+6. **Delete the test course** - PASS
+   - Navigated to /admin/courses
+   - Clicked delete button for TEST_COURSE_12345
+   - Confirmed deletion in modal
+   - Verified course removed from catalog (0 results for search)
+
+### Console Errors:
+- Only HMR-related errors for AnalyticsDashboardPage (unrelated to feature)
+
+### Screenshots:
+- feature-66-course-in-catalog.png - Course appearing in search results
+- feature-66-course-deleted.png - Course no longer found after deletion
+
+### Current Status:
+- Feature #66 marked as PASSING
+- Progress: 201/248 features passing (81.0%)
+- Commit: c0e43d8
+
+[Coding] 2026-01-26 Feature #66 'Created course appears in catalog' verified - PASSED
+
+[Testing] 2026-01-26 Feature #193 'Server-side validation works' - VERIFIED PASSING
+- Step 1: Bypass client-side validation - PASS (used direct API calls via browser evaluate)
+- Step 2: Submit invalid form data - PASS (tested forum, login endpoints)
+- Step 3: Verify server returns errors - PASS
+  - Forum empty fields: 400 - 'El titulo es requerido', 'El contenido es requerido'
+  - Forum short fields: 400 - 'El titulo debe tener al menos 5 caracteres', 'El contenido debe tener al menos 10 caracteres'
+  - Login missing fields: 400 - 'Correo electronico y contrasena son requeridos'
+  - Login invalid email: 400 - 'Formato de correo electronico invalido'
+- Step 4: Verify errors displayed in UI - PASS (ForumPage.jsx handles validationErrors properly)
+- Additional: Fixed regression in AnalyticsDashboardPage.jsx (extra </div> closing tag)
+- Console errors: Only expected 401s for auth check
+- Screenshots: feature-193-client-validation-errors.png, feature-193-login-validation-error.png
+
