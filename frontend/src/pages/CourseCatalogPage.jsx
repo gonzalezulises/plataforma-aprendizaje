@@ -1,9 +1,10 @@
 /**
  * Course Catalog Page (Feature #174: Pagination resets on context change)
  * Feature #184: Filter persistence across sessions
+ * Feature #228: Late API response handled - prevents stale responses from overriding newer data
  * Displays courses with filtering and pagination
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 
@@ -210,8 +211,16 @@ export default function CourseCatalogPage() {
     fetchLevels();
   }, []);
 
+  // Feature #228: Track request ID to handle race conditions
+  const requestIdRef = useRef(0);
+
   // Fetch courses from API with search, filters, and pagination
+  // Feature #228: Uses AbortController and request ID to prevent stale responses
   useEffect(() => {
+    // Feature #228: Create abort controller for this request
+    const abortController = new AbortController();
+    const currentRequestId = ++requestIdRef.current;
+
     const fetchCourses = async () => {
       try {
         setLoading(true);
@@ -229,15 +238,28 @@ export default function CourseCatalogPage() {
         const queryString = params.toString();
         const url = `${CATALOG_API_URL}/courses${queryString ? `?${queryString}` : ''}`;
 
-        console.log('[Search] Fetching courses from:', url);
+        console.log(`[Search] Request #${currentRequestId} fetching courses from:`, url);
 
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: abortController.signal });
+
+        // Feature #228: Check if this request is still the current one
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Search] Request #${currentRequestId} superseded by #${requestIdRef.current}, ignoring response`);
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
         const data = await response.json();
 
-        console.log('[Search] API Response:', data);
+        // Feature #228: Double-check after JSON parsing
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Search] Request #${currentRequestId} superseded during JSON parse, ignoring`);
+          return;
+        }
+
+        console.log(`[Search] Request #${currentRequestId} API Response:`, data);
 
         // Update pagination info from API response
         if (data.pagination) {
@@ -274,14 +296,36 @@ export default function CourseCatalogPage() {
           rating: course.rating || 4.5,
         }));
         setCourses(mappedCourses);
+        console.log(`[Search] Request #${currentRequestId} completed successfully`);
       } catch (err) {
+        // Feature #228: Don't update state if request was aborted
+        if (err.name === 'AbortError') {
+          console.log(`[Search] Request #${currentRequestId} was aborted (navigation or new request)`);
+          return;
+        }
+
+        // Feature #228: Only update error state if this is still the current request
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Search] Request #${currentRequestId} superseded during error handling`);
+          return;
+        }
+
         console.error('Error fetching courses:', err);
         setError(err.message);
       } finally {
-        setLoading(false);
+        // Feature #228: Only update loading state if this is still the current request
+        if (currentRequestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
     fetchCourses();
+
+    // Feature #228: Cleanup - abort request on unmount or dependency change
+    return () => {
+      console.log(`[Search] Aborting request #${currentRequestId} due to cleanup`);
+      abortController.abort();
+    };
   }, [searchQuery, categoryFilter, levelFilter, priceFilter, currentPage]);
 
   const getLevelColor = (level) => {

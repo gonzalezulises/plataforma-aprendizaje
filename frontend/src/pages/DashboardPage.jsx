@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+/**
+ * Dashboard Page
+ * Feature #228: Late API response handled - prevents stale responses from overriding newer data
+ */
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { ServerErrorBanner } from '../components/ServerErrorBanner';
@@ -15,6 +19,9 @@ function DashboardPage() {
   const [serverError, setServerError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Feature #228: Track request ID to handle race conditions
+  const requestIdRef = useRef(0);
+
   useEffect(() => {
     // Redirect to login if not authenticated
     if (!authLoading && !isAuthenticated) {
@@ -22,17 +29,32 @@ function DashboardPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  // Feature #228: Uses AbortController and request ID to prevent stale responses
   useEffect(() => {
-    async function fetchEnrollments() {
-      if (!isAuthenticated) return;
+    if (!isAuthenticated) return;
 
+    // Feature #228: Create abort controller for this request
+    const abortController = new AbortController();
+    const currentRequestId = ++requestIdRef.current;
+
+    async function fetchEnrollments() {
       try {
         setIsLoading(true);
         setError(null);
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+        console.log(`[Dashboard] Request #${currentRequestId} fetching enrollments`);
+
         const response = await fetch(`${API_BASE}/enrollments`, {
-          credentials: 'include'
+          credentials: 'include',
+          signal: abortController.signal
         });
+
+        // Feature #228: Check if this request is still the current one
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Dashboard] Request #${currentRequestId} superseded by #${requestIdRef.current}, ignoring`);
+          return;
+        }
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -59,32 +81,70 @@ function DashboardPage() {
         }
 
         const data = await response.json();
-        setEnrollments(data.enrollments || []);
 
-        // Also fetch pending projects
+        // Feature #228: Double-check after JSON parsing
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Dashboard] Request #${currentRequestId} superseded during JSON parse, ignoring`);
+          return;
+        }
+
+        setEnrollments(data.enrollments || []);
+        console.log(`[Dashboard] Request #${currentRequestId} completed successfully`);
+
+        // Also fetch pending projects (with same abort controller)
         try {
           const projectsResponse = await fetch(`${API_BASE}/projects/my/pending`, {
-            credentials: 'include'
+            credentials: 'include',
+            signal: abortController.signal
           });
+
+          // Feature #228: Check again before updating state
+          if (currentRequestId !== requestIdRef.current) {
+            console.log(`[Dashboard] Projects request #${currentRequestId} superseded, ignoring`);
+            return;
+          }
+
           if (projectsResponse.ok) {
             const projectsData = await projectsResponse.json();
             setPendingProjects(projectsData.projects || []);
           }
         } catch (projectErr) {
-          console.error('Error fetching pending projects:', projectErr);
+          // Feature #228: Don't log abort errors
+          if (projectErr.name !== 'AbortError') {
+            console.error('Error fetching pending projects:', projectErr);
+          }
           // Don't fail the whole page if projects fail
         }
       } catch (err) {
+        // Feature #228: Don't update state if request was aborted
+        if (err.name === 'AbortError') {
+          console.log(`[Dashboard] Request #${currentRequestId} was aborted (navigation)`);
+          return;
+        }
+
+        // Feature #228: Only update error state if this is still the current request
+        if (currentRequestId !== requestIdRef.current) {
+          console.log(`[Dashboard] Request #${currentRequestId} superseded during error handling`);
+          return;
+        }
+
         console.error('Error fetching enrollments:', err);
         setError(err.message);
       } finally {
-        setIsLoading(false);
+        // Feature #228: Only update loading state if this is still the current request
+        if (currentRequestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
       }
     }
 
-    if (isAuthenticated) {
-      fetchEnrollments();
-    }
+    fetchEnrollments();
+
+    // Feature #228: Cleanup - abort request on unmount or dependency change
+    return () => {
+      console.log(`[Dashboard] Aborting request #${currentRequestId} due to cleanup`);
+      abortController.abort();
+    };
   }, [isAuthenticated, navigate]);
 
   // Loading state

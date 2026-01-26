@@ -183,6 +183,24 @@ if (process.env.NODE_ENV !== 'production') {
     // Simulate an unexpected crash that goes through error handler
     next(new Error('Simulated server crash for testing'));
   });
+
+  // Feature #228: Test endpoint for simulating slow API responses
+  app.get('/api/test/slow-response', (req, res) => {
+    const delayMs = parseInt(req.query.delay) || 3000; // Default 3 second delay
+    const requestId = req.query.requestId || 'unknown';
+
+    console.log(`[Slow API Test] Request ${requestId}: Starting with ${delayMs}ms delay`);
+
+    setTimeout(() => {
+      console.log(`[Slow API Test] Request ${requestId}: Responding after ${delayMs}ms delay`);
+      res.json({
+        message: 'Slow response completed',
+        requestId,
+        delayMs,
+        timestamp: new Date().toISOString()
+      });
+    }, delayMs);
+  });
 }
 
 // API Routes

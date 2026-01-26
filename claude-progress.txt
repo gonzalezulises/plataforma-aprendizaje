@@ -10103,3 +10103,10 @@ All handlers:
 
 [Coding] 2026-01-26 Feature #225 'Viewing deleted record handled' verified - PASSED
 
+[Testing] 2026-01-26 Feature #129 'Notification count from database' - VERIFIED PASSING
+- Step 1: Checked API - 4 unread notifications for authenticated user (id=1)
+- Step 2: Navigated to dashboard, logged in as testuser@example.com
+- Step 3: Notification badge showed '4' - matches database count
+- Step 4: Clicked unread notification 'Nueva Retroalimentacion 95/100'
+- Step 5: Badge decremented to '3', API confirms count=3
+- Screenshots: feature-129-step1-notification-badge.png, feature-129-step2-notification-dropdown.png, feature-129-step3-count-decremented.png
