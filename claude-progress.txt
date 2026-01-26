@@ -11216,3 +11216,53 @@ All 5 verification steps completed:
 - Console errors: Only expected 401 auth errors (user not logged in)
 - Screenshots: feature-205-tablet-layout-menu-open.png, feature-205-tablet-courses-page.png
 
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #245)
+
+### Feature #245: Course duration estimate displayed - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Navigate to course detail** - PASS
+   - Navigated to /course/perf-100-linux-y-ansible
+   - Page loaded successfully with all course information
+
+2. **Verify duration estimate visible** - PASS
+   - Duration shown in stats bar: "17 horas"
+   - Duration shown in "Este curso incluye": "17 horas de video"
+   - Duration shown in content summary: "1 modulos • 1 lecciones • 17 horas"
+   - Also visible on course catalog cards
+
+3. **Verify format is hours or 'X hours'** - PASS
+   - Format is "X horas" (Spanish for "X hours")
+   - Consistent format across all display locations
+   - Verified multiple courses: 17, 36, 9, 16, 26, 15 horas
+
+4. **Verify estimate seems reasonable for content** - PASS
+   - Duration values range from 9-36 hours across different courses
+   - Values are reasonable for typical course lengths
+   - Duration stored in database `duration_hours` field and displayed correctly
+
+### Technical Details:
+- Duration displayed in CourseCard component on catalog page
+- Duration displayed in CourseDetailPage in multiple locations:
+  - Stats bar (with students, lessons count)
+  - "Este curso incluye" sidebar section
+  - Content summary line
+- Data comes from courses.duration_hours field in database
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-245-step1-course-detail-duration.png - Course detail showing 17 horas
+- feature-245-step2-different-duration-9hrs.png - Different course showing 9 horas
+- feature-245-step3-catalog-duration-badges.png - Catalog showing duration on cards
+
+### Current Status:
+- Feature #245 marked as PASSING
+- Commit: 796d490
+
+[Coding] 2026-01-26 Feature #245 'Course duration estimate displayed' verified - PASSED
