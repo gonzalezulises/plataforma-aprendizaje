@@ -8774,3 +8774,68 @@ All 5 verification steps completed:
 ### Status: No regression found - feature still working correctly
 
 [Testing] Session complete - Feature #185 verified, no regression found
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #136)
+
+### Feature #136: Code editor content survives navigation - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Write code in editor** - PASS
+   - Modified code with unique test string "TEST_136_CODE_PERSISTENCE_UNIQUE_2026"
+   - "Modificado" badge appeared showing code was changed
+   - "Resetear" button became enabled
+
+2. **Navigate to another lesson** - PASS
+   - Navigated to Dashboard
+   - Left the lesson page completely
+
+3. **Return to original lesson** - PASS
+   - Navigated back to /course/python-fundamentos/lesson/6
+   - Page loaded successfully
+
+4. **Verify code is still present** - PASS
+   - Code persisted: "TEST_136_CODE_PERSISTENCE_UNIQUE_2026" still visible
+   - "Modificado" badge still showing
+   - Saved in localStorage with key: lesson_code_draft_6_0
+
+5. **Submit and verify it works** - PASS
+   - Clicked "Ejecutar" button
+   - Output: "Feature 136 Test: TEST_USER_136, Age: 136"
+   - Code execution uses the persisted edited code
+
+### Implementation Details:
+
+**Changes to LessonPage.jsx:**
+- Added localStorage helper functions: getCodeDraft(), saveCodeDraft(), clearCodeDraft()
+- Key format: lesson_code_draft_{lessonId}_{codeBlockIndex}
+- Added editedCode state to track modified code blocks
+- Added useEffect to load saved drafts when lesson loads
+- Added handleCodeChange() to save edits to localStorage on each keystroke
+- Added handleResetCode() to restore original code and clear localStorage
+- Replaced read-only CodeBlock with editable textarea
+- Shows "Modificado" badge when code differs from original
+- Reset button disabled when code matches original
+
+### Additional Verification:
+- Reset button works correctly - restores original code and clears localStorage
+- No console errors related to the feature
+- Code persists across browser refresh (localStorage-based)
+
+### Console Errors: Only WebSocket reconnection (expected behavior)
+
+### Screenshots:
+- feature-136-step1-before-edit.png - Original code
+- feature-136-step1-code-modified.png - Code after editing
+- feature-136-step4-code-persisted.png - Code persisted after navigation
+- feature-136-step5-code-executed.png - Code execution with output
+- feature-136-reset-to-original.png - Code after reset
+
+### Current Status:
+- Feature #136 marked as PASSING
+- Commit: 73a888b
+
+[Coding] 2026-01-26 Feature #136 'Code editor content survives navigation' verified - PASSED
