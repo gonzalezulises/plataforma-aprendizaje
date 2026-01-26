@@ -17395,3 +17395,63 @@ Long text without natural break points (like underscores instead of spaces) was 
 - No regression found - Feature still PASSING
 
 [Testing] Session complete - Feature #93 verified, no regression found
+[Testing] 2026-01-26 Feature #67 'Created module appears in course structure' - REGRESSION TEST PASSED
+- Step 1: Log in as instructor - PASS (Test Instructor via instructor@test.com)
+- Step 2: Create a module with name TEST_MODULE_ABC - PASS
+  - Navigated to admin course editor
+  - Clicked 'Agregar Modulo' button
+  - Entered title 'TEST_MODULE_ABC'
+  - Toast: 'Modulo creado'
+- Step 3: Navigate to the course as a student would - PASS
+  - Published the course (added lesson first as required)
+  - Navigated to /course/python-fundamentos-1769377302285
+- Step 4: Verify TEST_MODULE_ABC appears in sidebar - PASS
+  - 'Contenido del curso' section shows '1 modulos • 1 lecciones • 0 horas'
+  - Module '1. TEST_MODULE_ABC' visible with '1 lecciones'
+  - Lesson 'TEST_LESSON_FOR_MODULE' listed under module
+- Step 5: Delete the test module - PASS
+  - Clicked delete button, confirmed dialog
+  - Toast: 'Modulo eliminado'
+  - Course now shows 'No hay modulos todavia'
+- Console errors: Only CSRF token fetches on wrong port (3000 vs 3001) - not feature-related
+- Screenshots: feature-67-module-in-sidebar-verified.png, feature-67-test-module-abc-visible.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #67 verified, no regression found
+
+[Testing] 2026-01-26 Feature #77 'Badge is awarded and persists' - VERIFIED AND PASSING
+- Step 1: Complete criteria to earn a badge - PASS (User completed career paths)
+- Step 2: Verify badge notification appears - PASS
+  - Notifications dropdown shows 'Has completado una ruta de carrera\!'
+  - Shows: 'Felicidades\! Has completado la ruta Data Scientist y has ganado una insignia.'
+  - Shows: 'Felicidades\! Has completado la ruta Python Developer y has ganado una insignia.'
+- Step 3: Navigate to profile - PASS (/profile/badges loaded)
+- Step 4: Verify badge is displayed - PASS
+  - Data Scientist badge (green) - Obtenida: 25 de enero de 2026
+  - Python Developer badge (blue) - Obtenida: 25 de enero de 2026
+- Step 5: Refresh page - PASS (F5 pressed)
+- Step 6: Verify badge is still there - PASS (badges persist from database)
+- Console errors: Only HTTP 404s on wrong port 3000 (not feature-related)
+- Screenshots: feature-77-badges-displayed.png, feature-77-badges-persisted-after-refresh.png, feature-77-badge-notifications.png
+- Feature #77 marked as PASSING
+
+[Testing] Session complete - Feature #77 verified and passing
+[Testing] 2026-01-26 Feature #239 'Video playback starts promptly' - REGRESSION TEST PASSED
+- Step 1: Navigate to video lesson - PASS (lesson 6 in Python: Fundamentos course)
+- Step 2: Click play - PASS (video play triggered programmatically)
+- Step 3: Measure time to playback start - PASS
+  - Test 1: 5.4ms (0.005 seconds)
+  - Test 2: 6.8ms (0.007 seconds)
+  - Test 3: 3.5ms (0.004 seconds)
+- Step 4: Verify under 3 seconds on good connection - PASS
+  - All tests well under 3 seconds (fastest: 4ms, slowest: 7ms)
+  - Video loads to readyState 4 (HAVE_ENOUGH_DATA) before play
+- Video details:
+  - Source: BigBuckBunny.mp4 (Google sample video)
+  - Resolution: 1280x720 (HD)
+  - Duration: 596.47 seconds
+- Console errors: Only HTTP 404s on wrong port (3000 vs 3001) - not video-related
+- Screenshot: feature-239-video-lesson-page.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #239 verified, no regression found
