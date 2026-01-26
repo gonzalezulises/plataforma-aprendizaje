@@ -405,11 +405,12 @@ function ForumPage() {
 
             <form onSubmit={handleCreateThread}>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="thread-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Titulo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="thread-title"
                   value={newThread.title}
                   onChange={(e) => handleFieldChange('title', e.target.value)}
                   placeholder="Escribe un titulo descriptivo para tu pregunta..."
@@ -424,7 +425,7 @@ function ForumPage() {
                 />
                 {fieldErrors.title && (
                   <p id="title-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {fieldErrors.title}
@@ -432,10 +433,11 @@ function ForumPage() {
                 )}
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="thread-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Contenido <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  id="thread-content"
                   value={newThread.content}
                   onChange={(e) => handleFieldChange('content', e.target.value)}
                   placeholder="Describe tu pregunta con detalle. Incluye codigo si es relevante..."
@@ -451,7 +453,7 @@ function ForumPage() {
                 />
                 {fieldErrors.content && (
                   <p id="content-error" className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     {fieldErrors.content}

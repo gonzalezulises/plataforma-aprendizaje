@@ -590,11 +590,12 @@ export default function CourseCreatorPage() {
             <div className="space-y-6">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="course-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Titulo del Curso *
                 </label>
                 <input
                   type="text"
+                  id="course-title"
                   value={courseForm.title}
                   onChange={(e) => {
                     setCourseForm({ ...courseForm, title: e.target.value });
@@ -622,10 +623,11 @@ export default function CourseCreatorPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="course-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descripcion
                 </label>
                 <textarea
+                  id="course-description"
                   value={courseForm.description}
                   onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
                   rows={4}
@@ -637,10 +639,11 @@ export default function CourseCreatorPage() {
               {/* Category & Level */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="course-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Categoria
                   </label>
                   <select
+                    id="course-category"
                     value={courseForm.category}
                     onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -655,10 +658,11 @@ export default function CourseCreatorPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="course-level" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Nivel
                   </label>
                   <select
+                    id="course-level"
                     value={courseForm.level}
                     onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -676,6 +680,7 @@ export default function CourseCreatorPage() {
                   <label className="flex items-center gap-3">
                     <input
                       type="checkbox"
+                      id="course-premium"
                       checked={courseForm.is_premium}
                       onChange={(e) => setCourseForm({ ...courseForm, is_premium: e.target.checked })}
                       className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
@@ -686,11 +691,12 @@ export default function CourseCreatorPage() {
                   </label>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="course-duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Duracion estimada (horas)
                   </label>
                   <input
                     type="number"
+                    id="course-duration"
                     min="0"
                     step="0.5"
                     value={courseForm.duration_hours}
@@ -1085,11 +1091,12 @@ export default function CourseCreatorPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="module-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Titulo *
                 </label>
                 <input
                   type="text"
+                  id="module-title"
                   value={moduleForm.title}
                   onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -1097,10 +1104,11 @@ export default function CourseCreatorPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="module-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descripcion
                 </label>
                 <textarea
+                  id="module-description"
                   value={moduleForm.description}
                   onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })}
                   rows={3}
@@ -1108,10 +1116,11 @@ export default function CourseCreatorPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="module-bloom" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Objetivo de Bloom
                 </label>
                 <select
+                  id="module-bloom"
                   value={moduleForm.bloom_objective}
                   onChange={(e) => setModuleForm({ ...moduleForm, bloom_objective: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -1156,11 +1165,12 @@ export default function CourseCreatorPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="lesson-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Titulo *
                 </label>
                 <input
                   type="text"
+                  id="lesson-title"
                   value={lessonForm.title}
                   onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -1168,10 +1178,11 @@ export default function CourseCreatorPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="lesson-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descripcion
                 </label>
                 <textarea
+                  id="lesson-description"
                   value={lessonForm.description}
                   onChange={(e) => setLessonForm({ ...lessonForm, description: e.target.value })}
                   rows={2}
@@ -1180,10 +1191,11 @@ export default function CourseCreatorPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="lesson-content-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tipo de contenido
                   </label>
                   <select
+                    id="lesson-content-type"
                     value={lessonForm.content_type}
                     onChange={(e) => setLessonForm({ ...lessonForm, content_type: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -1197,11 +1209,12 @@ export default function CourseCreatorPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label htmlFor="lesson-duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Duracion (min)
                   </label>
                   <input
                     type="number"
+                    id="lesson-duration"
                     min="1"
                     value={lessonForm.duration_minutes}
                     onChange={(e) => setLessonForm({ ...lessonForm, duration_minutes: parseInt(e.target.value) || 15 })}
@@ -1240,10 +1253,11 @@ export default function CourseCreatorPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="content-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tipo
                 </label>
                 <select
+                  id="content-type"
                   value={contentForm.type}
                   onChange={(e) => setContentForm({ ...contentForm, type: e.target.value, content: { text: '' } })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
@@ -1254,10 +1268,11 @@ export default function CourseCreatorPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label htmlFor="content-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Contenido
                 </label>
                 <textarea
+                  id="content-text"
                   value={contentForm.content.text || ''}
                   onChange={(e) => setContentForm({ ...contentForm, content: { text: e.target.value } })}
                   rows={6}
