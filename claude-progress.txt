@@ -13084,3 +13084,71 @@ All 6 verification steps completed:
 - Progress: 198/248 features passing (79.8%)
 
 [Coding] 2026-01-26 Feature #61 "Category filter in catalog updates URL" verified - PASSED
+[Testing] 2026-01-26 Feature #95 'Complete forum thread workflow' - VERIFIED PASSING
+- Step 1: Navigate to course forum - PASS (navigated to /course/python-fundamentos/forum)
+- Step 2: Create new thread with question - PASS (created 'Test Feature 95 - Forum Workflow')
+- Step 3: Wait for or add a reply - PASS (added reply with upvote/resolve test content)
+- Step 4: Mark reply as helpful (upvote) - PASS (vote count changed from 0 to 1)
+- Step 5: Mark thread as resolved - PASS (status changed to 'Resuelto')
+- Step 6: Verify thread shows resolved status - PASS (forum list shows green 'Resuelto' badge)
+- Console errors: Only expected 401s (pre-login auth check) and brief WebSocket reconnection
+- Screenshots: feature-95-thread-resolved.png, feature-95-forum-list-resolved.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #63)
+
+### Feature #63: Webinar calendar navigation - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Navigate to webinar section** - PASS
+   - Navigated to http://localhost:5173/webinars
+   - 'Webinars' heading displayed with subtitle 'Sesiones en vivo con instructores expertos'
+   - Page loaded with 3 webinars in the database
+
+2. **Verify calendar or list view of webinars** - PASS
+   - List view (default): Shows webinars as cards with full details
+   - Calendar view: Shows webinars grouped by date with date headers
+   - View toggle buttons working correctly
+   - Filter buttons available: Todos, Proximos, Finalizados
+
+3. **Click on a webinar** - PASS
+   - Webinar details displayed inline in the list/calendar view
+   - Each webinar card shows comprehensive information
+
+4. **Verify webinar details are shown** - PASS
+   - Title: 'Q&A: Consultas SQL Avanzadas', 'Introduccion a Python para Principiantes', etc.
+   - Description: Full description text visible
+   - Date and time: 'viernes, 23 de enero de 2026', '01:28 (60 min)'
+   - Duration: Shown in minutes (60 min, 90 min, 120 min)
+   - Registered count: '0 registrados' -> '1 registrados' after registration
+   - Status badges: 'Finalizado' (gray), 'Programado' (green)
+   - Associated course: 'SQL desde Cero', 'Python: Fundamentos', etc.
+
+5. **Verify join link or registration is available** - PASS
+   - Completed webinars: 'Ver Grabacion' button (purple)
+   - Upcoming webinars: 'Registrarse' button (blue)
+   - Registration works: Toast 'Te has registrado exitosamente', count updates
+   - Unauthenticated users: Redirected to login with message
+
+### Additional Features Verified:
+- Instructor-only 'Programar Webinar' button visible when logged in as instructor
+- Registration correctly increments the registered count
+- Filter by status works (Todos/Proximos/Finalizados)
+
+### Console Errors: None
+
+### Screenshots:
+- feature-63-step1-webinars-list-view.png - List view with all webinars
+- feature-63-step2-webinars-calendar-view.png - Calendar view grouped by date
+- feature-63-step5-registration-success.png - After successful registration (1 registrados)
+
+### Current Status:
+- Feature #63 marked as PASSING
+- Progress: 199/248 features passing (80.2%)
+
+[Coding] 2026-01-26 Feature #63 'Webinar calendar navigation' verified - PASSED
+

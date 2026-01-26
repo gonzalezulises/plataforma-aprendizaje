@@ -580,6 +580,7 @@ function App() {
             <Route path="/test-video" element={<VideoTestPage />} />
             <Route path="/test-race-condition" element={<RaceConditionTestPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:tab" element={<ProfilePage />} />
             <Route path="/instructor/:id" element={<InstructorProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
