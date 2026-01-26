@@ -15564,3 +15564,116 @@ All 7 verification steps completed:
 - Screenshot: feature-235-page-load-performance.png
 - No regression found - Feature still PASSING
 
+[Testing] 2026-01-26 Feature #126 'Code execution result matches backend response' - REGRESSION TEST PASSED
+- Step 1: Write code that prints unique value - PASS (unique_value = 12345 + 67890, print(unique_value))
+- Step 2: Submit code - PASS (clicked Ejecutar button)
+- Step 3: Inspect API response - PASS (API returned output: '80235')
+- Step 4: Verify UI displays same output as API - PASS (UI shows '80235')
+- Step 5: Verify no mocked execution results - PASS (dynamically computed value)
+- Additional tests: print('Hello World'), print(42*7) all matched API
+- Console errors: None
+- Screenshots: feature-126-code-execution-test.png, feature-126-verification-complete.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #126 verified, no regression found
+
+[Testing] 2026-01-26 Feature #232 'Import with duplicate handling' - REGRESSION TEST PASSED
+- Step 1: Import file with some existing items - PASS
+  - Uploaded test-import-232.json containing 3 courses (2 existing, 1 new)
+  - File was processed successfully
+- Step 2: Verify duplicate warning shown - PASS
+  - Warning displayed: 'Duplicados encontrados (2)' showing Python: Fundamentos and Data Science con Python
+  - Yellow warning box with triangle icon correctly highlights duplicates
+  - New items section shows 'Nuevos (1): TEST_232_NEW_COURSE'
+- Step 3: Choose to skip or overwrite - PASS
+  - Two radio options available: 'Omitir' (Skip) and 'Sobrescribir' (Overwrite)
+  - Tested SKIP action: Result showed 'Nuevos: 1, Omitidos: 2, Sobrescritos: 0'
+  - Tested OVERWRITE action: Result showed 'Nuevos: 0, Omitidos: 0, Sobrescritos: 3'
+- Step 4: Verify correct action taken - PASS
+  - SKIP: New course was created, duplicates were skipped (Total Cursos went from 6 to 7)
+  - OVERWRITE: All 3 duplicate courses were overwritten successfully
+  - Statistics correctly updated after each import
+- Console errors: None
+- Screenshots: feature-232-step2-duplicate-warning.png, feature-232-step3-skip-result.png, feature-232-step4-overwrite-selected.png, feature-232-step4-overwrite-result.png
+- No regression found - Feature still PASSING
+
+
+[Coding] 2026-01-26 Feature #36 'Instructor can moderate forum posts' - IMPLEMENTED AND PASSING
+- Backend: Added PUT /api/forum/thread/:threadId for editing threads
+- Backend: Added PUT /api/forum/reply/:replyId for editing replies
+- Backend: Added DELETE /api/forum/reply/:replyId for deleting replies
+- Backend: Updated thread delete with authorization check
+- Frontend: Added edit/delete buttons on threads and replies for instructors/owners
+- Frontend: Added inline editing UI with form fields
+- Frontend: Added confirmation dialogs for delete operations
+- Authorization: Instructors can moderate any post, users can only modify their own
+- Verified: Logged in as instructor, navigated to forum, edited thread title
+- Verified: Deleted a reply, deleted a thread with confirmation
+- Screenshots: feature-36-step1 through feature-36-step6
+- Commit: 199d242 feat(forum): Add instructor moderation for forum posts
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #37)
+
+### Feature #37: Video feedback URLs are protected - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Get a video feedback URL** - PASS
+   - Logged in as student (submission owner)
+   - Retrieved feedback with video_url via GET /api/feedback/submissions/1/feedback
+   - Video URL returned: /api/feedback/video/1/feature37-instructor-video.mp4
+   - video_url_protected flag: true
+
+2. **Log out of the application** - PASS
+   - Tested unauthenticated access (no session cookie)
+
+3. **Attempt to access the video URL directly** - PASS
+   - GET /api/feedback/submissions/1/feedback (no auth) → 401 Authentication required
+   - GET /api/feedback/feedback/1 (no auth) → 401 Authentication required
+   - GET /api/feedback/video/1/feature37-instructor-video.mp4 (no auth) → 401 Authentication required
+
+4. **Verify access is denied or requires authentication** - PASS
+   - All unauthenticated attempts return 401
+   - Non-owner (User ID 999) returns 403: "Access denied: You can only view feedback for your own submissions"
+   - Submission owner (User ID 1) gets 200 OK with feedback data
+   - Course instructor (User ID 2) gets 200 OK with feedback data
+
+### Implementation Details:
+
+**Backend Changes (backend/src/routes/feedback.js):**
+- Added `requireAuth` middleware to GET /submissions/:submissionId/feedback
+- Added `requireAuth` middleware to GET /feedback/:id
+- Added ownership verification: user must own submission OR be course instructor
+- Created new protected video endpoint: GET /video/:feedbackId/:filename
+  - Validates authentication
+  - Validates feedback ownership (submission owner or course instructor)
+  - Validates filename matches feedback's video_url
+  - Serves file securely
+
+**Security Model:**
+- Unauthenticated users: 401 Authentication required
+- Authenticated but not owner: 403 Access denied
+- Submission owner: Full access
+- Course instructor: Full access to their course's submissions
+- Video URLs converted to protected endpoint format
+
+### Test Results:
+```
+✓ PASS - Step 1: Get video feedback URL as owner
+✓ PASS - Step 3: Feedback endpoint requires auth
+✓ PASS - Step 3: Single feedback endpoint requires auth
+✓ PASS - Step 4: Video endpoint requires auth
+✓ PASS - Step security: Non-owner denied access
+✓ PASS - Step security: Instructor can access feedback
+✓ PASS - Step security: Owner can access feedback
+```
+
+### Console Errors: None
+
+### Current Status:
+- Feature #37 marked as PASSING
+- Commit: 20f4c84
+
+[Coding] 2026-01-26 Feature #37 'Video feedback URLs are protected' verified - PASSED
