@@ -11025,3 +11025,51 @@ All 4 verification steps completed:
 - Console errors: Only expected 401 auth errors (user not logged in)
 - Screenshots: feature-132-webinar-list.png, feature-132-webinar-calendar.png, feature-132-webinar-filtered.png
 
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #242)
+
+### Feature #242: Premium course indicator visible in catalog - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Navigate to course catalog** - PASS
+   - Navigated to http://localhost:5173/courses
+   - Page loaded with 100 courses across 17 pages
+
+2. **Find a premium course** - PASS
+   - Found multiple premium courses in the catalog
+   - Examples: PERF_100: Linux y Ansible, PERF_099: Vue.js y Terraform
+   - Premium courses clearly identifiable with yellow "Premium" badge
+
+3. **Verify premium badge or indicator visible** - PASS
+   - Premium courses display a distinct yellow "Premium" badge
+   - Badge appears next to the level badge (e.g., "Intermedio" + "Premium")
+   - When filtering by "Premium": 29 results, ALL showing Premium badge
+   - Badge is visually distinct and easy to identify
+
+4. **Verify free courses don't have premium badge** - PASS
+   - Free courses only show level badge (e.g., "Intermedio", "Avanzado", "Principiante")
+   - No "Premium" badge appears on free courses
+   - When filtering by "Gratuitos": 71 results, NONE showing Premium badge
+   - Examples: PERF_098 (free), PERF_095 (free), PERF_094 (free)
+
+### Technical Details:
+- Premium badge implemented in CourseCard component
+- Badge uses yellow background with dark text for contrast
+- Conditional rendering: only shown when course.is_premium is true
+- Filter functionality working correctly for Premium/Gratuitos
+
+### Console Errors: Only expected 401 auth errors (user not logged in)
+
+### Screenshots:
+- feature-242-step1-catalog-with-premium-badges.png - Mixed catalog showing both premium and free courses
+- feature-242-step2-premium-filter-all-have-badge.png - Premium filter showing all 29 premium courses
+- feature-242-step3-free-courses-no-premium-badge.png - Free filter showing 71 courses without premium badge
+
+### Current Status:
+- Feature #242 marked as PASSING
+- Commit: 2e9cea4
+
+[Coding] 2026-01-26 Feature #242 'Premium course indicator visible in catalog' verified - PASSED

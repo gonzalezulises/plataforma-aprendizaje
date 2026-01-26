@@ -197,6 +197,7 @@ function Navbar() {
     let reconnectTimeout = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
+    let isIntentionalClose = false; // Track intentional closure to suppress error logs
 
     const connect = () => {
       try {
@@ -226,19 +227,26 @@ function Navbar() {
         };
 
         ws.onclose = () => {
-          console.log('[Navbar WebSocket] Disconnected');
-          // Attempt to reconnect with exponential backoff
-          if (reconnectAttempts < maxReconnectAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-            reconnectTimeout = setTimeout(() => {
-              reconnectAttempts++;
-              connect();
-            }, delay);
+          // Only log if not intentionally closed (e.g., navigation cleanup)
+          if (!isIntentionalClose) {
+            console.log('[Navbar WebSocket] Disconnected');
+            // Attempt to reconnect with exponential backoff
+            if (reconnectAttempts < maxReconnectAttempts) {
+              const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+              reconnectTimeout = setTimeout(() => {
+                reconnectAttempts++;
+                connect();
+              }, delay);
+            }
           }
         };
 
-        ws.onerror = (error) => {
-          console.error('[Navbar WebSocket] Error:', error);
+        ws.onerror = () => {
+          // Suppress error logging during intentional close (navigation cleanup)
+          // WebSocket errors during cleanup are expected and not actionable
+          if (!isIntentionalClose) {
+            console.warn('[Navbar WebSocket] Connection error (will retry)');
+          }
         };
       } catch (error) {
         console.error('[Navbar WebSocket] Connection error:', error);
@@ -248,6 +256,7 @@ function Navbar() {
     connect();
 
     return () => {
+      isIntentionalClose = true; // Mark as intentional close before cleanup
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
