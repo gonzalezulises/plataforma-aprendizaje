@@ -1,3 +1,59 @@
+## Session: 2026-01-26 (Coding Agent - Feature #60)
+
+### Feature #60: Notifications dropdown shows recent notifications - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as user with notifications** - PASS
+   - Logged in as instructor@test.com / password123
+   - Created 5 test notifications via API for user ID 2
+
+2. **Click notification bell icon** - PASS
+   - Bell icon visible in navbar with red badge showing "5"
+   - Clicked to open notification dropdown
+
+3. **Verify dropdown shows recent notifications** - PASS
+   - Dropdown displays "Notificaciones" header
+   - "Marcar todo como leido" button available
+   - 5 notifications listed with different icons by type:
+     - Green check for feedback_received
+     - Yellow star for badge_earned
+     - Purple video for webinar_reminder
+     - Gray bell for enrollment_confirmed and new_comment
+   - Each notification shows title, message, relative time ("Ahora")
+   - Blue dots indicate unread status
+   - "Ver todas las notificaciones" link at bottom
+
+4. **Verify notification count updates** - PASS
+   - Clicked "Nuevo feedback recibido" notification
+   - Count decreased from 5 to 4
+   - Clicked "Inscripcion confirmada" notification
+   - Count decreased from 4 to 3
+
+5. **Click a notification to navigate** - PASS
+   - "Nuevo feedback recibido" → navigated to /feedback/1
+   - "Inscripcion confirmada" → navigated to /course/data-science-python
+   - Navigation works correctly based on notification type and content
+
+### Console Errors:
+- Only expected 401 (before login) and 404 (test data placeholders) errors
+- No JavaScript errors
+
+### Screenshots:
+- feature-60-step1-logged-in.png - Dashboard with notification bell
+- feature-60-step2-notification-badge.png - Bell showing "5" badge
+- feature-60-step3-dropdown-open.png - Dropdown with all notifications
+- feature-60-step4-count-updated.png - Count decreased to "4"
+- feature-60-step5-navigate-to-course.png - Course page after notification click
+
+### Current Status:
+- Feature #60 marked as PASSING
+- Commit: 3bf900f
+
+[Coding] 2026-01-26 Feature #60 "Notifications dropdown shows recent notifications" verified - PASSED
+
+---
+
 ## Session: 2026-01-26 (Coding Agent - Feature #54)
 
 ### Feature #54: Deep link to lesson works when logged in - VERIFIED AND PASSING
@@ -12907,3 +12963,14 @@ All 5 verification steps completed:
 - Commit: bfff982
 
 [Coding] 2026-01-26 Feature #59 "Clicking forum thread opens thread detail" verified - PASSED
+
+[Testing] 2026-01-26 Feature #123 'Progress percentage matches database' - VERIFIED PASSING
+- Step 1: Check database for lesson_progress entries - PASS (via API)
+- Step 2: Navigate to dashboard - PASS (shows 0% initially)
+- Step 3: Calculate expected percentage - PASS (4 lessons total, 1/4 = 25%)
+- Step 4: Verify displayed percentage matches calculation - PASS
+- Step 5: Complete a lesson - PASS (POST /api/lessons/1/complete => 200 OK)
+- Step 6: Verify both UI and database update - PASS (0% → 25%)
+- Console errors: None
+- Screenshots: feature-123-dashboard-25-percent.png, feature-123-module-progress-detail.png
+
