@@ -10689,3 +10689,19 @@ All 5 verification steps completed:
 - Feature #234 marked as PASSING
 
 [Coding] 2026-01-26 Feature #234 'Round-trip data integrity' verified - PASSED
+[Testing] 2026-01-26 Feature #177 'Whitespace-only search handled' - VERIFIED PASSING
+- Step 1: Entered only spaces in search textbox (5 spaces)
+- Step 2: Submitted search via button click
+- Step 3: Verified treated as empty - all 7 courses displayed (Page 1 of 2)
+- Step 4: No errors occurred - page rendered correctly
+- Additional test: Submitted via Enter key - same correct behavior
+- Console: Only pre-existing 401 auth errors (unrelated, expected when not logged in)
+- Screenshot: feature-177-whitespace-search-test.png
+[Testing] 2026-01-26 Feature #41 'Logo click navigates to home page' - VERIFIED PASSING
+- Step 1: Navigated to /courses page (not home)
+- Step 2: Clicked logo in navigation bar ('Ir al inicio')
+- Step 3: Verified home page displayed with 'Aprende Haciendo' hero content
+- Step 4: Verified URL is http://localhost:5173/
+- Additional test: Also verified from login page - logo correctly navigates to home
+- Console: Only expected 401 auth errors (not logged in), no feature-related errors
+- Screenshots: feature-41-step1-on-courses-page.png, feature-41-step2-navigated-to-home.png, feature-41-step3-logo-from-login.png
