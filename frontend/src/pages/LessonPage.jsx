@@ -5,6 +5,37 @@ import VideoPlayer from '../components/VideoPlayer';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+// Feature #136: Helper functions for localStorage code persistence
+const LESSON_CODE_KEY_PREFIX = 'lesson_code_draft_';
+
+const getCodeDraft = (lessonId, codeBlockIndex) => {
+  try {
+    const key = `${LESSON_CODE_KEY_PREFIX}${lessonId}_${codeBlockIndex}`;
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn('Failed to read code draft from localStorage:', e);
+    return null;
+  }
+};
+
+const saveCodeDraft = (lessonId, codeBlockIndex, code) => {
+  try {
+    const key = `${LESSON_CODE_KEY_PREFIX}${lessonId}_${codeBlockIndex}`;
+    localStorage.setItem(key, code);
+  } catch (e) {
+    console.warn('Failed to save code draft to localStorage:', e);
+  }
+};
+
+const clearCodeDraft = (lessonId, codeBlockIndex) => {
+  try {
+    const key = `${LESSON_CODE_KEY_PREFIX}${lessonId}_${codeBlockIndex}`;
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.warn('Failed to clear code draft from localStorage:', e);
+  }
+};
+
 /**
  * LessonPage - Displays lesson content including code blocks and videos
  * Supports video progress tracking - videos resume from where users left off
@@ -29,6 +60,8 @@ function LessonPage() {
   const [loadError, setLoadError] = useState(null);
   const [apiLesson, setApiLesson] = useState(null);
   const [enrollmentRequired, setEnrollmentRequired] = useState(null); // { courseSlug, courseTitle }
+  // Feature #136: Track edited code for each code block (keyed by index)
+  const [editedCode, setEditedCode] = useState({});
 
   // Sample lesson data with multiple lessons for navigation testing
   const lessonsData = {
@@ -349,6 +382,46 @@ print(potencia(3, 3))   # 27 (3^3)`
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLessonId, isLoading, notFound, loadError]);
+
+  // Feature #136: Load saved code drafts from localStorage when lesson loads
+  useEffect(() => {
+    if (!lesson || !lesson.content) return;
+
+    const savedDrafts = {};
+    lesson.content.forEach((block, index) => {
+      if (block.type === 'code') {
+        const savedCode = getCodeDraft(currentLessonId, index);
+        if (savedCode !== null) {
+          savedDrafts[index] = savedCode;
+        }
+      }
+    });
+
+    if (Object.keys(savedDrafts).length > 0) {
+      setEditedCode(savedDrafts);
+    }
+  }, [lesson, currentLessonId]);
+
+  // Feature #136: Handle code changes in editor
+  const handleCodeChange = useCallback((index, newCode) => {
+    setEditedCode(prev => ({
+      ...prev,
+      [index]: newCode
+    }));
+    // Save to localStorage
+    saveCodeDraft(currentLessonId, index, newCode);
+  }, [currentLessonId]);
+
+  // Feature #136: Reset code to original
+  const handleResetCode = useCallback((index, originalCode) => {
+    setEditedCode(prev => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+    // Clear from localStorage
+    clearCodeDraft(currentLessonId, index);
+  }, [currentLessonId]);
 
   // Handle video progress update
   const handleVideoProgress = useCallback((progressData) => {
@@ -957,17 +1030,79 @@ print(potencia(3, 3))   # 27 (3^3)`
               );
             }
             if (block.type === 'code') {
+              // Feature #136: Use edited code if available, otherwise use original
+              const currentCode = editedCode[index] !== undefined ? editedCode[index] : block.code;
+              const isModified = editedCode[index] !== undefined && editedCode[index] !== block.code;
+              const lines = currentCode.split('\n');
+
               return (
                 <div key={index} className="mb-8">
-                  <CodeBlock
-                    code={block.code}
-                    language={block.language}
-                    title={block.title}
-                    showLineNumbers={true}
-                  />
+                  {/* Editable code editor (Feature #136) */}
+                  <div className="rounded-lg overflow-hidden shadow-lg">
+                    {/* Header bar */}
+                    <div className="bg-gray-800 dark:bg-gray-700 px-4 py-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {/* Traffic light dots */}
+                        <div className="flex gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-red-500" />
+                          <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                          <div className="w-3 h-3 rounded-full bg-green-500" />
+                        </div>
+                        {block.title && (
+                          <span className="ml-4 text-sm text-gray-400 font-mono">{block.title}</span>
+                        )}
+                        <span className="ml-2 text-xs text-gray-500 font-mono uppercase">{block.language}</span>
+                        {isModified && (
+                          <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-amber-500 text-white">
+                            Modificado
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(currentCode);
+                          } catch (err) {
+                            console.error('Failed to copy code:', err);
+                          }
+                        }}
+                        className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Copiar
+                      </button>
+                    </div>
+
+                    {/* Editable code area */}
+                    <div className="relative bg-gray-900 dark:bg-gray-950">
+                      <textarea
+                        value={currentCode}
+                        onChange={(e) => handleCodeChange(index, e.target.value)}
+                        className="w-full min-h-[200px] p-4 pl-12 font-mono text-sm bg-transparent text-green-400 resize-y focus:outline-none focus:ring-2 focus:ring-primary-500 overflow-auto"
+                        spellCheck={false}
+                        placeholder="Escribe tu codigo aqui..."
+                        style={{
+                          height: `${Math.max(200, lines.length * 24 + 32)}px`,
+                          tabSize: 4
+                        }}
+                      />
+                      {/* Line numbers overlay */}
+                      <div className="absolute left-0 top-0 p-4 font-mono text-sm pointer-events-none select-none overflow-hidden" style={{ height: `${Math.max(200, lines.length * 24 + 32)}px` }}>
+                        {lines.map((_, idx) => (
+                          <div key={idx} className="h-6 text-right pr-2 w-8 text-gray-500">
+                            {idx + 1}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => handleRunCode(block.code)}
+                      onClick={() => handleRunCode(currentCode)}
                       disabled={isExecutingCode}
                       className="px-4 py-2 bg-success-500 hover:bg-success-600 disabled:bg-success-400 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
@@ -989,7 +1124,18 @@ print(potencia(3, 3))   # 27 (3^3)`
                         </>
                       )}
                     </button>
-                    <button className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
+                    <button
+                      onClick={() => handleResetCode(index, block.code)}
+                      disabled={!isModified}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                        isModified
+                          ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
                       Resetear
                     </button>
                   </div>

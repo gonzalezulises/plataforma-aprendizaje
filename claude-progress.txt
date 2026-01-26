@@ -8744,3 +8744,33 @@ All 5 verification steps completed:
 - No code changes required - modal responsiveness already implemented correctly
 
 [Coding] 2026-01-26 Feature #209 'Modal fits on all screen sizes' verified - PASSED
+[Testing] 2026-01-26 Feature #185 'Required fields show error when empty' - REGRESSION TEST PASSED
+
+### Verification Steps:
+1. **Leave required field empty** - PASS
+   - Tested login form with empty email and password fields
+
+2. **Submit form** - PASS  
+   - Clicked 'Iniciar sesion' button
+
+3. **Verify error message on field** - PASS
+   - Browser validation showed 'Completa este campo' tooltip on empty fields
+   - Email field showed error first, then password field after email filled
+
+4. **Fill field** - PASS
+   - Filled email: test@example.com
+   - Filled password: (masked)
+
+5. **Verify error clears** - PASS
+   - No validation errors visible when both fields are filled
+
+### Console Errors: Only expected 401 for /api/auth/me (not logged in)
+
+### Screenshots:
+- feature-185-step1-empty-form.png - Error on empty email field
+- feature-185-step2-password-empty.png - Error on empty password field  
+- feature-185-step3-fields-filled.png - No errors when fields filled
+
+### Status: No regression found - feature still working correctly
+
+[Testing] Session complete - Feature #185 verified, no regression found
