@@ -64,6 +64,8 @@ function LessonPage() {
   const [loadError, setLoadError] = useState(null);
   const [apiLesson, setApiLesson] = useState(null);
   const [enrollmentRequired, setEnrollmentRequired] = useState(null); // { courseSlug, courseTitle }
+  // Feature #15: State for premium content upgrade prompt
+  const [premiumUpgradeRequired, setPremiumUpgradeRequired] = useState(null); // { courseSlug, courseTitle, upgradeUrl }
   // Feature #136: Track edited code for each code block (keyed by index)
   const [editedCode, setEditedCode] = useState({});
 
@@ -249,6 +251,7 @@ print(potencia(3, 3))   # 27 (3^3)`
       setLoadError(null);
       setApiLesson(null);
       setEnrollmentRequired(null);
+      setPremiumUpgradeRequired(null); // Feature #15: Reset premium upgrade state
 
       try {
         // First, try to fetch from API
@@ -268,7 +271,18 @@ print(potencia(3, 3))   # 27 (3^3)`
         } else if (response.status === 401 || response.status === 403) {
           // User not authenticated or not enrolled - check response for enrollment requirement
           const data = await response.json();
-          if (data.requiresEnrollment) {
+
+          // Feature #15: Check if premium upgrade is required
+          if (data.requiresUpgrade || data.isPremiumContent) {
+            console.log('[LessonPage] Premium content blocked - upgrade required');
+            setPremiumUpgradeRequired({
+              courseSlug: data.courseSlug || slug,
+              courseId: data.courseId,
+              courseTitle: data.courseTitle || 'este curso',
+              upgradeUrl: data.upgradeUrl || '/upgrade',
+              message: data.message || 'Este contenido es exclusivo para usuarios premium.'
+            });
+          } else if (data.requiresEnrollment) {
             setEnrollmentRequired({
               courseSlug: data.courseSlug || slug,
               courseId: data.courseId,
@@ -558,6 +572,110 @@ print(potencia(3, 3))   # 27 (3^3)`
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
           <p className="text-gray-600 dark:text-gray-400">Cargando leccion...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Feature #15: Premium upgrade required - Free user trying to access premium content
+  if (premiumUpgradeRequired) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4">
+        <div className="max-w-lg w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+            {/* Premium Crown Icon */}
+            <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-12 h-12 text-white"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Contenido Premium
+            </h1>
+
+            {/* Description */}
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {premiumUpgradeRequired.message}
+            </p>
+
+            {/* Premium benefits box */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-6 mb-8 text-left border border-amber-200 dark:border-amber-700">
+              <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clipRule="evenodd" />
+                </svg>
+                Beneficios Premium
+              </h3>
+              <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Acceso a todos los cursos premium
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Sugerencias de mejora con IA
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Acceso a webinars en vivo
+                </li>
+                <li className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Certificados verificables
+                </li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Link
+                to={premiumUpgradeRequired.upgradeUrl}
+                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg font-medium transition-all inline-flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+                </svg>
+                Actualizar a Premium
+              </Link>
+
+              <div className="flex gap-3">
+                <Link
+                  to={`/course/${premiumUpgradeRequired.courseSlug}`}
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-center"
+                >
+                  Ver Curso
+                </Link>
+                <Link
+                  to="/courses"
+                  className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  Ver Cursos Gratis
+                </Link>
+              </div>
+            </div>
+
+            {/* Course info */}
+            <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Curso: {premiumUpgradeRequired.courseTitle}
+            </p>
+          </div>
         </div>
       </div>
     );

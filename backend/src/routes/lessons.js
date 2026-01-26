@@ -49,6 +49,21 @@ router.get('/:id', (req, res) => {
         });
       }
 
+      // Feature #15: Block free users from accessing premium course content
+      if (lesson.course_is_premium && userRole === 'student_free') {
+        console.log(`[Lessons] Blocked free user ${userId} from accessing premium lesson ${id} in course ${lesson.course_id}`);
+        return res.status(403).json({
+          error: 'Premium content requires upgrade',
+          requiresUpgrade: true,
+          isPremiumContent: true,
+          message: 'Este contenido es exclusivo para usuarios premium. Actualiza tu cuenta para desbloquear.',
+          upgradeUrl: '/upgrade',
+          courseSlug: lesson.course_slug,
+          courseId: lesson.course_id,
+          courseTitle: lesson.course_title
+        });
+      }
+
       // Check if user is enrolled in the course
       const enrollment = queryOne(`
         SELECT id FROM enrollments

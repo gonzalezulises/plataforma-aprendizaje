@@ -105,10 +105,12 @@ router.get('/:courseId', requireAuth, (req, res) => {
 /**
  * POST /api/enrollments
  * Enroll current user in a course
+ * Feature #15: Free users cannot access premium content
  */
 router.post('/', requireAuth, (req, res) => {
   try {
     const userId = req.session.user.id;
+    const userRole = req.session.user.role;
     const { courseId } = req.body;
 
     if (!courseId) {
@@ -119,6 +121,17 @@ router.post('/', requireAuth, (req, res) => {
     const course = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Feature #15: Block free users from enrolling in premium courses
+    if (course.is_premium && userRole === 'student_free') {
+      console.log(`[Enrollments] Blocked free user ${userId} from enrolling in premium course ${courseId}`);
+      return res.status(403).json({
+        error: 'Premium course requires upgrade',
+        requiresUpgrade: true,
+        message: 'Este curso es premium. Actualiza tu cuenta para acceder a contenido exclusivo.',
+        upgradeUrl: '/upgrade'
+      });
     }
 
     // Check if already enrolled
