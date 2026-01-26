@@ -39,14 +39,18 @@ function LoginPage() {
     }
   };
 
-  // If already authenticated, redirect to dashboard
+  // Track if we've initiated a login attempt (to prevent useEffect from handling redirect)
+  const [loginInitiated, setLoginInitiated] = useState(false);
+
+  // If already authenticated on initial page load, redirect
+  // Skip this if we just completed a login (loginInitiated=true) - the login handler will redirect
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !loginInitiated) {
       const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
       sessionStorage.removeItem('loginReturnUrl');
       navigate(returnUrl, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loginInitiated, navigate]);
 
   // Check for OAuth callback params and location state (Feature #55)
   useEffect(() => {
@@ -69,6 +73,7 @@ function LoginPage() {
   const handleLoginWithRizoMa = async () => {
     setIsLoading(true);
     setError(null);
+    setLoginInitiated(true); // Prevent useEffect from handling redirect
 
     try {
       // Get the OAuth authorization URL from the backend
@@ -101,6 +106,7 @@ function LoginPage() {
 
   // Development mode login - bypasses OAuth
   const handleDevLogin = async () => {
+    setLoginInitiated(true); // Prevent useEffect from handling redirect
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
       const response = await fetch(`${API_BASE}/auth/dev-login`, {
@@ -143,6 +149,7 @@ function LoginPage() {
 
     setIsLoading(true);
     setError(null);
+    setLoginInitiated(true); // Prevent useEffect from handling redirect
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';

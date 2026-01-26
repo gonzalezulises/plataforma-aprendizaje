@@ -300,8 +300,10 @@ function Navbar() {
 
   const handleLogout = async () => {
     setShowUserMenu(false);
+    // Navigate to home FIRST, before logout clears auth state
+    // This prevents protected page redirects from racing to /login
+    navigate('/', { replace: true });
     await logout();
-    navigate('/');
   };
 
   // Get user initials for avatar

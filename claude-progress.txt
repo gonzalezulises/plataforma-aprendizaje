@@ -12617,3 +12617,10 @@ All 7 verification steps completed:
 - Step 5: Verify error clears - PASS (error cleared when fields filled)
 - Console errors: Only expected 401 (user not logged in)
 - Screenshots: feature-185-step1-empty-field-validation.png, feature-185-step2-password-validation.png, feature-185-step3-error-cleared.png
+[Testing] 2026-01-26 Feature #245 'Course duration estimate displayed' - VERIFIED PASSING
+- Step 1: Navigate to course detail - PASS (tested python-fundamentos and data-science-python)
+- Step 2: Verify duration estimate visible - PASS (shown in info bar, sidebar, and content summary)
+- Step 3: Verify format is hours or 'X hours' - PASS (format: 'X horas' consistently)
+- Step 4: Verify estimate seems reasonable - PASS (20h for beginner, 35h for intermediate)
+- Console errors: Only expected 401 (user not logged in)
+- Screenshots: feature-245-python-duration.png, feature-245-data-science-duration.png
