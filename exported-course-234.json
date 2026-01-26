@@ -1,7 +1,7 @@
 {
   "export_version": "1.0",
   "export_type": "course_structure",
-  "exported_at": "2026-01-26T03:05:15.114Z",
+  "exported_at": "2026-01-26T05:04:11.090Z",
   "course": {
     "title": "TEST_234_ROUNDTRIP_COURSE",
     "slug": "test-234-roundtrip-course",
@@ -64,11 +64,61 @@
           ]
         }
       ]
+    },
+    {
+      "_temp_id": "module_1",
+      "title": "Module 1 - Introduction",
+      "description": "Introduction module with basic concepts",
+      "order_index": 1,
+      "bloom_objective": "Remember and Understand",
+      "project_milestone": "Complete introduction quiz",
+      "duration_hours": 2,
+      "lessons": [
+        {
+          "_temp_id": "lesson_1_0",
+          "title": "Lesson 1 - Getting Started",
+          "description": "First lesson covering basics",
+          "order_index": 0,
+          "bloom_level": "Remember",
+          "structure_4c": "{}",
+          "content_type": "video",
+          "duration_minutes": 15,
+          "content": [
+            {
+              "type": "video",
+              "content": "{\"url\":\"https://example.com/video1.mp4\",\"duration\":900,\"title\":\"Intro Video\"}",
+              "order_index": 0
+            }
+          ]
+        },
+        {
+          "_temp_id": "lesson_1_1",
+          "title": "Lesson 2 - Core Concepts",
+          "description": "Second lesson with core concepts",
+          "order_index": 1,
+          "bloom_level": "Understand",
+          "structure_4c": "{}",
+          "content_type": "text",
+          "duration_minutes": 20,
+          "content": [
+            {
+              "type": "text",
+              "content": "{\"text\":\"This is the main content for lesson 2. It covers important concepts.\",\"format\":\"markdown\"}",
+              "order_index": 0
+            },
+            {
+              "type": "code",
+              "content": "{\"language\":\"python\",\"code\":\"print(\\\"Hello, World!\\\")\",\"solution\":\"print(\\\"Hello, World!\\\")\"}",
+              "order_index": 1
+            }
+          ]
+        }
+      ]
     }
   ],
   "summary": {
-    "total_modules": 1,
-    "total_lessons": 2,
-    "total_content_items": 3
+    "total_modules": 2,
+    "total_lessons": 4,
+    "total_content_items": 6
   }
 }
