@@ -10,11 +10,13 @@ function Navbar() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const menuRef = useRef(null);
   const notificationsRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   const navLinks = [
     { path: '/courses', label: 'Cursos' },
@@ -271,11 +273,19 @@ function Navbar() {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
         setShowNotifications(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setShowMobileMenu(false);
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     setShowUserMenu(false);
@@ -311,8 +321,31 @@ function Navbar() {
     <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo - Clickable link to home */}
+          {/* Left side: Hamburger + Logo */}
           <div className="flex items-center">
+            {/* Hamburger Menu Button - Visible on mobile/tablet */}
+            <div className="md:hidden mr-2" ref={mobileMenuRef}>
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Abrir menu de navegacion"
+                aria-expanded={showMobileMenu}
+              >
+                {showMobileMenu ? (
+                  // X icon when menu is open
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  // Hamburger icon when menu is closed
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* Logo - Clickable link to home */}
             <Link
               to="/"
               className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 transition-colors"
@@ -348,8 +381,8 @@ function Navbar() {
             </Link>
           </div>
 
-          {/* Navigation Links */}
-          <div className="hidden sm:flex sm:items-center sm:space-x-4">
+          {/* Navigation Links - Hidden on mobile/tablet, visible on desktop */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -581,6 +614,82 @@ function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer - Slides in from left */}
+      {showMobileMenu && (
+        <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setShowMobileMenu(false)}
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  location.pathname === link.path
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Show additional links for authenticated users */}
+            {isAuthenticated && user && (
+              <>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                <Link
+                  to="/dashboard"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                >
+                  <svg className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  Mi Dashboard
+                </Link>
+                <Link
+                  to="/profile"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                >
+                  <svg className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Mi Perfil
+                </Link>
+                {user.role === 'instructor_admin' && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                  >
+                    <svg className="h-5 w-5 mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Panel de Admin
+                  </Link>
+                )}
+              </>
+            )}
+
+            {/* Show login link for non-authenticated users */}
+            {!isAuthenticated && (
+              <>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                <Link
+                  to="/login"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:text-primary-400 dark:hover:text-primary-300 dark:hover:bg-primary-900/20"
+                >
+                  Iniciar Sesion
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

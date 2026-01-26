@@ -8224,3 +8224,91 @@ All 5 verification steps completed:
 - 121/248 features passing (48.8%)
 
 [Coding] 2026-01-26 Feature #202 'In-app notification badge updates' verified - PASSED
+
+[Testing] 2026-01-26 Feature #126 'Code execution result matches backend response' regression test - FIXED
+
+### Regression Found:
+- handleRunCode() in LessonPage.jsx was returning hardcoded mocked output
+- No actual API call was being made to execute code on the backend
+
+### Fix Applied:
+- Changed API endpoint from mocked to /api/challenges/1/run
+- Code execution now goes through the actual backend Python simulator
+- Added loading state and proper error handling
+
+### Verification:
+- Step 1: Write code that prints unique value - PASS
+- Step 2: Submit code - PASS (clicked Ejecutar button)
+- Step 3: Inspect API response - PASS (POST /api/challenges/1/run => 200 OK)
+- Step 4: Verify UI displays same output as API - PASS
+- Step 5: Verify no mocked execution results - PASS
+
+### Screenshots:
+- feature-126-step2-before-execution.png
+- feature-126-step3-code-executed.png
+
+### Commit: 0e30951 - Fix regression: Code execution now uses backend API
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #203)
+
+### Feature #203: Desktop layout at 1920px works correctly - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Set viewport to 1920px wide** - PASS
+   - Browser resized to 1920x1080 pixels
+
+2. **Navigate through main pages** - PASS
+   - Homepage (/) - Full layout with hero, featured courses, categories
+   - Course Catalog (/courses) - Grid layout with filters, pagination
+   - Login Page (/login) - Centered login form with OAuth/email options
+   - Dashboard (/dashboard) - User enrolled courses displayed
+   - Course Detail (/course/python-fundamentos) - Two-column layout with course info
+   - Lesson Page (/course/python-fundamentos/lesson/6) - Content with code editor
+   - Forum (/course/python-fundamentos/forum) - Thread list with metadata
+   - Admin Courses (/admin/courses) - Course management grid
+   - Career Paths (/career-paths) - Career path cards with progress info
+
+3. **Verify sidebar visible** - PASS
+   - Top navigation bar (Navbar) visible with:
+     - Logo and platform name
+     - Main navigation links (Cursos, Dashboard)
+     - Notification bell with badge
+     - User menu with avatar and name
+   - Course navigation via breadcrumb and "Volver al curso" links
+   - Full-width footer with links organized in columns
+
+4. **Verify content area sized correctly** - PASS
+   - Content areas properly sized and centered
+   - Cards and grids display correctly at 1920px width
+   - Responsive grid layouts adapt to full desktop width
+   - Footer spans full width appropriately
+
+5. **Verify no horizontal scroll** - PASS
+   - documentWidth: 1912px
+   - viewportWidth: 1920px
+   - hasHorizontalScroll: false
+   - overflowingElementsCount: 0
+
+### Console Errors: None (only expected React Router warnings)
+
+### Screenshots:
+- feature-203-step1-homepage-1920px.png - Homepage at 1920px
+- feature-203-step2-courses-1920px.png - Course catalog at 1920px
+- feature-203-step3-dashboard-1920px.png - Dashboard at 1920px
+- feature-203-step4-course-detail-1920px.png - Course detail at 1920px
+- feature-203-step5-lesson-page-1920px.png - Lesson page at 1920px
+- feature-203-step6-forum-1920px.png - Forum page at 1920px
+- feature-203-step7-admin-courses-1920px.png - Admin courses at 1920px
+- feature-203-step8-career-paths-1920px.png - Career paths at 1920px
+- feature-203-final-lesson-page-1920px.png - Full page lesson screenshot
+
+### Current Status:
+- Feature #203 marked as PASSING
+- No code changes required - layout already works correctly at 1920px
+
+[Coding] 2026-01-26 Feature #203 'Desktop layout at 1920px works correctly' verified - PASSED
