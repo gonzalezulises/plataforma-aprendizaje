@@ -146,7 +146,29 @@ function AnalyticsDashboardPage() {
 
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+
+      // Try to parse JSON - provide user-friendly error messages for malformed files
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        // Provide specific error messages based on JSON parse error type
+        let userMessage = 'El archivo no contiene JSON valido.';
+
+        if (parseError.message.includes('Unexpected token')) {
+          const match = parseError.message.match(/position (\d+)/);
+          const position = match ? match[1] : 'desconocida';
+          userMessage = `El archivo contiene caracteres invalidos. Posicion: ${position}. Asegurate de que el archivo sea JSON valido exportado desde esta plataforma.`;
+        } else if (parseError.message.includes("Expected ','") || parseError.message.includes("Expected '}'") || parseError.message.includes("Expected ']'")) {
+          const lineMatch = parseError.message.match(/line (\d+)/);
+          const line = lineMatch ? lineMatch[1] : 'desconocida';
+          userMessage = `Error de sintaxis JSON en la linea ${line}. El archivo parece estar incompleto o mal formateado.`;
+        } else if (parseError.message.includes('Unexpected end')) {
+          userMessage = 'El archivo JSON esta incompleto o truncado. Asegurate de usar un archivo completo exportado desde esta plataforma.';
+        }
+
+        throw new Error(userMessage);
+      }
 
       // Preview the import to detect duplicates
       const response = await fetch(`${API_BASE_URL}/analytics/import/preview`, {
@@ -157,7 +179,17 @@ function AnalyticsDashboardPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to preview import');
+        // Handle specific HTTP error codes with user-friendly messages
+        if (response.status === 401) {
+          throw new Error('Tu sesion ha expirado. Por favor, recarga la pagina e inicia sesion nuevamente.');
+        } else if (response.status === 403) {
+          throw new Error('No tienes permisos para importar datos. Se requiere acceso de instructor.');
+        } else if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'El formato del archivo no es compatible. Usa archivos exportados desde esta plataforma.');
+        } else {
+          throw new Error('Error del servidor al procesar el archivo. Por favor, intentalo de nuevo.');
+        }
       }
 
       const preview = await response.json();
