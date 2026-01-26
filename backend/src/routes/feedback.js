@@ -1,6 +1,16 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { queryAll, queryOne, run, getDatabase, saveDatabase } from '../config/database.js';
 import { sendFeedbackNotificationEmail, isEmailNotificationEnabled } from '../utils/emailService.js';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Path to uploads directory
+const uploadsDir = path.join(__dirname, '../../uploads');
 
 const router = express.Router();
 
@@ -145,19 +155,65 @@ router.post('/rubrics', requireInstructor, (req, res) => {
 
 /**
  * Get feedback for a submission
+ * Feature #37: Video feedback URLs require authentication
+ * Only the submission owner or instructors can access video feedback URLs
  */
-router.get('/submissions/:submissionId/feedback', (req, res) => {
+router.get('/submissions/:submissionId/feedback', requireAuth, (req, res) => {
   try {
+    const userId = req.session.user.id;
+    const userRole = req.session.user.role;
+    const submissionId = req.params.submissionId;
+
+    // Get submission info to validate access
+    const submission = queryOne(`
+      SELECT ps.*, c.instructor_id
+      FROM project_submissions ps
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE ps.id = ?
+    `, [submissionId]);
+
+    if (!submission) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    // Check authorization: user owns submission OR is instructor for the course
+    const isOwner = submission.user_id === userId || submission.user_id === String(userId);
+    const isInstructor = userRole === 'instructor_admin';
+    const isCourseInstructor = submission.instructor_id === userId || submission.instructor_id === String(userId);
+
+    if (!isOwner && !isInstructor && !isCourseInstructor) {
+      return res.status(403).json({ error: 'Access denied: You can only view feedback for your own submissions' });
+    }
+
     const feedback = queryAll(
       'SELECT * FROM feedback WHERE submission_id = ? ORDER BY created_at DESC',
-      [req.params.submissionId]
+      [submissionId]
     );
-    // Parse JSON fields
-    const parsedFeedback = feedback.map(f => ({
-      ...f,
-      content: JSON.parse(f.content || '{}'),
-      scores: JSON.parse(f.scores || '{}')
-    }));
+
+    // Parse JSON fields and protect video URLs
+    // Feature #37: Only return video_url if user has access
+    const parsedFeedback = feedback.map(f => {
+      const parsed = {
+        ...f,
+        content: JSON.parse(f.content || '{}'),
+        scores: JSON.parse(f.scores || '{}')
+      };
+
+      // Convert direct video URLs to protected endpoint URLs
+      if (parsed.video_url) {
+        // If it's an internal upload URL, convert to protected endpoint
+        if (parsed.video_url.includes('/api/uploads/file/')) {
+          const filename = parsed.video_url.split('/').pop();
+          parsed.video_url = `/api/feedback/video/${f.id}/${filename}`;
+        }
+        // For external URLs (YouTube, etc.), keep as-is but mark as protected access
+        parsed.video_url_protected = true;
+      }
+
+      return parsed;
+    });
+
     res.json({ feedback: parsedFeedback });
   } catch (error) {
     console.error('Error fetching feedback:', error);
@@ -395,15 +451,56 @@ router.put('/feedback/:id', requireInstructor, (req, res) => {
 
 /**
  * Get a single feedback by ID
+ * Feature #37: Video feedback URLs require authentication
+ * Only the submission owner or instructors can access video feedback URLs
  */
-router.get('/feedback/:id', (req, res) => {
+router.get('/feedback/:id', requireAuth, (req, res) => {
   try {
-    const feedback = queryOne('SELECT * FROM feedback WHERE id = ?', [req.params.id]);
+    const userId = req.session.user.id;
+    const userRole = req.session.user.role;
+    const feedbackId = req.params.id;
+
+    // Get feedback with submission and course info for access validation
+    const feedback = queryOne(`
+      SELECT f.*, ps.user_id as submission_owner, c.instructor_id
+      FROM feedback f
+      JOIN project_submissions ps ON f.submission_id = ps.id
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE f.id = ?
+    `, [feedbackId]);
+
     if (!feedback) {
       return res.status(404).json({ error: 'Feedback not found' });
     }
+
+    // Check authorization: user owns submission OR is instructor for the course
+    const isOwner = feedback.submission_owner === userId || feedback.submission_owner === String(userId);
+    const isInstructor = userRole === 'instructor_admin';
+    const isCourseInstructor = feedback.instructor_id === userId || feedback.instructor_id === String(userId);
+
+    if (!isOwner && !isInstructor && !isCourseInstructor) {
+      return res.status(403).json({ error: 'Access denied: You can only view feedback for your own submissions' });
+    }
+
+    // Parse JSON fields
     feedback.content = JSON.parse(feedback.content || '{}');
     feedback.scores = JSON.parse(feedback.scores || '{}');
+
+    // Feature #37: Protect video URLs
+    if (feedback.video_url) {
+      // If it's an internal upload URL, convert to protected endpoint
+      if (feedback.video_url.includes('/api/uploads/file/')) {
+        const filename = feedback.video_url.split('/').pop();
+        feedback.video_url = `/api/feedback/video/${feedbackId}/${filename}`;
+      }
+      feedback.video_url_protected = true;
+    }
+
+    // Clean up internal fields
+    delete feedback.submission_owner;
+    delete feedback.instructor_id;
+
     res.json({ feedback });
   } catch (error) {
     console.error('Error fetching feedback:', error);
@@ -448,5 +545,68 @@ router.get('/default-rubric', (req, res) => {
   });
 });
 
+/**
+ * Protected video feedback endpoint
+ * Feature #37: Video feedback URLs are protected
+ * This endpoint serves video files only to authorized users (submission owner or instructors)
+ */
+router.get('/video/:feedbackId/:filename', requireAuth, (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const userRole = req.session.user.role;
+    const { feedbackId, filename } = req.params;
+
+    // Validate filename to prevent directory traversal attacks
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    // Get feedback with submission and course info for access validation
+    const feedback = queryOne(`
+      SELECT f.*, ps.user_id as submission_owner, c.instructor_id
+      FROM feedback f
+      JOIN project_submissions ps ON f.submission_id = ps.id
+      JOIN projects p ON ps.project_id = p.id
+      JOIN courses c ON (p.course_id = c.slug OR p.course_id = CAST(c.id AS TEXT))
+      WHERE f.id = ?
+    `, [feedbackId]);
+
+    if (!feedback) {
+      return res.status(404).json({ error: 'Feedback not found' });
+    }
+
+    // Check authorization: user owns submission OR is instructor for the course
+    const isOwner = feedback.submission_owner === userId || feedback.submission_owner === String(userId);
+    const isInstructor = userRole === 'instructor_admin';
+    const isCourseInstructor = feedback.instructor_id === userId || feedback.instructor_id === String(userId);
+
+    if (!isOwner && !isInstructor && !isCourseInstructor) {
+      console.log(`[Feature #37] Video access denied - User ${userId} tried to access video for feedback ${feedbackId}`);
+      return res.status(403).json({ error: 'Access denied: Video feedback access requires authorization' });
+    }
+
+    // Verify the feedback has this video URL
+    const hasVideo = feedback.video_url && feedback.video_url.includes(filename);
+    if (!hasVideo) {
+      return res.status(404).json({ error: 'Video not found for this feedback' });
+    }
+
+    // Serve the file
+    const filePath = path.join(uploadsDir, filename);
+
+    if (!fs.existsSync(filePath)) {
+      console.log(`[Feature #37] Video file not found: ${filePath}`);
+      return res.status(404).json({ error: 'Video file not found' });
+    }
+
+    console.log(`[Feature #37] Video access granted - User ${userId} accessing video for feedback ${feedbackId}`);
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error serving video feedback:', error);
+    res.status(500).json({ error: 'Failed to serve video feedback' });
+  }
+});
+
 export default router;
-// Feature #201 trigger reload do., 25 de ene. de 2026 19:23:33
+// Feature #37: Video feedback URLs are protected - 2026-01-26
+// Feature #37 reload trigger lu., 26 de ene. de 2026  6:36:51
