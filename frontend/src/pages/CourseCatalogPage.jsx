@@ -351,7 +351,7 @@ export default function CourseCatalogPage() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="mb-6" data-testid="search-form">
+        <form onSubmit={handleSearchSubmit} className="mb-6" data-testid="search-form" role="search">
           <div className="flex gap-2">
             <div className="relative flex-1 max-w-md">
               <input
@@ -359,6 +359,7 @@ export default function CourseCatalogPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Buscar cursos por nombre o descripcion..."
+                aria-label="Buscar cursos"
                 className="w-full px-4 py-2 pl-10 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 data-testid="search-input"
               />
@@ -367,6 +368,7 @@ export default function CourseCatalogPage() {
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -398,10 +400,11 @@ export default function CourseCatalogPage() {
         </form>
 
         {/* Filters */}
-        <div className="mb-6 flex flex-wrap gap-4">
+        <div className="mb-6 flex flex-wrap gap-4" role="group" aria-label="Filtros de cursos">
           <select
             value={categoryFilter}
             onChange={(e) => handleCategoryChange(e.target.value)}
+            aria-label="Filtrar por categoria"
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="category-filter"
           >
@@ -413,6 +416,7 @@ export default function CourseCatalogPage() {
           <select
             value={levelFilter}
             onChange={(e) => handleLevelChange(e.target.value)}
+            aria-label="Filtrar por nivel"
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="level-filter"
           >
@@ -424,6 +428,7 @@ export default function CourseCatalogPage() {
           <select
             value={priceFilter}
             onChange={(e) => handlePriceChange(e.target.value)}
+            aria-label="Filtrar por precio"
             className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
             data-testid="price-filter"
           >
@@ -436,10 +441,11 @@ export default function CourseCatalogPage() {
             <button
               type="button"
               onClick={handleResetFilters}
+              aria-label="Restablecer todos los filtros"
               className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-medium rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center gap-2"
               data-testid="reset-filters-button"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
               Restablecer filtros
