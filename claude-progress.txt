@@ -13696,3 +13696,54 @@ All 6 verification steps completed:
   - Dashboard shows 'Mis Cursos (2)' with enrolled courses
 - Console errors: None (only pre-login 401s to wrong port)
 - Screenshots: feature-9-oauth-callback-success.png, feature-9-user-profile-loaded.png
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #73)
+
+### Feature #73: Forum post content is saved correctly - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as student** - PASS
+   - Logged in as testuser@example.com (Test User)
+   - Role: student_free
+
+2. **Create a forum post with title TEST_FORUM_POST_ABC123** - PASS
+   - Navigated to Python: Fundamentos course forum
+   - Clicked 'Nueva Pregunta' button
+   - Entered title: TEST_FORUM_POST_ABC123
+   - Toast showed 'Hilo creado exitosamente'
+
+3. **Include specific content in the body** - PASS
+   - Content: 'This is the UNIQUE_CONTENT_XYZ789 for Feature #73 verification. The forum post content should be saved correctly and displayed exactly as entered. Testing special characters: @#$%^&*() and numbers 12345.'
+   - Special characters preserved correctly
+
+4. **View the created post** - PASS
+   - Navigated to /forum/thread/5
+   - Thread detail page loaded successfully
+
+5. **Verify title and content match exactly** - PASS
+   - Title displayed: 'TEST_FORUM_POST_ABC123' - EXACT MATCH
+   - Content displayed: Full content with special characters - EXACT MATCH
+   - Author: Test User - correct attribution
+   - Status: Abierto (Open)
+   - Data persists after page refresh
+
+### Console Errors:
+- WebSocket reconnection errors (transient, non-critical)
+- Expected 401s for auth check when session expires
+
+### Screenshots:
+- feature-73-step4-created-post-content.png - Thread detail after creation
+- feature-73-forum-list-shows-post.png - Forum list showing the new post
+- feature-73-step5-content-verified-after-refresh.png - Content after page refresh
+
+### Current Status:
+- Feature #73 marked as PASSING
+- Progress: 208/248 features passing (83.9%)
+- Commit: 4860fff
+
+[Coding] 2026-01-26 Feature #73 'Forum post content is saved correctly' verified - PASSED
+
