@@ -17246,3 +17246,27 @@ Long text without natural break points (like underscores instead of spaces) was 
 - No regression found - Feature still PASSING
 
 [Testing] Session complete - Feature #98 verified, no regression found
+[Testing] 2026-01-26 Feature #13 'Unauthenticated users cannot access dashboard' - REGRESSION TEST PASSED
+- Step 1: Ensure you are logged out - PASS (home page showed 'Iniciar Sesion' link)
+- Step 2: Navigate directly to /dashboard - PASS (attempted navigation)
+- Step 3: Verify redirect to login page - PASS (URL: http://localhost:5173/login)
+- Step 4: Verify no dashboard content is exposed - PASS (only login form visible)
+- Console errors: Only expected HTTP 401s on /api/auth/me (correct unauthenticated rejection)
+- Screenshot: feature-13-dashboard-redirect-to-login.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #13 verified, no regression found
+[Testing] 2026-01-26 Feature #81 'Video progress is saved' - REGRESSION TEST PASSED
+- Step 1: Start watching a video - PASS (lesson 2, ElephantsDream.mp4)
+- Step 2: Pause at specific timestamp - PASS (paused at 134.03 seconds, 20%)
+- Step 3: Navigate away - PASS (went to Dashboard)
+- Step 4: Return to the lesson - PASS (returned to lesson 2)
+- Step 5: Verify video resumes from saved position - PASS
+  - Before navigation: currentTime = 134.028069 seconds
+  - After navigation: currentTime = 134.028067 seconds (exact match!)
+  - UI showed 'Progreso: 20%' confirming restore
+- Console errors: Only expected HTTP 404s for database API (sample lessons use fallback)
+- Screenshots: feature-81-video-lesson-initial.png, feature-81-video-progress-restored.png
+- No regression found - Feature still PASSING
+
+[Testing] Session complete - Feature #81 verified, no regression found

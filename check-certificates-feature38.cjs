@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const db = new Database('backend/database.sqlite');
+const db = new Database('./backend/src/data/database.sqlite');
 
 // Check existing certificates
 const certs = db.prepare('SELECT * FROM certificates LIMIT 5').all();
