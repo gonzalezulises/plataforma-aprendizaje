@@ -9500,3 +9500,65 @@ All 4 verification steps completed:
 - Commit: efe2357
 
 [Coding] 2026-01-26 Feature #217 'Error messages announced' verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #218)
+
+### Feature #218: Skip navigation link available - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Load page** - PASS
+   - Navigated to http://localhost:5173
+   - Skip link present in accessibility tree
+
+2. **Press Tab immediately** - PASS
+   - First Tab key focuses the skip link
+   - Skip link becomes visible in top-left corner
+   - Styled as blue button with white text
+
+3. **Verify skip link appears** - PASS
+   - Link text: "Saltar al contenido principal"
+   - Positioned at top-4 left-4 with z-50
+   - Uses sr-only focus:not-sr-only pattern for accessibility
+
+4. **Activate skip link** - PASS
+   - Pressed Enter to activate the link
+   - URL changed to include #main-content hash
+
+5. **Verify focus moves to main content** - PASS
+   - Focus moved to main element (indicated by [active] in snapshot)
+   - Main element has id="main-content" and tabIndex="-1"
+   - Skip link hides again after losing focus
+
+### Implementation Details:
+
+**File modified: frontend/src/App.jsx**
+- Added skip link as first focusable element inside AuthProvider
+- Skip link uses sr-only class (visually hidden) with focus:not-sr-only (visible on focus)
+- Styled with Tailwind: focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg focus:shadow-lg
+- Added id="main-content" and tabIndex="-1" to <main> element for proper focus target
+
+### Console Errors: Only expected 401 (not logged in)
+
+### Screenshots:
+- feature-218-step2-skip-link-visible.png - Skip link visible after Tab
+- feature-218-step5-focus-on-main.png - After activating skip link
+- feature-218-courses-page-skip-link.png - Skip link on courses page
+
+### Current Status:
+- Feature #218 marked as PASSING
+- Commit: b81db78
+
+[Coding] 2026-01-26 Feature #218 "Skip navigation link available" verified - PASSED
+
+[Testing] 2026-01-26 Feature #200 'Toast notifications stack correctly' - VERIFIED PASSING
+- Triggered 4 rapid toggle clicks on profile page notification preferences
+- All 4 toasts rendered simultaneously with role='status'
+- Toasts stacked vertically with unique top positions (4 unique positions)
+- Each toast visible with text 'Preferencias actualizadas'
+- Auto-dismiss confirmed: all 4 toasts dismissed after ~4 seconds (4→0)
+- No console errors
+- Screenshot: feature-200-toast-stacking-verified.png
