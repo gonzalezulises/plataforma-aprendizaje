@@ -7595,3 +7595,141 @@ Success toasts are triggered in multiple forms:
 - feature-150-step3-direct-link-works.png - Direct URL navigation successful
 - feature-150-regression-test-PASS.png - Second thread verification
 
+
+
+---
+
+## Session: 2026-01-25 (Coding Agent - Feature #193)
+
+### Feature #193: Server-side validation works - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Disable JavaScript validation** - PASS
+   - Tested by making direct API calls bypassing client-side validation
+   - Used browser evaluate to call fetch API directly with invalid data
+
+2. **Submit invalid form** - PASS
+   - Submitted title 'AB' (2 chars, below 5 minimum)
+   - Submitted content 'Test' (4 chars, below 10 minimum)
+
+3. **Verify server returns errors** - PASS
+   - Server returned HTTP 400 status code
+   - Response included 'validationErrors' object with field-specific messages:
+     - title: 'El titulo debe tener al menos 5 caracteres'
+     - content: 'El contenido debe tener al menos 10 caracteres'
+
+4. **Verify errors are displayed in UI** - PASS
+   - Frontend code properly handles server validationErrors
+   - ForumPage.jsx (lines 265-271): Maps errors to setFieldErrors
+   - ThreadDetailPage.jsx: Handles reply validation errors  
+   - WebinarSchedulePage.jsx: Handles webinar form validation errors
+
+### Server-side Validation Implementation Locations:
+- backend/src/routes/forum.js (lines 158-201, 236-263)
+- backend/src/routes/webinars.js
+- backend/src/middleware/forumValidation.js
+
+### API Test Results (test-server-validation-193.cjs):
+- Test 1: Invalid data (short title and content) - Status 400, errors returned
+- Test 2: Empty title - Status 400, 'El titulo es requerido'
+- Test 3: Empty content - Status 400, 'El contenido es requerido'
+
+### Console Errors: Only expected 400 Bad Request (validation rejection)
+
+### Screenshots:
+- feature-193-step1-client-validation-working.png - Form showing validation
+- feature-193-verification-complete.png - Final verification state
+
+### Current Status
+- Feature #193 marked as PASSING
+- 115/248 features passing (46.4%)
+
+[Coding] 2026-01-25 Feature #193 'Server-side validation works' verified - PASSED
+
+
+[Testing] 2026-01-25 Feature #153 'Enrollment button prevents double enrollment' regression test - PASSED (no regression found)
+
+### Verification Details:
+- Step 1: Navigate to course - PASS (navigated to TEST_144_NoEnroll_Course)
+- Step 2: Click enroll - PASS (enrolled successfully, toast: 'Te has inscrito exitosamente\!')
+- Step 3: Try to enroll again - PASS (tested via API call)
+- Step 4: Verify second enrollment is prevented - PASS
+  - UI: Enroll button replaced with 'Continuar Curso' and 'Cancelar inscripcion' buttons
+  - API: Returns 409 Conflict with error 'Already enrolled in this course'
+- Step 5: Verify single enrollment in database - PASS
+  - Confirmed single enrollment (id: 25) for user_id: 1, course_id: 37
+
+### Implementation Details:
+- Frontend: CoursePage shows different buttons based on enrollment status
+- Backend: POST /api/enrollments returns 409 Conflict for duplicate enrollments
+- Database: UNIQUE constraint on (user_id, course_id) in enrollments table
+
+### Console Errors: None (409 error is expected when testing duplicate enrollment)
+
+### Screenshots:
+- feature-153-step1-before-enrollment.png - Course page before enrollment
+- feature-153-step2-enrollment-confirmation.png - Enrollment confirmation dialog
+- feature-153-step2-enrolled-success.png - After successful enrollment
+- feature-153-step3-already-enrolled-ui.png - UI shows 'Continuar Curso' instead of enroll
+- feature-153-step4-double-enrollment-prevented.png - Final verification
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #196)
+
+### Feature #196: Error message after failed action - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Trigger a failed action** - PASS
+   - Tried enrolling without login → toast "Debes iniciar sesion para inscribirte"
+   - Tried wrong login credentials → banner "Credenciales incorrectas. Por favor verifica tu correo y contrasena."
+   - Entered past date in webinar scheduler → inline error "La fecha no puede ser en el pasado"
+   - Entered short text in forum → inline errors with character counts
+   - Clicked submit with validation errors → toast "Por favor corrige los errores en el formulario"
+
+2. **Verify error message appears** - PASS
+   - Toast notifications appear in top-right (react-hot-toast)
+   - Inline error messages appear below form fields with warning icons
+   - Error banners appear for authentication failures
+
+3. **Verify message describes the issue** - PASS
+   - All error messages are specific and actionable
+   - Messages explain what went wrong
+   - Character counts show progress (e.g., "2/5")
+
+4. **Verify option to retry or close** - PASS
+   - Toasts auto-dismiss after 4 seconds
+   - Inline errors clear automatically when user fixes input
+   - User can correct mistakes and resubmit
+
+### Implementation Details:
+The application uses react-hot-toast for toast notifications with:
+- Position: top-right
+- Duration: 4000ms auto-dismiss
+- Success theme: green (#10b981)
+- Error theme: red (#ef4444)
+
+Inline validation uses:
+- Red border on invalid fields
+- Warning icon with error message
+- Real-time validation feedback
+- Aria attributes for accessibility
+
+### Console Errors: None
+
+### Screenshots:
+- feature-196-step1-enroll-error.png - Enrollment without login
+- feature-196-step2-login-error.png - Wrong credentials error
+- feature-196-step3-date-validation-error.png - Date validation error
+- feature-196-step4-validation-errors-forum.png - Multiple validation errors
+- feature-196-step5-toast-error.png - Toast error on submit
+- feature-196-step6-errors-cleared-retry.png - Errors cleared after fix
+
+### Current Status:
+- Feature #196 marked as PASSING
+- No code changes required - feature already fully implemented
+
+[Coding] 2026-01-26 Feature #196 'Error message after failed action' verified - PASSED
+
