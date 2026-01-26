@@ -1,7 +1,9 @@
 import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 import { parseSearchQuery } from '../utils/searchUtils.js';
+import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
 
+// Feature #40: Sensitive operations log audit trail
 console.log('Courses routes loading... (Feature #191 - UNIQUE_VALIDATION - 2026-01-25T21:42:00.000Z)');
 
 const router = express.Router();
@@ -324,6 +326,20 @@ router.post('/', requireInstructor, (req, res) => {
     // Fetch by slug since lastInsertRowid may not work reliably with sql.js
     const course = queryOne('SELECT * FROM courses WHERE slug = ?', [slug]);
     console.log('Fetched course after insert:', course);
+
+    // Feature #40: Log audit event for course creation
+    logAuditEvent(instructorId, AUDIT_EVENTS.COURSE_CREATED, {
+      action: 'Course created',
+      courseId: course.id,
+      courseTitle: title,
+      courseSlug: slug,
+      category: safeCategory,
+      level: level,
+      isPremium: is_premium,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+
     res.status(201).json({ course });
   } catch (error) {
     console.error('Error creating course:', error);
@@ -432,6 +448,18 @@ router.put('/:id', requireInstructor, (req, res) => {
     }
 
     const updatedCourse = queryOne('SELECT * FROM courses WHERE id = ?', [id]);
+
+    // Feature #40: Log audit event for course update
+    const userId = req.session.user.id;
+    logAuditEvent(userId, AUDIT_EVENTS.COURSE_UPDATED, {
+      action: 'Course updated',
+      courseId: parseInt(id),
+      courseTitle: updatedCourse.title,
+      updatedFields: updates.filter(u => u !== 'updated_at = ?').map(u => u.split(' = ')[0]),
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+
     res.json({ course: updatedCourse });
   } catch (error) {
     console.error('Error updating course:', error);
@@ -619,6 +647,20 @@ router.delete('/:id', requireInstructor, (req, res) => {
 
     // 4. Update career paths that include this course (remove course and recalculate progress)
     handleCourseDeletedFromCareerPaths(id);
+
+    // Feature #40: Log audit event BEFORE deleting the course
+    const userId = req.session.user.id;
+    logAuditEvent(userId, AUDIT_EVENTS.COURSE_DELETED, {
+      action: 'Course deleted',
+      courseId: parseInt(id),
+      courseTitle: course.title,
+      courseSlug: course.slug,
+      wasPublished: course.is_published === 1,
+      wasPremium: course.is_premium === 1,
+      enrollmentCount: lessonIds.length,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
 
     // 5. Delete course (cascades to modules, lessons, content via foreign keys)
     run('DELETE FROM courses WHERE id = ?', [id]);

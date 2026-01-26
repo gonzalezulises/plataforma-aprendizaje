@@ -1374,4 +1374,53 @@ router.post('/import-structure', requireInstructor, (req, res) => {
   }
 });
 
-export default router;// trigger reload feature234
+/**
+ * GET /api/analytics/audit-trail
+ * Feature #40: Retrieve audit trail events for security auditing
+ * Requires instructor/admin role
+ */
+router.get('/audit-trail', requireInstructor, (req, res) => {
+  try {
+    const { limit = 50, userId, eventType } = req.query;
+
+    let sql = `
+      SELECT ae.*, u.name as user_name, u.email as user_email
+      FROM analytics_events ae
+      LEFT JOIN users u ON ae.user_id = u.id
+      WHERE ae.event_type LIKE 'audit:%'
+    `;
+    const params = [];
+
+    if (userId) {
+      sql += ' AND ae.user_id = ?';
+      params.push(userId);
+    }
+
+    if (eventType) {
+      sql += ' AND ae.event_type = ?';
+      params.push(eventType);
+    }
+
+    sql += ' ORDER BY ae.created_at DESC LIMIT ?';
+    params.push(parseInt(limit) || 50);
+
+    const events = queryAll(sql, params);
+
+    // Parse metadata JSON for each event
+    const parsedEvents = events.map(e => ({
+      ...e,
+      metadata: e.metadata ? JSON.parse(e.metadata) : {}
+    }));
+
+    res.json({
+      success: true,
+      count: parsedEvents.length,
+      events: parsedEvents
+    });
+  } catch (error) {
+    console.error('Error fetching audit trail:', error);
+    res.status(500).json({ error: 'Failed to fetch audit trail' });
+  }
+});
+
+export default router;// trigger reload feature234 feature40

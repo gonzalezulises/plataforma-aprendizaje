@@ -1,5 +1,7 @@
 import express from 'express';
+import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
 // Feature #144 - Added userId parameter to dev-login for enrollment testing
+// Feature #40: Sensitive operations log audit trail
 
 const router = express.Router();
 
@@ -123,6 +125,16 @@ router.get('/callback', async (req, res) => {
     delete req.session.returnUrl;
 
     console.log('[Auth] Login successful, redirecting to:', returnUrl);
+
+    // Feature #40: Log audit event for successful login
+    logAuditEvent(req.session.user.id, AUDIT_EVENTS.LOGIN_SUCCESS, {
+      action: 'User logged in via OAuth',
+      email: req.session.user.email,
+      role: req.session.user.role,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+
     // Redirect to frontend auth callback page which will handle the session check
     // and show appropriate feedback before redirecting to the final destination
     res.redirect(`${FRONTEND_URL}/auth/callback`);
@@ -138,6 +150,17 @@ router.get('/callback', async (req, res) => {
  * Logs out the current user
  */
 router.post('/logout', (req, res) => {
+  // Feature #40: Log audit event BEFORE destroying session (so we have user info)
+  const userId = req.session?.user?.id;
+  if (userId) {
+    logAuditEvent(userId, AUDIT_EVENTS.LOGOUT, {
+      action: 'User logged out',
+      email: req.session.user.email,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+  }
+
   req.session.destroy((err) => {
     if (err) {
       console.error('[Auth] Logout error:', err);
@@ -208,6 +231,16 @@ router.post('/dev-login', (req, res) => {
   req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
 
   console.log('[Auth] Dev login successful, user:', req.session.user);
+
+  // Feature #40: Log audit event for dev login
+  logAuditEvent(finalUserId, AUDIT_EVENTS.LOGIN_SUCCESS, {
+    action: 'Dev login (development mode)',
+    email: req.session.user.email,
+    role: userRole,
+    isDev: true,
+    ip: req.ip || req.connection?.remoteAddress,
+    userAgent: req.headers?.['user-agent']
+  });
 
   res.json({
     success: true,

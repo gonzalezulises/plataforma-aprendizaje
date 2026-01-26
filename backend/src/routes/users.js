@@ -1,6 +1,8 @@
 import express from 'express';
 import crypto from 'crypto';
 import { queryOne, queryAll, run } from '../config/database.js';
+import { logAuditEvent, createRequestLogger, AUDIT_EVENTS } from '../utils/auditLogger.js';
+// Feature #40: Sensitive operations log audit trail
 // Feature #162: User deletion cascade
 // Feature #230: Export student progress report - Reloaded 2026-01-26T02:23
 // Feature #75: Profile updates are saved
@@ -146,6 +148,14 @@ router.put('/me', (req, res) => {
     }
 
     console.log('[Users] Profile updated successfully for user', userId);
+
+    // Feature #40: Log audit event for profile update
+    logAuditEvent(userId, AUDIT_EVENTS.PROFILE_UPDATED, {
+      action: 'Profile updated',
+      updatedFields: updates.slice(0, -1).map(u => u.split(' = ')[0]),
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
 
     res.json({
       success: true,
@@ -507,6 +517,15 @@ router.post('/me/request-deletion', (req, res) => {
 
     console.log('[Users] Account deletion requested for user', userId, '- confirmation email sent');
 
+    // Feature #40: Log audit event for deletion request
+    logAuditEvent(userId, AUDIT_EVENTS.ACCOUNT_DELETION_REQUESTED, {
+      action: 'Account deletion requested',
+      email: user.email,
+      expiresAt: expiresAt,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+
     res.json({
       success: true,
       message: 'Se ha enviado un correo de confirmacion a tu email',
@@ -654,6 +673,16 @@ router.post('/confirm-deletion/:token', (req, res) => {
     // Delete the deletion request
     run('DELETE FROM account_deletion_requests WHERE user_id = ?', [userId]);
 
+    // Feature #40: Log audit event BEFORE deleting the user (so we have the record)
+    logAuditEvent(userId, AUDIT_EVENTS.ACCOUNT_DELETION_CONFIRMED, {
+      action: 'Account deletion confirmed via email',
+      email: userEmail,
+      userName: userName,
+      deletedRecords: deletedData.deletedRecords,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
+
     // Finally delete the user
     deletedData.deletedRecords.user = run('DELETE FROM users WHERE id = ?', [userId]).changes;
     console.log('[Users] Account deleted via email confirmation for user', userId);
@@ -740,6 +769,13 @@ router.delete('/me/cancel-deletion', (req, res) => {
     }
 
     console.log('[Users] Deletion request cancelled for user', currentUser.id);
+
+    // Feature #40: Log audit event for deletion cancellation
+    logAuditEvent(currentUser.id, AUDIT_EVENTS.ACCOUNT_DELETION_CANCELLED, {
+      action: 'Account deletion request cancelled',
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
 
     res.json({
       success: true,
@@ -834,6 +870,17 @@ router.delete('/:id', (req, res) => {
 
     // Delete notifications
     deletedData.deletedRecords.notifications = run('DELETE FROM notifications WHERE user_id = ?', [String(userId)]).changes;
+
+    // Feature #40: Log audit event BEFORE deleting the user
+    logAuditEvent(currentUser.id, AUDIT_EVENTS.USER_DELETED, {
+      action: 'User account deleted by admin',
+      targetUserId: userId,
+      targetEmail: user.email,
+      isSelf: isSelf,
+      deletedRecords: deletedData.deletedRecords,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent']
+    });
 
     // Delete user
     deletedData.deletedRecords.user = run('DELETE FROM users WHERE id = ?', [userId]).changes;
