@@ -13152,3 +13152,14 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #63 'Webinar calendar navigation' verified - PASSED
 
+
+[Testing] 2026-01-26 Feature #187 'Minimum length validation' - VERIFIED PASSING
+- Step 1: Enter 1 character in field with minimum - PASS (entered 'A' in title, 'B' in content)
+- Step 2: Submit form - PASS (form submitted, validation triggered)
+- Step 3: Verify minimum length error - PASS (errors shown: 'El titulo debe tener al menos 5 caracteres', 'El contenido debe tener al menos 10 caracteres')
+- Step 4: Enter sufficient characters - PASS (entered 33 chars in title, 89 chars in content)
+- Step 5: Verify validation passes - PASS (no errors shown, form submitted successfully)
+- Additional: Thread created successfully at /forum/thread/4
+- Console errors: Only transient WebSocket reconnection (non-critical)
+- Screenshots: feature-187-min-length-errors.png, feature-187-validation-passes.png, feature-187-thread-created.png
+

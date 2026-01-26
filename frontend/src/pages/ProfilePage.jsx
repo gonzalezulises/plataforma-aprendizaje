@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 
 // Feature #230: Export student progress report
+// Feature #64: Profile tabs navigate correctly
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api');
+// Strip trailing /api from VITE_API_URL to avoid double /api/api paths for some endpoints
+const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
 
 // Notification preference labels in Spanish
 const NOTIFICATION_LABELS = {
@@ -17,14 +20,34 @@ const NOTIFICATION_LABELS = {
   email_forum_replies: 'Respuestas en el foro'
 };
 
+// Tab configuration
+const TABS = [
+  { id: 'info', label: 'Mi Perfil', path: '/profile' },
+  { id: 'certificates', label: 'Certificados', path: '/profile/certificates' },
+  { id: 'badges', label: 'Insignias', path: '/profile/badges' }
+];
+
 function ProfilePage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { tab } = useParams();
+
+  // Determine active tab from URL
+  const activeTab = tab || 'info';
+
   const [preferences, setPreferences] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [isExporting, setIsExporting] = useState(false); // Feature #230
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Certificates state
+  const [certificates, setCertificates] = useState([]);
+  const [certificatesLoading, setCertificatesLoading] = useState(false);
+
+  // Badges state
+  const [badges, setBadges] = useState([]);
+  const [badgesLoading, setBadgesLoading] = useState(false);
 
   // Feature #230: Export progress function
   const handleExportProgress = async () => {
@@ -127,6 +150,74 @@ function ProfilePage() {
     }
   }, [isAuthenticated, navigate]);
 
+  // Fetch certificates when tab is active
+  useEffect(() => {
+    async function fetchCertificates() {
+      if (!isAuthenticated || activeTab !== 'certificates') return;
+
+      try {
+        setCertificatesLoading(true);
+        const response = await fetch(`${BASE_URL}/api/certificates?userId=${user?.id || 'dev-user'}`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            navigate('/login', { state: { from: '/profile/certificates' } });
+            return;
+          }
+          throw new Error('Failed to fetch certificates');
+        }
+
+        const data = await response.json();
+        setCertificates(data.certificates || []);
+      } catch (error) {
+        console.error('Error fetching certificates:', error);
+        toast.error('Error al cargar los certificados');
+      } finally {
+        setCertificatesLoading(false);
+      }
+    }
+
+    if (isAuthenticated && activeTab === 'certificates' && certificates.length === 0) {
+      fetchCertificates();
+    }
+  }, [isAuthenticated, activeTab, user, navigate]);
+
+  // Fetch badges when tab is active
+  useEffect(() => {
+    async function fetchBadges() {
+      if (!isAuthenticated || activeTab !== 'badges') return;
+
+      try {
+        setBadgesLoading(true);
+        const response = await fetch(`${API_URL}/career-paths/user/badges`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            navigate('/login', { state: { from: '/profile/badges' } });
+            return;
+          }
+          throw new Error('Failed to fetch badges');
+        }
+
+        const data = await response.json();
+        setBadges(data.badges || []);
+      } catch (error) {
+        console.error('Error fetching badges:', error);
+        toast.error('Error al cargar las insignias');
+      } finally {
+        setBadgesLoading(false);
+      }
+    }
+
+    if (isAuthenticated && activeTab === 'badges' && badges.length === 0) {
+      fetchBadges();
+    }
+  }, [isAuthenticated, activeTab, navigate]);
+
   // Initialize default preferences
   const initializeDefaults = async () => {
     try {
@@ -195,8 +286,27 @@ function ProfilePage() {
     }
   };
 
+  // Certificate download handler
+  const handleDownloadCertificate = async (certId) => {
+    try {
+      window.open(`${BASE_URL}/api/certificates/${certId}/pdf?userId=${user?.id || 'dev-user'}`, '_blank');
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast.error('Error al descargar el certificado');
+    }
+  };
+
+  // Format date helper
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   // Loading state
-  if (authLoading || (isAuthenticated && isLoading)) {
+  if (authLoading || (isAuthenticated && isLoading && activeTab === 'info')) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -208,7 +318,7 @@ function ProfilePage() {
   }
 
   // Error state
-  if (error && !preferences) {
+  if (error && !preferences && activeTab === 'info') {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
         <div className="max-w-4xl mx-auto">
@@ -226,6 +336,343 @@ function ProfilePage() {
     );
   }
 
+  // Render Profile Info Tab Content
+  const renderProfileInfo = () => (
+    <>
+      {/* User Profile Info */}
+      {user && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Informacion Personal
+          </h2>
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <span className="text-gray-600 dark:text-gray-400 w-32">Nombre:</span>
+              <span className="text-gray-900 dark:text-white font-medium">{user.name}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-gray-600 dark:text-gray-400 w-32">Email:</span>
+              <span className="text-gray-900 dark:text-white font-medium">{user.email}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-gray-600 dark:text-gray-400 w-32">Rol:</span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
+                {user.role === 'student_free' ? 'Estudiante Gratis' :
+                 user.role === 'student_premium' ? 'Estudiante Premium' :
+                 user.role === 'instructor_admin' ? 'Instructor/Admin' : user.role}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feature #230: Export Progress Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Exportar Mi Progreso
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Descarga un archivo con todo tu progreso, cursos completados, calificaciones de quizzes y retos
+          </p>
+        </div>
+
+        <button
+          onClick={handleExportProgress}
+          disabled={isExporting}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg transition-colors
+            ${isExporting
+              ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
+              : 'bg-primary-600 hover:bg-primary-700 text-white'
+            }
+          `}
+          aria-label="Exportar progreso"
+        >
+          {isExporting ? (
+            <>
+              <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Exportando...</span>
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              <span>Exportar Progreso</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Preferencias de Notificacion
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Elige que notificaciones por correo electronico deseas recibir
+          </p>
+        </div>
+
+        {preferences ? (
+          <div className="space-y-4">
+            {Object.keys(NOTIFICATION_LABELS).map((key) => (
+              <div
+                key={key}
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <label
+                  htmlFor={key}
+                  className="flex-1 cursor-pointer"
+                >
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {NOTIFICATION_LABELS[key]}
+                  </span>
+                </label>
+
+                {/* Toggle Switch */}
+                <button
+                  id={key}
+                  role="switch"
+                  aria-checked={preferences[key]}
+                  onClick={() => handleToggle(key)}
+                  disabled={isSaving}
+                  className={`
+                    relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                    ${preferences[key]
+                      ? 'bg-primary-600'
+                      : 'bg-gray-300 dark:bg-gray-600'
+                    }
+                    ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                  `}
+                >
+                  <span
+                    className={`
+                      inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                      ${preferences[key] ? 'translate-x-6' : 'translate-x-1'}
+                    `}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400">
+              Cargando preferencias...
+            </p>
+          </div>
+        )}
+
+        {/* Saving indicator */}
+        {isSaving && (
+          <div className="mt-4 flex items-center justify-center text-sm text-primary-600 dark:text-primary-400">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-600 border-t-transparent mr-2"></div>
+            Guardando...
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  // Render Certificates Tab Content
+  const renderCertificates = () => {
+    if (certificatesLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      );
+    }
+
+    if (certificates.length === 0) {
+      return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
+          <div className="text-6xl mb-4">🎓</div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Aun no tienes certificados
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Completa cursos para obtener certificados de finalizacion.
+          </p>
+          <Link
+            to="/courses"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Explorar Cursos
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {certificates.map((cert) => (
+          <div
+            key={cert.id}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+          >
+            {/* Certificate Preview */}
+            <div className="bg-gradient-to-br from-primary-500 to-primary-700 p-6 text-white">
+              <div className="text-sm opacity-75 mb-1">cursos.rizo.ma</div>
+              <h3 className="font-bold text-lg mb-2 line-clamp-2">{cert.courseTitle}</h3>
+              <div className="flex items-center gap-2 text-sm opacity-90">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {cert.userName}
+              </div>
+            </div>
+
+            {/* Certificate Info */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {formatDate(cert.issuedAt)}
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {cert.courseCategory && (
+                  <span className="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 text-xs rounded-full">
+                    {cert.courseCategory}
+                  </span>
+                )}
+                {cert.courseLevel && (
+                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
+                    {cert.courseLevel}
+                  </span>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownloadCertificate(cert.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Descargar
+                </button>
+                <Link
+                  to={`/certificate/verify/${cert.verificationCode}`}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Verificar
+                </Link>
+              </div>
+
+              {/* Verification Code */}
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Codigo de verificacion:
+                </div>
+                <code className="text-xs text-primary-600 dark:text-primary-400 font-mono">
+                  {cert.verificationCode}
+                </code>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Render Badges Tab Content
+  const renderBadges = () => {
+    if (badgesLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      );
+    }
+
+    if (badges.length === 0) {
+      return (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-12 text-center">
+          <div className="text-6xl mb-4">🏆</div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            Aun no tienes insignias
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Completa rutas de carrera para obtener insignias de logro.
+          </p>
+          <Link
+            to="/career-paths"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Ver Rutas de Carrera
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {badges.map((badge) => (
+          <div
+            key={badge.id}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+          >
+            {/* Badge Header */}
+            <div
+              className="p-6 text-white text-center"
+              style={{ backgroundColor: badge.color || '#2563EB' }}
+            >
+              <div className="text-5xl mb-3">🏆</div>
+              <h3 className="font-bold text-lg">{badge.career_path_name}</h3>
+            </div>
+
+            {/* Badge Info */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Obtenida: {formatDate(badge.earned_at)}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                Ruta de carrera completada
+              </div>
+
+              {badge.career_path_slug && (
+                <Link
+                  to={`/career-paths/${badge.career_path_slug}`}
+                  className="mt-4 block text-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                >
+                  Ver Ruta de Carrera
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
       <div className="max-w-4xl mx-auto">
@@ -235,147 +682,37 @@ function ProfilePage() {
             Mi Perfil
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Administra tu informacion personal y preferencias de notificacion
+            Administra tu informacion personal, certificados e insignias
           </p>
         </div>
 
-        {/* User Profile Info */}
-        {user && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Informacion Personal
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <span className="text-gray-600 dark:text-gray-400 w-32">Nombre:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{user.name}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-gray-600 dark:text-gray-400 w-32">Email:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{user.email}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-gray-600 dark:text-gray-400 w-32">Rol:</span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
-                  {user.role === 'student_free' ? 'Estudiante Gratis' :
-                   user.role === 'student_premium' ? 'Estudiante Premium' :
-                   user.role === 'instructor_admin' ? 'Instructor/Admin' : user.role}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Feature #230: Export Progress Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Exportar Mi Progreso
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Descarga un archivo con todo tu progreso, cursos completados, calificaciones de quizzes y retos
-            </p>
-          </div>
-
-          <button
-            onClick={handleExportProgress}
-            disabled={isExporting}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg transition-colors
-              ${isExporting
-                ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
-                : 'bg-primary-600 hover:bg-primary-700 text-white'
-              }
-            `}
-            aria-label="Exportar progreso"
-          >
-            {isExporting ? (
-              <>
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Exportando...</span>
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span>Exportar Progreso</span>
-              </>
-            )}
-          </button>
+        {/* Tabs Navigation */}
+        <div className="mb-6">
+          <nav className="flex space-x-1 bg-white dark:bg-gray-800 rounded-lg shadow-md p-1" aria-label="Tabs">
+            {TABS.map((tabItem) => (
+              <Link
+                key={tabItem.id}
+                to={tabItem.path}
+                className={`
+                  flex-1 text-center px-4 py-2 rounded-md text-sm font-medium transition-colors
+                  ${activeTab === tabItem.id
+                    ? 'bg-primary-600 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                  }
+                `}
+                aria-current={activeTab === tabItem.id ? 'page' : undefined}
+              >
+                {tabItem.label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        {/* Notification Preferences */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              Preferencias de Notificacion
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Elige que notificaciones por correo electronico deseas recibir
-            </p>
-          </div>
-
-          {preferences ? (
-            <div className="space-y-4">
-              {Object.keys(NOTIFICATION_LABELS).map((key) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <label
-                    htmlFor={key}
-                    className="flex-1 cursor-pointer"
-                  >
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {NOTIFICATION_LABELS[key]}
-                    </span>
-                  </label>
-
-                  {/* Toggle Switch */}
-                  <button
-                    id={key}
-                    role="switch"
-                    aria-checked={preferences[key]}
-                    onClick={() => handleToggle(key)}
-                    disabled={isSaving}
-                    className={`
-                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                      ${preferences[key]
-                        ? 'bg-primary-600'
-                        : 'bg-gray-300 dark:bg-gray-600'
-                      }
-                      ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    `}
-                  >
-                    <span
-                      className={`
-                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                        ${preferences[key] ? 'translate-x-6' : 'translate-x-1'}
-                      `}
-                    />
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500 dark:text-gray-400">
-                Cargando preferencias...
-              </p>
-            </div>
-          )}
-
-          {/* Saving indicator */}
-          {isSaving && (
-            <div className="mt-4 flex items-center justify-center text-sm text-primary-600 dark:text-primary-400">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-600 border-t-transparent mr-2"></div>
-              Guardando...
-            </div>
-          )}
+        {/* Tab Content */}
+        <div className="tab-content">
+          {activeTab === 'info' && renderProfileInfo()}
+          {activeTab === 'certificates' && renderCertificates()}
+          {activeTab === 'badges' && renderBadges()}
         </div>
       </div>
     </div>
