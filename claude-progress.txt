@@ -10956,3 +10956,63 @@ All 5 verification steps completed:
 - Step 5: User profile loaded - shows 'Usuario de Prueba', 'test@rizo.ma', 'Estudiante'
 - Console errors: Only pre-existing 401 auth errors (before login, expected)
 - Screenshots: feature-9-step1-login-page.png, feature-9-step2-oauth-success-dashboard.png, feature-9-step3-user-profile-loaded.png
+[Testing] 2026-01-26 Feature #129 'Notification count from database' - VERIFIED PASSING
+- Step 1: Checked API /api/notifications/unread/count - returned accurate count
+- Step 2: Navigated to dashboard
+- Step 3: Badge showed '1' when 1 unread notification existed in database
+- Step 4: Clicked notification to mark as read
+- Step 5: Badge disappeared (count went from 1 to 0), API confirmed count=0
+- Console errors: Only transient WebSocket reconnection error (expected behavior)
+- Screenshots: feature-129-step3-badge-shows-1.png, feature-129-step5-badge-cleared.png
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #239)
+
+### Feature #239: Video playback starts promptly - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Navigate to video lesson** - PASS
+   - Navigated to /course/test-234-roundtrip-course/lesson/1
+   - Video lesson page loaded with "Intro Video - BigBuckBunny"
+   - Updated lesson content with proper video URL (BigBuckBunny.mp4)
+
+2. **Click play** - PASS
+   - Video plays successfully when play is clicked
+   - Video content displays correctly (BigBuckBunny animation)
+   - No errors during playback
+
+3. **Measure time to playback start** - PASS
+   - Page load complete: 88ms
+   - Time to playback after click: 1-16ms (varies between tests)
+   - Video reaches HAVE_ENOUGH_DATA state (readyState: 4) immediately
+
+4. **Verify under 3 seconds on good connection** - PASS
+   - Total time: Well under 3 seconds (< 100ms total)
+   - pageLoadedUnder3Seconds: true
+   - underThreeSeconds: true for playback
+
+### Technical Details:
+- Video source: BigBuckBunny.mp4 from Google CDN (596 seconds duration)
+- Video player uses native HTML5 <video> element with controls
+- VideoPlayer component (frontend/src/components/VideoPlayer.jsx) handles:
+  - Progress tracking
+  - Error states with retry functionality
+  - Resume from saved position
+  - Alternative content fallback
+- Browser caching helps subsequent loads
+
+### Console Errors: Only pre-existing WebSocket error (unrelated)
+
+### Screenshots:
+- feature-239-step1-video-lesson-page.png - Video lesson page
+- feature-239-step2-video-playing.png - Video playing with content visible
+- feature-239-step3-playback-verified.png - Final verification
+
+### Current Status:
+- Feature #239 marked as PASSING
+
+[Coding] 2026-01-26 Feature #239 'Video playback starts promptly' verified - PASSED
