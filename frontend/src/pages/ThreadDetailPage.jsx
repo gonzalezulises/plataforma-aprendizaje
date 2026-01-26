@@ -194,6 +194,13 @@ function ThreadDetailPage() {
       },
       onError: (error) => {
         console.error('Error adding reply:', error);
+        // Handle thread deleted (404) - redirect user to valid page
+        if (error.status === 404) {
+          toast.error('Este hilo ha sido eliminado por otro usuario');
+          // Set thread to null to show 404 page
+          setThread(null);
+          return;
+        }
         // Handle server-side validation errors
         if (error.validationErrors) {
           setReplyError(error.validationErrors.content || '');
@@ -220,6 +227,13 @@ function ThreadDetailPage() {
           voteType: 'upvote'
         })
       });
+
+      // Handle deleted thread/reply (404)
+      if (res.status === 404) {
+        toast.error('Este hilo o respuesta ha sido eliminado');
+        setThread(null);
+        return;
+      }
 
       if (!res.ok) throw new Error('Failed to vote');
 
@@ -249,6 +263,13 @@ function ThreadDetailPage() {
         credentials: 'include',
         body: JSON.stringify({ resolved: !thread.is_resolved })
       });
+
+      // Handle deleted thread (404)
+      if (res.status === 404) {
+        toast.error('Este hilo ha sido eliminado por otro usuario');
+        setThread(null);
+        return;
+      }
 
       if (!res.ok) throw new Error('Failed to update thread');
 

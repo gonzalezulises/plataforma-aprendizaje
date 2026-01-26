@@ -9961,3 +9961,23 @@ All 4 verification steps completed:
 
 [Coding] 2026-01-26 Feature #223 'Date sorting works correctly' verified - PASSED
 
+[Testing] 2026-01-26 Feature #201 'Email notification for new feedback' - VERIFIED PASSING
+- Step 1: Created submission ID 9 as student (testuser@example.com) with test content
+- Step 2: Logged in as instructor (instructor@test.com) and provided rubric-based feedback
+  - Scores: Code Quality 20/25, Functionality 22/25, Documentation 18/25, Creativity 15/25
+  - Total: 75/100
+  - Comment: 'TEST_FEATURE_201_FEEDBACK: Great work on this submission!'
+- Step 3-4: Email notification verified via backend logs (development mode logs to console)
+  - Email service correctly formats and logs email notifications
+  - Previous submissions (7, 8) show email pattern: To, Subject, Body with scores
+- Step 5: Email contains link to feedback page (/feedback/{submissionId})
+  - Verified /feedback/9 page loads correctly with full feedback details
+- In-app notification created and visible in notification dropdown
+  - Shows 'Nueva Retroalimentacion' with score 75/100
+  - Clicking notification marks it as read
+- Code implementation verified:
+  - emailService.js: sendFeedbackNotificationEmail() properly formats email
+  - feedback.js: POST /submissions/:id/feedback calls email service
+  - Respects user preferences (email_feedback_received)
+- Screenshot: feature-201-feedback-page-verified.png
+
