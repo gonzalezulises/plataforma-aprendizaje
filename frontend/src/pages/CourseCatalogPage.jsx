@@ -145,25 +145,28 @@ export default function CourseCatalogPage() {
   // Feature #174: Reset pagination to page 1 when filters change
   const resetPaginationOnFilterChange = useCallback(() => {
     setCurrentPage(1);
-    updateURLParams({ page: '' }); // Remove page param when resetting
-  }, [updateURLParams]);
+  }, []);
 
   // Wrapper functions to update both state and URL (Feature #174: also reset pagination)
+  // Feature #61: Update URL with filter parameter for shareable links
   const handleCategoryChange = useCallback((value) => {
     setCategoryFilter(value);
-    updateURLParams({ category: value });
+    // Combine category and page reset in single URL update to avoid race condition
+    updateURLParams({ category: value, page: '' });
     resetPaginationOnFilterChange(); // Feature #174
   }, [updateURLParams, resetPaginationOnFilterChange]);
 
   const handleLevelChange = useCallback((value) => {
     setLevelFilter(value);
-    updateURLParams({ level: value });
+    // Combine level and page reset in single URL update to avoid race condition
+    updateURLParams({ level: value, page: '' });
     resetPaginationOnFilterChange(); // Feature #174
   }, [updateURLParams, resetPaginationOnFilterChange]);
 
   const handlePriceChange = useCallback((value) => {
     setPriceFilter(value);
-    updateURLParams({ price: value });
+    // Combine price and page reset in single URL update to avoid race condition
+    updateURLParams({ price: value, page: '' });
     resetPaginationOnFilterChange(); // Feature #174
   }, [updateURLParams, resetPaginationOnFilterChange]);
 
@@ -348,7 +351,8 @@ export default function CourseCatalogPage() {
     const trimmedSearch = searchInput.trim();
     setSearchInput(trimmedSearch); // Also update the input to show trimmed value
     setSearchQuery(trimmedSearch);
-    updateURLParams({ search: trimmedSearch || '' }); // Empty string removes param
+    // Combine search and page reset in single URL update
+    updateURLParams({ search: trimmedSearch || '', page: '' });
     resetPaginationOnFilterChange(); // Feature #174: reset to page 1
   };
 
@@ -356,7 +360,8 @@ export default function CourseCatalogPage() {
   const handleClearSearch = () => {
     setSearchInput('');
     setSearchQuery('');
-    updateURLParams({ search: '' });
+    // Combine search clear and page reset in single URL update
+    updateURLParams({ search: '', page: '' });
     resetPaginationOnFilterChange(); // Feature #174
   };
 
