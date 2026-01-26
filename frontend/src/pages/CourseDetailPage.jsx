@@ -463,12 +463,12 @@ function CourseDetailPage() {
             {/* Course Info */}
             <div className="md:col-span-2">
               {/* Breadcrumb */}
-              <nav className="text-primary-200 text-sm mb-4">
-                <Link to="/" className="hover:text-white">Inicio</Link>
-                <span className="mx-2">/</span>
-                <Link to="/courses" className="hover:text-white">Cursos</Link>
-                <span className="mx-2">/</span>
-                <span className="text-white">{course.title}</span>
+              <nav className="text-primary-200 text-sm mb-4 flex items-center min-w-0">
+                <Link to="/" className="hover:text-white flex-shrink-0">Inicio</Link>
+                <span className="mx-2 flex-shrink-0">/</span>
+                <Link to="/courses" className="hover:text-white flex-shrink-0">Cursos</Link>
+                <span className="mx-2 flex-shrink-0">/</span>
+                <span className="text-white truncate" title={course.title}>{course.title}</span>
               </nav>
 
               {/* Tags */}
@@ -487,7 +487,7 @@ function CourseDetailPage() {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4 break-words">{course.title}</h1>
 
               {/* Description */}
               <p className="text-lg text-primary-100 mb-6">{course.description}</p>
