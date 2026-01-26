@@ -14334,3 +14334,141 @@ All 5 verification steps completed:
 
 [Coding] 2026-01-26 Feature #33 'Rate limiting on login attempts' verified - PASSED
 
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #11)
+
+### Feature #11: Session persists across page refreshes - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as a user** - PASS
+   - Logged in as Usuario de Prueba via OAuth (rizo.ma)
+   - Role: student_free
+   - Redirected to /dashboard after login
+
+2. **Note the current page** - PASS
+   - Current page: /dashboard
+   - User menu shows "Usuario de Prueba"
+   - Dashboard shows "Bienvenido de vuelta, Usuario de Prueba"
+   - 2 enrolled courses visible
+
+3. **Refresh the browser** - PASS
+   - Used F5 to hard refresh the page
+   - Page reloaded completely
+   - No redirect to login page
+
+4. **Verify user is still logged in** - PASS
+   - User avatar "UD" still visible in navbar
+   - User name "Usuario de Prueba" still displayed
+   - No "Iniciar Sesion" link visible
+
+5. **Verify user data is still displayed correctly** - PASS
+   - Dashboard shows same 2 enrolled courses:
+     - Python: Fundamentos (100% completado)
+     - SQL desde Cero (0% completado)
+   - Profile page shows correct user data:
+     - Name: Usuario de Prueba
+     - Email: test@rizo.ma
+     - Role: Estudiante Gratis
+     - Bio: TEST_BIO_UNIQUE_12345
+
+### Additional Verification:
+- Navigated to /profile after refresh - session persisted
+- No console errors during verification
+- Session cookie (connect.sid) properly maintained
+
+### Implementation Details:
+- Backend uses express-session with SQLite session store
+- Session ID stored in connect.sid cookie
+- Frontend AuthContext checks /api/auth/me on mount to restore session
+- Session timeout: 24 hours of inactivity (as per spec)
+
+### Console Errors: None
+
+### Screenshots:
+- feature-11-step1-logged-in.png - Dashboard before refresh
+- feature-11-step3-after-refresh.png - Dashboard after refresh
+- feature-11-profile-after-refresh.png - Profile page with persisted data
+
+### Current Status:
+- Feature #11 marked as PASSING
+- Commit: f21e8db
+
+[Coding] 2026-01-26 Feature #11 'Session persists across page refreshes' verified - PASSED
+[Testing] 2026-01-26 Feature #204 'Laptop layout at 1024px works correctly' - VERIFIED PASSING
+- Step 1: Set viewport to 1024px wide - PASS
+- Step 2: Navigate through main pages - PASS (Homepage, Courses, Dashboard, Course Detail, Lesson, Profile)
+- Step 3: Verify sidebar may collapse - PASS (Lesson sidebar visible at 1024px)
+- Step 4: Verify content readable - PASS (All text and UI elements clearly visible)
+- Step 5: Verify no horizontal scroll - PASS (documentWidth == viewportWidth: 1016px)
+- Console errors: Only unrelated API 401/404 errors (not layout-related)
+- Screenshots: feature-204-step*.png (6 files)
+- No regression found
+
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #12)
+
+### Feature #12: Session expires after 24 hours of inactivity - VERIFIED AND PASSING
+
+All 5 verification steps completed:
+
+1. **Log in as a user** - PASS
+   - Logged in as Usuario de Prueba via OAuth
+   - Session created with lastActivity timestamp
+
+2. **Simulate 24 hours of inactivity** - PASS
+   - Used test endpoint /api/test/simulate-session-inactivity
+   - Set lastActivity to 25 hours ago (exceeds 24-hour timeout)
+
+3. **Attempt to access a protected route** - PASS
+   - Called /api/auth/me endpoint
+   - Middleware detected inactivity exceeded 24 hours
+   - Session was regenerated (invalidated)
+
+4. **Verify user is redirected to login** - PASS
+   - Navigated to /dashboard
+   - URL redirected to /login page
+   - Navbar shows 'Iniciar Sesion' instead of user menu
+
+5. **Verify session was invalidated** - PASS
+   - API returned: {status: 401, data: {error: 'No autenticado', isAuthenticated: false}}
+   - Session no longer contains user data
+
+### Additional Verification: Rolling Session Feature
+- Tested that lastActivity is updated on each request
+- First activity: 1769423044562
+- Second activity (1 second later): 1769423045575
+- Difference: 1013ms - confirms rolling session works
+- Active users will have sessions extended continuously
+
+### Implementation Details:
+- Backend: backend/src/index.js
+  - Added SESSION_TIMEOUT constant (24 hours in milliseconds)
+  - Added `rolling: true` to session config (resets cookie expiry on each request)
+  - Added inactivity check middleware that compares now vs lastActivity
+  - Uses session.regenerate() to cleanly invalidate expired sessions
+- Backend: backend/src/routes/auth.js, direct-auth.js
+  - Added `req.session.lastActivity = Date.now()` on all login methods
+- Test endpoints (DEV only):
+  - POST /api/test/simulate-session-inactivity - simulates inactivity
+  - GET /api/test/session-info - returns session state for debugging
+
+### Console Errors:
+- Only expected 401 Unauthorized responses (before login or after session expiry)
+- No JavaScript errors
+
+### Screenshots:
+- feature-12-session-expired-redirect.png - Login page after session expiry
+
+### Current Status:
+- Feature #12 marked as PASSING
+- Progress: 219/248 features passing (88.3%)
+- Commit: c64397a
+
+[Coding] 2026-01-26 Feature #12 'Session expires after 24 hours of inactivity' verified - PASSED
+
