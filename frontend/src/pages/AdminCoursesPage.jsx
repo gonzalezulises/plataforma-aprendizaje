@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
-import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import DoubleConfirmDeleteModal from '../components/DoubleConfirmDeleteModal';
 import AdminLayout from '../components/AdminLayout';
 
 // Use the base URL - env var already includes /api
@@ -249,13 +249,13 @@ export default function AdminCoursesPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmDeleteModal
+      {/* Double Confirmation Delete Modal - Feature #29 */}
+      <DoubleConfirmDeleteModal
         isOpen={deleteModal.isOpen}
         onConfirm={confirmDelete}
         onCancel={closeDeleteModal}
-        title={deleteModal.course ? `"${deleteModal.course.title}"` : 'este curso'}
-        message={deleteModal.course ? `¿Estas seguro de que quieres eliminar el curso "${deleteModal.course.title}"? Todos los modulos, lecciones y el progreso de los estudiantes se perderan. Esta accion no se puede deshacer.` : undefined}
+        itemName={deleteModal.course?.title || 'este curso'}
+        confirmationPhrase="ELIMINAR"
         isDeleting={isDeleting}
       />
     </AdminLayout>
