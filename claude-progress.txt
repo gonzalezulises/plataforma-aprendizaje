@@ -13909,3 +13909,11 @@ All 6 verification steps completed:
 - Commit: e8ca5eb
 
 [Coding] 2026-01-26 Feature #76 "Notification preferences are saved" verified - PASSED
+[Testing] 2026-01-26 Feature #55 'Post-login redirect returns to intended page' - VERIFIED PASSING
+- Step 1: Navigate to /dashboard while logged out - PASS (redirected to /login)
+- Step 2: Complete login flow - PASS (OAuth login with rizo.ma)
+- Step 3: Verify redirect to /dashboard - PASS (not home page)
+- Step 4: Repeat with deep link to course - PASS (enrollment triggered login, returned to course)
+- Console errors: Only expected 401s before login
+- Screenshots: feature-55-step3-dashboard-redirect.png, feature-55-step4-course-redirect.png
+- No regression found
