@@ -11659,3 +11659,44 @@ All 8 verification steps completed:
 - Commit: d7581e4
 
 [Coding] 2026-01-26 Feature #93 "Complete project submission workflow" verified - PASSED
+
+
+---
+
+## Session: 2026-01-26 (Coding Agent - Feature #13)
+
+### Feature #13: Unauthenticated users cannot access dashboard - VERIFIED AND PASSING
+
+All 4 verification steps completed:
+
+1. **Ensure you are logged out** - PASS
+   - Navigated to homepage, saw 'Iniciar Sesion' link (not logged in)
+   - API calls to /api/auth/me returned 401 Unauthorized
+   - Confirmed unauthenticated state
+
+2. **Navigate directly to /dashboard** - PASS
+   - Entered URL http://localhost:5173/dashboard directly
+   - Request made to protected route
+
+3. **Verify redirect to login page** - PASS
+   - Page URL changed to http://localhost:5173/login
+   - Login form displayed with 'Inicia sesion para acceder a tus cursos'
+   - Options: 'Iniciar Sesion con rizo.ma' and 'Iniciar sesion con email'
+
+4. **Verify no dashboard content is exposed** - PASS
+   - Only login form shown, no dashboard data
+   - Network requests show only /api/auth/me calls (401)
+   - No enrollment, progress, or user data endpoints called
+   - No sensitive information leaked
+
+### Console Errors: Only expected 401 auth errors (correct behavior)
+
+### Screenshots:
+- feature-13-dashboard-redirect-to-login.png - Login page after redirect
+
+### Current Status:
+- Feature #13 marked as PASSING
+- Commit: ba86935
+
+[Coding] 2026-01-26 Feature #13 'Unauthenticated users cannot access dashboard' verified - PASSED
+
