@@ -248,13 +248,22 @@ export function onAuthStateChange(callback) {
  * Called after Supabase auth to create backend session
  */
 export async function verifyWithBackend() {
+  console.log('[Supabase] verifyWithBackend called');
   const session = await getSession();
+  console.log('[Supabase] Session for verify:', session ? 'exists' : 'null');
+
   if (!session?.access_token) {
+    console.log('[Supabase] No access token, returning failure');
     return { success: false, error: 'No session' };
   }
 
   try {
-    const response = await fetch('/api/auth/verify', {
+    // Use VITE_API_URL to ensure correct backend URL
+    const apiUrl = import.meta.env.VITE_API_URL || '/api';
+    const verifyUrl = `${apiUrl}/auth/verify`;
+    console.log('[Supabase] Verifying with backend at:', verifyUrl);
+
+    const response = await fetch(verifyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -263,7 +272,9 @@ export async function verifyWithBackend() {
       credentials: 'include',
     });
 
+    console.log('[Supabase] Verify response status:', response.status);
     const data = await response.json();
+    console.log('[Supabase] Verify response data:', data);
 
     if (!response.ok) {
       return { success: false, error: data.error || 'Verification failed' };
