@@ -11,6 +11,9 @@ import dotenv from 'dotenv';
 // Import CSRF middleware
 import { csrfTokenGenerator, csrfProtection, getCsrfTokenHandler } from './middleware/csrf.js';
 
+// Import Supabase token verification
+import { verifySupabaseToken, extractBearerToken } from './lib/supabase.js';
+
 // Import routes
 import authRoutes from './routes/auth.js';
 import videoProgressRoutes from './routes/video-progress.js';
@@ -197,6 +200,53 @@ app.use((req, res, next) => {
     // Update last activity timestamp
     req.session.lastActivity = now;
   }
+  next();
+});
+
+// Supabase Token Authentication Middleware
+// Checks Authorization header and creates session from valid Supabase token
+// This enables cross-domain authentication (Vercel frontend -> Railway backend)
+app.use(async (req, res, next) => {
+  // Skip if already authenticated via session
+  if (req.session && req.session.isAuthenticated && req.session.user) {
+    return next();
+  }
+
+  // Check for Authorization header with Supabase token
+  const authHeader = req.headers.authorization;
+  const token = extractBearerToken(authHeader);
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const { user, error } = await verifySupabaseToken(token);
+
+    if (error || !user) {
+      // Token invalid, continue without session
+      return next();
+    }
+
+    // Create session from Supabase user
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+      role: user.user_metadata?.role || 'student_free',
+      supabaseId: user.id,
+      avatar: user.user_metadata?.avatar_url,
+    };
+
+    req.session.isAuthenticated = true;
+    req.session.lastActivity = Date.now();
+    req.session.supabaseToken = token;
+
+    console.log('[Auth Middleware] Session created from Supabase token for:', user.email);
+  } catch (err) {
+    console.error('[Auth Middleware] Supabase token verification error:', err);
+  }
+
   next();
 });
 

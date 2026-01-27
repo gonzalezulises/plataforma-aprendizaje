@@ -1,12 +1,34 @@
-// API Utility with CSRF Protection
+// API Utility with CSRF Protection and Supabase Auth
 // Feature #32: CSRF protection on state-changing operations
+// Cross-domain auth: Includes Supabase token in Authorization header
 
 import { getCsrfHeaders } from './csrf';
+import { getSession as getSupabaseSession, isSupabaseConfigured } from '../lib/supabase';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
- * Make an API request with automatic CSRF token handling
+ * Get Authorization header with Supabase token if available
+ */
+async function getAuthHeaders() {
+  if (!isSupabaseConfigured()) {
+    return {};
+  }
+
+  try {
+    const session = await getSupabaseSession();
+    if (session?.access_token) {
+      return { 'Authorization': `Bearer ${session.access_token}` };
+    }
+  } catch (error) {
+    console.warn('[API] Could not get Supabase token:', error);
+  }
+
+  return {};
+}
+
+/**
+ * Make an API request with automatic CSRF token and auth handling
  * @param {string} endpoint - API endpoint (relative to base URL)
  * @param {Object} options - Fetch options
  * @returns {Promise<Response>} The fetch response
@@ -21,6 +43,14 @@ export async function apiFetch(endpoint, options = {}) {
   const headers = {
     ...(options.headers || {}),
   };
+
+  // Add Supabase auth header for cross-domain requests
+  try {
+    const authHeaders = await getAuthHeaders();
+    Object.assign(headers, authHeaders);
+  } catch (error) {
+    console.warn('[API] Could not get auth header:', error);
+  }
 
   if (needsCsrf) {
     try {
@@ -39,7 +69,7 @@ export async function apiFetch(endpoint, options = {}) {
 }
 
 /**
- * Intercept global fetch to automatically add CSRF tokens
+ * Intercept global fetch to automatically add CSRF tokens and Supabase auth
  * Call this once at app initialization
  */
 export function setupCsrfInterceptor() {
@@ -49,8 +79,8 @@ export function setupCsrfInterceptor() {
     const url = typeof input === 'string' ? input : input.url;
     const method = ((init && init.method) || 'GET').toUpperCase();
 
-    // Only intercept API calls with state-changing methods
-    const isApiCall = url.includes('/api/') || url.includes('localhost:3001');
+    // Only intercept API calls
+    const isApiCall = url.includes('/api/') || url.includes('localhost:3001') || url.includes('railway.app');
     const needsCsrf = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
 
     // Skip CSRF for auth endpoints (they establish the session)
@@ -65,29 +95,43 @@ export function setupCsrfInterceptor() {
       '/api/test/'
     ].some(path => url.includes(path));
 
-    if (isApiCall && needsCsrf && !skipCsrf) {
+    if (isApiCall) {
+      const headers = new Headers(init.headers || {});
+
+      // Add Supabase Authorization header for cross-domain auth
       try {
-        const csrfHeaders = await getCsrfHeaders();
-        const headers = new Headers(init.headers || {});
-
-        // Add CSRF token if we have one
-        Object.entries(csrfHeaders).forEach(([key, value]) => {
-          headers.set(key, value);
+        const authHeaders = await getAuthHeaders();
+        Object.entries(authHeaders).forEach(([key, value]) => {
+          if (!headers.has(key)) {
+            headers.set(key, value);
+          }
         });
-
-        init = {
-          ...init,
-          headers,
-        };
       } catch (error) {
-        console.warn('[CSRF Interceptor] Could not add CSRF token:', error);
+        console.warn('[API Interceptor] Could not add auth header:', error);
       }
+
+      // Add CSRF token for state-changing methods
+      if (needsCsrf && !skipCsrf) {
+        try {
+          const csrfHeaders = await getCsrfHeaders();
+          Object.entries(csrfHeaders).forEach(([key, value]) => {
+            headers.set(key, value);
+          });
+        } catch (error) {
+          console.warn('[CSRF Interceptor] Could not add CSRF token:', error);
+        }
+      }
+
+      init = {
+        ...init,
+        headers,
+      };
     }
 
     return originalFetch.call(window, input, init);
   };
 
-  console.log('[CSRF] Fetch interceptor installed');
+  console.log('[API] Fetch interceptor installed (CSRF + Auth)');
 }
 
 export default {

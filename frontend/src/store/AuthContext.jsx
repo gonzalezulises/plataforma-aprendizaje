@@ -100,10 +100,22 @@ export function AuthProvider({ children }) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             setSupabaseSession(session);
-            setUser(session.user);
-            setIsAuthenticated(true);
-            // Skip backend verification for now - Supabase session is enough
             console.log('[AuthContext] Supabase session found:', session.user?.email);
+
+            // Verify with backend to create server session (for cross-domain auth)
+            const verifyResult = await verifyWithBackend();
+            if (verifyResult.success && verifyResult.user) {
+              setUser(verifyResult.user);
+              setIsAuthenticated(true);
+              fetchCsrfToken();
+              console.log('[AuthContext] Backend session created for:', verifyResult.user.email);
+            } else {
+              // Fallback to Supabase user if backend verification fails
+              // This allows the app to work while the fetch interceptor adds auth headers
+              setUser(session.user);
+              setIsAuthenticated(true);
+              console.log('[AuthContext] Using Supabase session (backend verify failed)');
+            }
           }
         }
       }
@@ -125,10 +137,21 @@ export function AuthProvider({ children }) {
       setSupabaseSession(session);
 
       if (event === 'SIGNED_IN' && session) {
-        // Set user directly from Supabase session
-        setUser(session.user);
-        setIsAuthenticated(true);
         console.log('[Auth] User signed in:', session.user?.email);
+
+        // Verify with backend to create server session (for cross-domain auth)
+        const verifyResult = await verifyWithBackend();
+        if (verifyResult.success && verifyResult.user) {
+          setUser(verifyResult.user);
+          setIsAuthenticated(true);
+          fetchCsrfToken();
+          console.log('[Auth] Backend session created for:', verifyResult.user.email);
+        } else {
+          // Fallback to Supabase user if backend verification fails
+          setUser(session.user);
+          setIsAuthenticated(true);
+          console.log('[Auth] Using Supabase session (backend verify failed)');
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
