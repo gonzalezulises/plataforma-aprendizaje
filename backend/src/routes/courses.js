@@ -25,8 +25,10 @@ function generateSlug(title) {
 }
 
 // Helper to check if user is instructor
+// Accepts both 'instructor' and 'instructor_admin' for compatibility
 function isInstructor(req) {
-  return req.session?.user?.role === 'instructor_admin';
+  const role = req.session?.user?.role;
+  return role === 'instructor' || role === 'instructor_admin';
 }
 
 // Middleware to require instructor role

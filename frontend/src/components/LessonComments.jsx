@@ -286,7 +286,7 @@ function LessonComments({ lessonId }) {
                       Respuesta del instructor
                     </span>
                   )}
-                  {comment.author_role === 'instructor_admin' && (
+                  {comment.author_role === 'instructor' && (
                     <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded-full">
                       Instructor
                     </span>
@@ -320,7 +320,7 @@ function LessonComments({ lessonId }) {
                   </button>
 
                   {/* Delete button (only for comment owner or admin) */}
-                  {isAuthenticated && (user?.id === comment.user_id || user?.role === 'instructor_admin') && (
+                  {isAuthenticated && (user?.id === comment.user_id || user?.role === 'instructor') && (
                     <button
                       onClick={() => handleDelete(comment.id)}
                       className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"

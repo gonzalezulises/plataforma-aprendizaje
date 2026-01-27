@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useSearchParams } from 'react-router-dom';
+import { Routes, Route, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './store/AuthContext';
 import { ThemeProvider } from './store/ThemeContext';
+import { getSupabaseClient, isSupabaseConfigured } from './lib/supabase';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LoginPage from './pages/LoginPage';
@@ -41,6 +42,91 @@ import CourseCatalogPage from './pages/CourseCatalogPage';
 import RaceConditionTestPage from './pages/RaceConditionTestPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
 import ConfirmDeletionPage from './pages/ConfirmDeletionPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+
+// Component to handle Supabase hash fragment auth (recovery, magic link)
+function HashFragmentHandler({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isProcessing, setIsProcessing] = useState(true);
+
+  useEffect(() => {
+    const handleHashFragment = async () => {
+      const hash = window.location.hash;
+
+      // Check if there's a hash fragment with auth tokens
+      if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+
+        if (accessToken && isSupabaseConfigured()) {
+          const supabase = getSupabaseClient();
+
+          try {
+            console.log('[Auth] Processing hash fragment, type:', type);
+
+            // Set the session from the tokens
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (error) {
+              console.error('[Auth] Error setting session:', error);
+              navigate('/login?error=' + encodeURIComponent(error.message || 'Error al establecer sesion'));
+              return;
+            }
+
+            console.log('[Auth] Session set successfully:', data?.session?.user?.email);
+
+            // Clear the hash from the URL and reload to ensure clean auth state
+            const destination = type === 'recovery' ? '/reset-password' : '/dashboard';
+            console.log('[Auth] Redirecting to:', destination);
+
+            // Use window.location to ensure full page reload with clean state
+            window.location.href = window.location.origin + '/academia' + destination;
+            return;
+          } catch (err) {
+            console.error('[Auth] Hash fragment auth error:', err);
+            const errorMessage = err?.message || err?.toString() || 'Error de autenticacion';
+            navigate('/login?error=' + encodeURIComponent(errorMessage));
+            return;
+          }
+        }
+      }
+
+      setIsProcessing(false);
+    };
+
+    handleHashFragment();
+  }, [navigate, location]);
+
+  // Show loading while processing hash
+  if (isProcessing && window.location.hash.includes('access_token')) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
+            <svg className="animate-spin h-10 w-10 text-rizoma-green" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Procesando...
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Verificando tu sesion
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
 
 // Placeholder pages - to be implemented
 function Home() {
@@ -542,6 +628,7 @@ function App() {
         />
         <Navbar />
         <main id="main-content" className="flex-grow" tabIndex="-1">
+          <HashFragmentHandler>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/courses" element={<CourseCatalogPage />} />
@@ -586,8 +673,10 @@ function App() {
             <Route path="/instructor/:id" element={<InstructorProfilePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </HashFragmentHandler>
         </main>
         <Footer />
         </div>

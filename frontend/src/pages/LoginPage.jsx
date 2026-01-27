@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { signInWithMagicLink, isSupabaseConfigured } from '../lib/supabase';
+import { signInWithMagicLink, signInWithPassword, resetPassword, signUp, isSupabaseConfigured } from '../lib/supabase';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -15,10 +15,18 @@ function LoginPage() {
   // Login method state: 'magic-link' | 'password' | 'dev'
   const [loginMethod, setLoginMethod] = useState('magic-link');
 
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  // Registration state
+  const [showRegister, setShowRegister] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [rateLimitInfo, setRateLimitInfo] = useState(null);
 
   // Email validation regex
@@ -105,8 +113,8 @@ function LoginPage() {
     setLoginInitiated(true);
 
     try {
-      const redirectTo = window.location.origin + '/auth/callback';
-      await signInWithMagicLink(email, redirectTo);
+      // Use /academia base path for redirect
+      await signInWithMagicLink(email);
 
       setSuccessMessage(
         'Te hemos enviado un enlace magico a tu correo. ' +
@@ -155,7 +163,7 @@ function LoginPage() {
     }
   };
 
-  // Direct email/password login
+  // Direct email/password login using Supabase Auth
   const handleDirectLogin = async (e) => {
     e.preventDefault();
 
@@ -164,43 +172,143 @@ function LoginPage() {
       return;
     }
 
+    if (!isSupabaseConfigured()) {
+      setError('Supabase no esta configurado. Usa Magic Link o contacta al administrador.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setLoginInitiated(true);
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || '/api';
-      const response = await fetch(`${API_BASE}/direct-auth/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      // Use Supabase Auth directly (same as rizo-web portal)
+      const { session, user } = await signInWithPassword(email, password);
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        if (response.status === 429 && data.rateLimited) {
-          setRateLimitInfo({
-            remainingSeconds: data.retryAfter || 60,
-            message: data.error
-          });
-        } else {
-          setError(data.error || 'Error al iniciar sesion');
-        }
+      if (session && user) {
+        await refreshAuth();
+        const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
+        sessionStorage.removeItem('loginReturnUrl');
+        navigate(returnUrl, { replace: true });
+      } else {
+        setError('Error al iniciar sesion');
         setIsLoading(false);
-        return;
       }
-
-      await refreshAuth();
-      const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
-      sessionStorage.removeItem('loginReturnUrl');
-      navigate(returnUrl, { replace: true });
     } catch (err) {
-      console.error('Direct login error:', err);
-      setError('Error al conectar con el servidor. Intenta de nuevo.');
+      console.error('Login error:', err);
+      // Handle specific Supabase errors
+      if (err.message?.includes('Invalid login credentials')) {
+        setError('Credenciales incorrectas. Verifica tu email y contrasena.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Email no confirmado. Revisa tu bandeja de entrada.');
+      } else if (err.message?.includes('rate limit')) {
+        setRateLimitInfo({
+          remainingSeconds: 60,
+          message: 'Demasiados intentos'
+        });
+      } else {
+        setError(err.message || 'Error al iniciar sesion');
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Handle forgot password
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    if (!isValidEmail(email)) {
+      setEmailError('Ingresa tu correo electronico para recuperar tu contrasena');
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      setError('Supabase no esta configurado.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setRateLimitInfo(null); // Clear any previous rate limit
+
+    try {
+      await resetPassword(email);
+      setSuccessMessage('Te hemos enviado un enlace para restablecer tu contrasena. Revisa tu bandeja de entrada.');
+      setShowForgotPassword(false);
+    } catch (err) {
+      console.error('Reset password error:', err);
+      const errorMsg = err.message?.toLowerCase() || '';
+      // Check for various rate limit message patterns from Supabase
+      if (errorMsg.includes('rate') || errorMsg.includes('limit') || errorMsg.includes('too many') || errorMsg.includes('exceeded')) {
+        // Extract seconds if available, otherwise default to 60
+        const match = err.message?.match(/(\d+)\s*second/i);
+        const seconds = match ? parseInt(match[1]) : 60;
+        setRateLimitInfo({
+          remainingSeconds: seconds,
+          message: err.message || 'Demasiados intentos'
+        });
+      } else {
+        setError(err.message || 'Error al enviar el enlace de recuperacion');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle registration
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    if (!isValidEmail(email)) {
+      setEmailError('Formato de correo electronico invalido');
+      return;
+    }
+
+    if (password.length < 6) {
+      setPasswordError('La contrasena debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setPasswordError('Las contrasenas no coinciden');
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      setError('Supabase no esta configurado.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setPasswordError('');
+
+    try {
+      const { user } = await signUp(email, password);
+
+      if (user) {
+        setSuccessMessage('Cuenta creada exitosamente. Revisa tu correo para confirmar tu cuenta.');
+        setShowRegister(false);
+        setPassword('');
+        setConfirmPassword('');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      const errorMsg = err.message?.toLowerCase() || '';
+
+      if (errorMsg.includes('already registered') || errorMsg.includes('already exists')) {
+        setError('Este correo ya esta registrado. Intenta iniciar sesion.');
+      } else if (errorMsg.includes('rate') || errorMsg.includes('limit')) {
+        const match = err.message?.match(/(\d+)\s*second/i);
+        const seconds = match ? parseInt(match[1]) : 60;
+        setRateLimitInfo({
+          remainingSeconds: seconds,
+          message: err.message || 'Demasiados intentos'
+        });
+      } else {
+        setError(err.message || 'Error al crear la cuenta');
+      }
+    } finally {
       setIsLoading(false);
     }
   };
@@ -210,25 +318,30 @@ function LoginPage() {
       <div className="max-w-md w-full">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-xl mb-4">
-            <svg
-              className="h-10 w-10 text-white"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M8 12L16 8L24 12V20L16 24L8 20V12Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinejoin="round"
+          <div className="flex justify-center mb-4">
+            <picture className="dark:hidden">
+              <source srcSet="/images/brand/logo-plenos-color-optimized.webp" type="image/webp" />
+              <img
+                src="/images/brand/logo-plenos-color-optimized.png"
+                alt="Rizoma"
+                width="120"
+                height="58"
+                className="h-12 w-auto"
               />
-              <path d="M16 16V24" stroke="currentColor" strokeWidth="2" />
-              <path d="M8 12L16 16L24 12" stroke="currentColor" strokeWidth="2" />
-            </svg>
+            </picture>
+            <picture className="hidden dark:block">
+              <source srcSet="/images/brand/logo-plenos-color-optimized.webp" type="image/webp" />
+              <img
+                src="/images/brand/logo-plenos-color-optimized.png"
+                alt="Rizoma"
+                width="120"
+                height="58"
+                className="h-12 w-auto brightness-0 invert"
+              />
+            </picture>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Plataforma de Aprendizaje
+          <h1 className="text-2xl font-bold font-heading text-gray-900 dark:text-white">
+            Academia Rizoma
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Inicia sesion para acceder a tus cursos
@@ -291,14 +404,15 @@ function LoginPage() {
           )}
 
           {/* Login Method Tabs */}
+          {!showForgotPassword && !showRegister && (
           <div className="flex mb-6 border-b border-gray-200 dark:border-gray-700">
             {isSupabaseConfigured() && (
               <button
                 onClick={() => { setLoginMethod('magic-link'); setError(null); setSuccessMessage(null); }}
                 className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
                   loginMethod === 'magic-link'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-rizoma-green text-rizoma-green dark:text-rizoma-green-light'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
                 Magic Link
@@ -308,16 +422,17 @@ function LoginPage() {
               onClick={() => { setLoginMethod('password'); setError(null); setSuccessMessage(null); }}
               className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
                 loginMethod === 'password'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-rizoma-green text-rizoma-green dark:text-rizoma-green-light'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Email y Contrasena
             </button>
           </div>
+          )}
 
           {/* Magic Link Form */}
-          {loginMethod === 'magic-link' && isSupabaseConfigured() && (
+          {loginMethod === 'magic-link' && isSupabaseConfigured() && !showForgotPassword && !showRegister && (
             <form onSubmit={handleMagicLinkLogin} className="space-y-4">
               <div>
                 <label htmlFor="magic-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -332,7 +447,7 @@ function LoginPage() {
                   placeholder="tu@email.com"
                   required
                   disabled={isLoading}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 ${
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
                     emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
@@ -344,7 +459,7 @@ function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading || !!successMessage}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-rizoma-green hover:bg-rizoma-green-dark disabled:bg-rizoma-green-muted text-white font-medium rounded-lg transition-colors"
               >
                 {isLoading ? (
                   <>
@@ -371,7 +486,7 @@ function LoginPage() {
           )}
 
           {/* Password Form */}
-          {loginMethod === 'password' && (
+          {loginMethod === 'password' && !showForgotPassword && !showRegister && (
             <form onSubmit={handleDirectLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -386,7 +501,7 @@ function LoginPage() {
                   placeholder="tu@email.com"
                   required
                   disabled={isLoading}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 ${
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
                     emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                   }`}
                 />
@@ -407,14 +522,14 @@ function LoginPage() {
                   placeholder="Tu contrasena"
                   required
                   disabled={isLoading}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading || emailError || rateLimitInfo}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-rizoma-green hover:bg-rizoma-green-dark disabled:bg-rizoma-green-muted text-white font-medium rounded-lg transition-colors"
               >
                 {isLoading ? (
                   <>
@@ -428,6 +543,184 @@ function LoginPage() {
                   <span>Iniciar sesion</span>
                 )}
               </button>
+
+              {/* Forgot password link */}
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(true); setError(null); setRateLimitInfo(null); setSuccessMessage(null); }}
+                  className="text-sm text-rizoma-green hover:text-rizoma-green-dark dark:text-rizoma-green-light transition-colors"
+                >
+                  ¿Olvidaste tu contrasena?
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Forgot Password Form */}
+          {showForgotPassword && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Recuperar contrasena
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Ingresa tu email y te enviaremos un enlace para restablecer tu contrasena
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Correo electronico
+                </label>
+                <input
+                  type="email"
+                  id="reset-email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={handleEmailBlur}
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
+                    emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-500">{emailError}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-rizoma-green hover:bg-rizoma-green-dark disabled:bg-rizoma-green-muted text-white font-medium rounded-lg transition-colors"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Enviando...</span>
+                  </>
+                ) : (
+                  <span>Enviar enlace de recuperacion</span>
+                )}
+              </button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(false); setError(null); setRateLimitInfo(null); }}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  Volver al inicio de sesion
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Registration Form */}
+          {showRegister && (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Crear cuenta
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Registrate para acceder a los cursos de Academia Rizoma
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="register-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Correo electronico
+                </label>
+                <input
+                  type="email"
+                  id="register-email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={handleEmailBlur}
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
+                    emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-500">{emailError}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="register-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contrasena
+                </label>
+                <input
+                  type="password"
+                  id="register-password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                  placeholder="Minimo 6 caracteres"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
+                    passwordError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Confirmar contrasena
+                </label>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                  placeholder="Repite tu contrasena"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rizoma-green focus:border-transparent disabled:opacity-50 ${
+                    passwordError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {passwordError && (
+                  <p className="mt-1 text-sm text-red-500">{passwordError}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-rizoma-green hover:bg-rizoma-green-dark disabled:bg-rizoma-green-muted text-white font-medium rounded-lg transition-colors"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Creando cuenta...</span>
+                  </>
+                ) : (
+                  <span>Crear cuenta</span>
+                )}
+              </button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => { setShowRegister(false); setError(null); setPasswordError(''); setConfirmPassword(''); }}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  Ya tengo una cuenta
+                </button>
+              </div>
             </form>
           )}
 
@@ -453,18 +746,19 @@ function LoginPage() {
             </>
           )}
 
-          {/* Register link */}
-          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            No tienes una cuenta?{' '}
-            <a
-              href="https://rizo.ma/register"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
-            >
-              Registrate en rizo.ma
-            </a>
-          </p>
+          {/* Register link - only show when not registering */}
+          {!showRegister && !showForgotPassword && (
+            <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+              No tienes una cuenta?{' '}
+              <button
+                type="button"
+                onClick={() => { setShowRegister(true); setError(null); setSuccessMessage(null); }}
+                className="text-rizoma-green hover:text-rizoma-green-dark dark:text-rizoma-green-light dark:hover:text-rizoma-green font-medium"
+              >
+                Registrate aqui
+              </button>
+            </p>
+          )}
         </div>
 
         {/* Back to home */}

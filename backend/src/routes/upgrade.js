@@ -119,7 +119,7 @@ router.get('/status', (req, res) => {
   const userRole = req.session.user.role;
 
   // Check if user already has premium
-  const isPremium = userRole === 'student_premium' || userRole === 'instructor_admin';
+  const isPremium = userRole === 'student_premium' || userRole === 'instructor' || userRole === 'instructor_admin';
 
   // Get active subscription if any
   const db = getDatabase();
@@ -163,7 +163,7 @@ router.post('/initiate', (req, res) => {
   }
 
   // Check if user already has premium
-  if (userRole === 'student_premium' || userRole === 'instructor_admin') {
+  if (userRole === 'student_premium' || userRole === 'instructor' || userRole === 'instructor_admin') {
     return res.status(400).json({ error: 'Ya tienes una suscripcion activa' });
   }
 

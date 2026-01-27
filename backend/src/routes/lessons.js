@@ -37,7 +37,7 @@ router.get('/:id', (req, res) => {
     }
 
     // Check enrollment status (unless instructor/admin)
-    const isInstructorAdmin = userRole === 'instructor_admin';
+    const isInstructorAdmin = userRole === 'instructor' || userRole === 'instructor_admin';
 
     if (!isInstructorAdmin && lesson.course_id) {
       // User must be authenticated to access lessons

@@ -77,10 +77,12 @@ export async function signInWithMagicLink(email, redirectTo) {
     throw new Error('Supabase not configured');
   }
 
+  // Use /academia base path for redirect
+  const baseUrl = window.location.origin + '/academia';
   const { data, error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: redirectTo || window.location.origin + '/auth/callback',
+      emailRedirectTo: redirectTo || baseUrl + '/auth/callback',
     },
   });
 
@@ -126,13 +128,58 @@ export async function signUp(email, password, metadata = {}) {
     throw new Error('Supabase not configured');
   }
 
+  // Use /academia base path for redirect
+  const baseUrl = window.location.origin + '/academia';
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: metadata,
-      emailRedirectTo: window.location.origin + '/auth/callback',
+      emailRedirectTo: baseUrl + '/auth/callback',
     },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Reset password - sends email with reset link
+ * @param {string} email - User email
+ */
+export async function resetPassword(email) {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
+  const baseUrl = window.location.origin + '/academia';
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: baseUrl + '/auth/callback?type=recovery',
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Update user password (after reset)
+ * @param {string} newPassword - New password
+ */
+export async function updatePassword(newPassword) {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
   });
 
   if (error) {
@@ -238,6 +285,8 @@ export default {
   signInWithPassword,
   signUp,
   signOut,
+  resetPassword,
+  updatePassword,
   handleAuthCallback,
   onAuthStateChange,
   verifyWithBackend,

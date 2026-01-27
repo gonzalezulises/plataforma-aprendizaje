@@ -6,10 +6,18 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api.cursos.rizo.ma/api/:path*"
+      "destination": "https://plataforma-aprendizaje-api-production.up.railway.app/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/academia/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/academia/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/academia",
       "destination": "/index.html"
     }
   ],

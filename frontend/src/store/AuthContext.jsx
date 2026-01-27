@@ -76,6 +76,13 @@ export function AuthProvider({ children }) {
   // Initialize auth - check backend session first, then Supabase
   useEffect(() => {
     const initAuth = async () => {
+      // Skip auth init if there's a hash fragment with tokens - let HashFragmentHandler handle it
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        console.log('[AuthContext] Skipping init - hash fragment detected, will be handled by HashFragmentHandler');
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       // First check if we have a backend session
@@ -93,8 +100,10 @@ export function AuthProvider({ children }) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
             setSupabaseSession(session);
-            // Verify with backend to create session
-            await verifySupabaseSession();
+            setUser(session.user);
+            setIsAuthenticated(true);
+            // Skip backend verification for now - Supabase session is enough
+            console.log('[AuthContext] Supabase session found:', session.user?.email);
           }
         }
       }
@@ -116,8 +125,10 @@ export function AuthProvider({ children }) {
       setSupabaseSession(session);
 
       if (event === 'SIGNED_IN' && session) {
-        // Verify with backend to create session
-        await verifySupabaseSession();
+        // Set user directly from Supabase session
+        setUser(session.user);
+        setIsAuthenticated(true);
+        console.log('[Auth] User signed in:', session.user?.email);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);

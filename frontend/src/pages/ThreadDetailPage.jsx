@@ -56,7 +56,7 @@ function ThreadDetailPage() {
   // Get user from AuthContext
   const { user } = useAuth();
   const isOwner = user && thread && (String(user.id) === String(thread.user_id));
-  const isInstructor = user && user.role === 'instructor_admin';
+  const isInstructor = user && user.role === 'instructor';
 
   useEffect(() => {
     fetchThread();

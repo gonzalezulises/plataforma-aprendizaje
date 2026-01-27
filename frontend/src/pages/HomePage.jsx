@@ -1,8 +1,10 @@
+import { Link } from 'react-router-dom';
+
 // Homepage component with hero, featured courses, and categories
 function FeatureCard({ title, description, icon }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-lg flex items-center justify-center mb-4">
+      <div className="w-12 h-12 bg-rizoma-green/10 dark:bg-rizoma-green/20 rounded-lg flex items-center justify-center mb-4">
         <span className="text-2xl">{icon === 'code' ? '💻' : icon === 'brain' ? '🧠' : '🚀'}</span>
       </div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
@@ -81,30 +83,33 @@ function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white" data-testid="hero-section">
+      <section className="bg-gradient-to-br from-rizoma-green via-rizoma-green-dark to-gray-900 text-white" data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+            <p className="text-sm font-medium tracking-wider uppercase text-rizoma-green-light mb-4">
+              Academia Rizoma
+            </p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-heading mb-6">
               Aprende Haciendo
             </h1>
-            <p className="text-xl md:text-2xl text-primary-100 mb-8">
+            <p className="text-xl md:text-2xl text-gray-200 mb-8">
               Cursos interactivos con ejecucion de codigo en vivo, asistencia de IA pedagogica y proyectos del mundo real
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="/courses"
-                className="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-700 font-semibold rounded-lg hover:bg-primary-50 transition-colors shadow-lg"
+              <Link
+                to="/courses"
+                className="inline-flex items-center justify-center px-8 py-4 bg-white text-rizoma-green font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
                 data-testid="cta-explore-courses"
               >
                 Explorar Cursos
-              </a>
-              <a
-                href="/login"
-                className="inline-flex items-center justify-center px-8 py-4 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-500 transition-colors border-2 border-primary-500"
+              </Link>
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center px-8 py-4 bg-transparent text-white font-semibold rounded-lg hover:bg-white/10 transition-colors border-2 border-white/50"
                 data-testid="cta-start-free"
               >
                 Comenzar Gratis
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -145,27 +150,27 @@ function HomePage() {
                 Los cursos mas populares de nuestra plataforma
               </p>
             </div>
-            <a
-              href="/courses"
-              className="hidden md:inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+            <Link
+              to="/courses"
+              className="hidden md:inline-flex items-center text-rizoma-green hover:text-rizoma-green-dark dark:text-rizoma-green-light dark:hover:text-rizoma-green font-medium"
             >
               Ver todos los cursos
               <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" data-testid="featured-courses-grid">
             {featuredCourses.map((course) => (
-              <a
+              <Link
                 key={course.id}
-                href={`/course/${course.slug}`}
+                to={`/course/${course.slug}`}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
                 data-testid={`featured-course-${course.id}`}
               >
                 {/* Thumbnail placeholder */}
-                <div className="h-40 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                <div className="h-40 bg-gradient-to-br from-rizoma-green-light to-rizoma-green-dark flex items-center justify-center">
                   <span className="text-6xl opacity-50">
                     {course.category === 'Programacion' ? '💻' :
                      course.category === 'Data Science' ? '📊' :
@@ -191,7 +196,7 @@ function HomePage() {
 
                   {/* Title */}
                   <h3
-                    className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2"
+                    className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-rizoma-green dark:group-hover:text-rizoma-green-light transition-colors line-clamp-2"
                     title={course.title}
                   >
                     {course.title}
@@ -215,21 +220,21 @@ function HomePage() {
                     </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
 
           {/* Mobile "View all" link */}
           <div className="mt-8 text-center md:hidden">
-            <a
-              href="/courses"
-              className="inline-flex items-center text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+            <Link
+              to="/courses"
+              className="inline-flex items-center text-rizoma-green hover:text-rizoma-green-dark dark:text-rizoma-green-light dark:hover:text-rizoma-green font-medium"
             >
               Ver todos los cursos
               <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -248,49 +253,49 @@ function HomePage() {
 
           <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6" data-testid="categories-grid">
             {categories.map((category) => (
-              <a
+              <Link
                 key={category.id}
-                href={`/courses?category=${category.slug}`}
-                className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 text-center hover:bg-primary-50 dark:hover:bg-gray-600 transition-colors group"
+                to={`/courses?category=${category.slug}`}
+                className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 text-center hover:bg-rizoma-green/10 dark:hover:bg-gray-600 transition-colors group"
                 data-testid={`category-${category.slug}`}
               >
                 <div className="text-4xl mb-3">{category.icon}</div>
-                <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm md:text-base">
+                <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-rizoma-green dark:group-hover:text-rizoma-green-light transition-colors text-sm md:text-base">
                   {category.name}
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {category.courseCount} cursos
                 </p>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-primary-600 to-primary-800 text-white" data-testid="cta-section">
+      <section className="py-16 bg-gradient-to-r from-rizoma-green to-rizoma-green-dark text-white" data-testid="cta-section">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold font-heading mb-4">
             Comienza tu viaje de aprendizaje hoy
           </h2>
-          <p className="text-xl text-primary-100 mb-8">
+          <p className="text-xl text-gray-200 mb-8">
             Unete a miles de estudiantes que ya estan aprendiendo con nosotros
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/courses"
-              className="inline-flex items-center justify-center px-8 py-4 bg-white text-primary-700 font-semibold rounded-lg hover:bg-primary-50 transition-colors shadow-lg"
+            <Link
+              to="/courses"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white text-rizoma-green font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
               data-testid="cta-view-courses"
             >
               Ver Cursos
-            </a>
-            <a
-              href="/login"
-              className="inline-flex items-center justify-center px-8 py-4 bg-transparent text-white font-semibold rounded-lg hover:bg-primary-500 transition-colors border-2 border-white"
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center px-8 py-4 bg-transparent text-white font-semibold rounded-lg hover:bg-white/10 transition-colors border-2 border-white/50"
               data-testid="cta-register-free"
             >
               Registrarse Gratis
-            </a>
+            </Link>
           </div>
         </div>
       </section>

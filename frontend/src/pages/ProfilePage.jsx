@@ -514,7 +514,7 @@ function ProfilePage() {
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-300">
                 {user.role === 'student_free' ? 'Estudiante Gratis' :
                  user.role === 'student_premium' ? 'Estudiante Premium' :
-                 user.role === 'instructor_admin' ? 'Instructor/Admin' : user.role}
+                 user.role === 'instructor' ? 'Instructor/Admin' : user.role}
               </span>
             </div>
           </div>

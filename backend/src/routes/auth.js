@@ -263,19 +263,20 @@ router.post('/dev-login', (req, res) => {
 
   const { role = 'student_free', name, email, userId } = req.body || {};
 
-  // Validate role
-  const validRoles = ['student_free', 'student_premium', 'instructor_admin'];
+  // Validate role - accept both 'instructor' and 'instructor_admin' for compatibility
+  const validRoles = ['student_free', 'student_premium', 'instructor', 'instructor_admin'];
   const userRole = validRoles.includes(role) ? role : 'student_free';
 
   // Determine user ID: custom userId > role-based default
-  const defaultId = userRole === 'instructor_admin' ? 99 : 1;
+  const isInstructorRole = userRole === 'instructor' || userRole === 'instructor_admin';
+  const defaultId = isInstructorRole ? 99 : 1;
   const finalUserId = userId && Number.isInteger(userId) && userId > 0 ? userId : defaultId;
 
   // Simulate successful login with test user
   req.session.user = {
     id: finalUserId,
-    email: email || (userRole === 'instructor_admin' ? 'instructor@rizo.ma' : 'test@rizo.ma'),
-    name: name || (userRole === 'instructor_admin' ? 'Instructor Admin' : 'Usuario de Prueba'),
+    email: email || (isInstructorRole ? 'instructor@rizo.ma' : 'test@rizo.ma'),
+    name: name || (isInstructorRole ? 'Instructor Admin' : 'Usuario de Prueba'),
     role: userRole,
   };
 

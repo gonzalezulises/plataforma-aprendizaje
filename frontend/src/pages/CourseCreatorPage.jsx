@@ -151,8 +151,8 @@ export default function CourseCreatorPage() {
       navigate('/login');
       return;
     }
-    // Role-based access control: Only instructor_admin can create/edit courses
-    if (!authLoading && user && user.role !== 'instructor_admin') {
+    // Role-based access control: Only instructor can create/edit courses
+    if (!authLoading && user && user.role !== 'instructor') {
       toast.error('Solo los instructores pueden crear cursos');
       navigate('/dashboard');
     }

@@ -117,7 +117,7 @@ function WebinarSchedulePage() {
 
   useEffect(() => {
     // Check if user is instructor
-    if (isAuthenticated && user?.role !== 'instructor_admin') {
+    if (isAuthenticated && user?.role !== 'instructor') {
       toast.error('Solo los instructores pueden programar webinars');
       navigate('/webinars');
     }

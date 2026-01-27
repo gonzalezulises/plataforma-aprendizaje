@@ -46,7 +46,7 @@ function AnalyticsDashboardPage() {
       return;
     }
 
-    if (user?.role !== 'instructor_admin') {
+    if (user?.role !== 'instructor') {
       navigate('/dashboard');
       return;
     }

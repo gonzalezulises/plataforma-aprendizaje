@@ -420,7 +420,7 @@ router.put('/thread/:threadId', async (req, res) => {
     // Authorization check: instructor or owner
     const actualUserId = req.session?.user?.id || userId;
     const userRole = req.session?.user?.role;
-    const isInstructor = userRole === 'instructor_admin';
+    const isInstructor = userRole === 'instructor' || userRole === 'instructor_admin';
     const isOwner = String(actualUserId) === String(thread.user_id);
 
     if (!isInstructor && !isOwner) {
@@ -501,7 +501,7 @@ router.delete('/thread/:threadId', async (req, res) => {
     // Authorization check: instructor or owner
     const actualUserId = req.session?.user?.id || userId;
     const userRole = req.session?.user?.role;
-    const isInstructor = userRole === 'instructor_admin';
+    const isInstructor = userRole === 'instructor' || userRole === 'instructor_admin';
     const isOwner = String(actualUserId) === String(thread.user_id);
 
     if (!isInstructor && !isOwner) {
@@ -559,7 +559,7 @@ router.put('/reply/:replyId', async (req, res) => {
     // Authorization check: instructor or owner
     const actualUserId = req.session?.user?.id || userId;
     const userRole = req.session?.user?.role;
-    const isInstructor = userRole === 'instructor_admin';
+    const isInstructor = userRole === 'instructor' || userRole === 'instructor_admin';
     const isOwner = String(actualUserId) === String(reply.user_id);
 
     if (!isInstructor && !isOwner) {
@@ -627,7 +627,7 @@ router.delete('/reply/:replyId', async (req, res) => {
     // Authorization check: instructor or owner
     const actualUserId = req.session?.user?.id || userId;
     const userRole = req.session?.user?.role;
-    const isInstructor = userRole === 'instructor_admin';
+    const isInstructor = userRole === 'instructor' || userRole === 'instructor_admin';
     const isOwner = String(actualUserId) === String(reply.user_id);
 
     if (!isInstructor && !isOwner) {

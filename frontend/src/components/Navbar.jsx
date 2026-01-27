@@ -323,7 +323,7 @@ function Navbar() {
         return 'Estudiante';
       case 'student_premium':
         return 'Premium';
-      case 'instructor_admin':
+      case 'instructor':
         return 'Instructor';
       default:
         return 'Usuario';
@@ -331,9 +331,9 @@ function Navbar() {
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-14 lg:h-16">
           {/* Left side: Hamburger + Logo */}
           <div className="flex items-center">
             {/* Hamburger Menu Button - Visible on mobile/tablet (below 1024px) */}
@@ -358,52 +358,45 @@ function Navbar() {
               </button>
             </div>
 
-            {/* Logo - Clickable link to home */}
-            <Link
-              to="/"
-              className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 transition-colors"
-              aria-label="Ir al inicio"
+            {/* Logo - Clickable link to rizo.ma home */}
+            <a
+              href="https://rizo.ma"
+              className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-rizoma-green focus-visible:ring-offset-2 rounded-lg"
+              aria-label="Rizoma - Ir al inicio"
             >
-              <svg
-                className="h-8 w-8"
-                viewBox="0 0 32 32"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect width="32" height="32" rx="8" fill="currentColor" />
-                <path
-                  d="M8 12L16 8L24 12V20L16 24L8 20V12Z"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
+              <picture className="dark:hidden">
+                <source srcSet="/images/brand/logo-plenos-color-optimized.webp" type="image/webp" />
+                <img
+                  src="/images/brand/logo-plenos-color-optimized.png"
+                  alt="Rizoma"
+                  width="83"
+                  height="40"
+                  className="h-8 w-auto"
                 />
-                <path
-                  d="M16 16V24"
-                  stroke="white"
-                  strokeWidth="2"
+              </picture>
+              <picture className="hidden dark:block">
+                <source srcSet="/images/brand/logo-plenos-color-optimized.webp" type="image/webp" />
+                <img
+                  src="/images/brand/logo-plenos-color-optimized.png"
+                  alt="Rizoma"
+                  width="83"
+                  height="40"
+                  className="h-8 w-auto brightness-0 invert"
                 />
-                <path
-                  d="M8 12L16 16L24 12"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-              </svg>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                Plataforma
-              </span>
-            </Link>
+              </picture>
+            </a>
           </div>
 
           {/* Navigation Links - Hidden on mobile/tablet (below 1024px), visible on desktop */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-4">
+          <div className="hidden lg:flex lg:items-center lg:space-x-1">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   location.pathname === link.path
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                    ? 'text-rizoma-green dark:text-rizoma-green-light'
+                    : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                 }`}
               >
                 {link.label}
@@ -548,7 +541,7 @@ function Navbar() {
                   aria-expanded={showUserMenu}
                 >
                   {/* Avatar */}
-                  <div className="h-9 w-9 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium text-sm">
+                  <div className="h-9 w-9 rounded-full bg-rizoma-green flex items-center justify-center text-white font-medium text-sm">
                     {getUserInitials(user.name)}
                   </div>
                   {/* User name (hidden on mobile) */}
@@ -606,7 +599,7 @@ function Navbar() {
                     </Link>
 
                     {/* Admin link for instructors */}
-                    {user.role === 'instructor_admin' && (
+                    {user.role === 'instructor' && (
                       <Link
                         to="/admin"
                         onClick={() => setShowUserMenu(false)}
@@ -650,7 +643,7 @@ function Navbar() {
 
       {/* Mobile Navigation Drawer - Visible on mobile/tablet (below 1024px) */}
       {showMobileMenu && (
-        <div className="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+        <div className="lg:hidden border-t border-gray-100 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navLinks.map((link) => (
               <Link
@@ -659,8 +652,8 @@ function Navbar() {
                 onClick={() => setShowMobileMenu(false)}
                 className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                   location.pathname === link.path
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                    ? 'bg-rizoma-green/10 text-rizoma-green dark:text-rizoma-green-light'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
                 }`}
               >
                 {link.label}
@@ -670,7 +663,7 @@ function Navbar() {
             {/* Show additional links for authenticated users */}
             {isAuthenticated && user && (
               <>
-                <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                <div className="border-t border-gray-100 dark:border-gray-800 my-2" />
                 <Link
                   to="/dashboard"
                   onClick={() => setShowMobileMenu(false)}
@@ -691,7 +684,7 @@ function Navbar() {
                   </svg>
                   Mi Perfil
                 </Link>
-                {user.role === 'instructor_admin' && (
+                {user.role === 'instructor' && (
                   <Link
                     to="/admin"
                     onClick={() => setShowMobileMenu(false)}
@@ -710,11 +703,11 @@ function Navbar() {
             {/* Show login link for non-authenticated users */}
             {!isAuthenticated && (
               <>
-                <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+                <div className="border-t border-gray-100 dark:border-gray-800 my-2" />
                 <Link
                   to="/login"
                   onClick={() => setShowMobileMenu(false)}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:text-primary-400 dark:hover:text-primary-300 dark:hover:bg-primary-900/20"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-rizoma-green hover:text-rizoma-green-dark hover:bg-rizoma-green/10 dark:text-rizoma-green-light dark:hover:text-rizoma-green"
                 >
                   Iniciar Sesion
                 </Link>
@@ -722,7 +715,7 @@ function Navbar() {
             )}
 
             {/* Dark Mode Toggle in Mobile Menu */}
-            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+            <div className="border-t border-gray-100 dark:border-gray-800 my-2" />
             <button
               onClick={toggleDarkMode}
               className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"

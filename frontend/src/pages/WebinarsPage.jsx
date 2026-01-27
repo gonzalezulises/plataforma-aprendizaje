@@ -8,7 +8,7 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replac
 
 // Helper to check if user has premium access (Feature #16)
 function isPremiumUser(user) {
-  return user && (user.role === 'student_premium' || user.role === 'instructor_admin');
+  return user && (user.role === 'student_premium' || user.role === 'instructor');
 }
 
 function WebinarsPage() {
@@ -372,7 +372,7 @@ function WebinarsPage() {
             </p>
           </div>
 
-          {user?.role === 'instructor_admin' && (
+          {user?.role === 'instructor' && (
             <Link
               to="/webinars/schedule"
               className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"

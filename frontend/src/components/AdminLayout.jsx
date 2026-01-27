@@ -8,7 +8,7 @@ import { useAuth } from '../store/AuthContext';
  * - Sidebar with navigation links to admin sections
  * - Highlights current section
  * - Responsive design with collapsible sidebar on mobile
- * - Role-based access control (instructor_admin only)
+ * - Role-based access control (instructor only)
  */
 export default function AdminLayout({ children }) {
   const { user } = useAuth();

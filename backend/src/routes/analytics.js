@@ -45,12 +45,14 @@ function requireAuth(req, res, next) {
 
 /**
  * Middleware to check if user is an instructor/admin
+ * Accepts both 'instructor' and 'instructor_admin' for compatibility
  */
 function requireInstructor(req, res, next) {
   if (!req.session || !req.session.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  if (req.session.user.role !== 'instructor_admin') {
+  const role = req.session.user.role;
+  if (role !== 'instructor' && role !== 'instructor_admin') {
     return res.status(403).json({ error: 'Instructor access required' });
   }
   next();
