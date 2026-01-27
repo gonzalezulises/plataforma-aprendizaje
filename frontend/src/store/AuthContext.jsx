@@ -99,7 +99,8 @@ export function AuthProvider({ children }) {
             console.log('[AuthContext] Supabase session found:', session.user?.email);
 
             // Verify with backend to create server session (for cross-domain auth)
-            const verifyResult = await verifyWithBackend();
+            // Pass the session directly to avoid calling getSession() again
+            const verifyResult = await verifyWithBackend(session);
             if (verifyResult.success && verifyResult.user) {
               setUser(verifyResult.user);
               setIsAuthenticated(true);
@@ -151,7 +152,8 @@ export function AuthProvider({ children }) {
         console.log('[Auth] User signed in:', session.user?.email);
 
         // Verify with backend to create server session (for cross-domain auth)
-        const verifyResult = await verifyWithBackend();
+        // Pass the session directly to avoid calling getSession() again
+        const verifyResult = await verifyWithBackend(session);
         if (verifyResult.success && verifyResult.user) {
           setUser(verifyResult.user);
           setIsAuthenticated(true);
@@ -161,7 +163,7 @@ export function AuthProvider({ children }) {
           // Fallback to Supabase user if backend verification fails
           setUser(session.user);
           setIsAuthenticated(true);
-          console.log('[Auth] Using Supabase session (backend verify failed)');
+          console.log('[Auth] Using Supabase session (backend verify failed):', verifyResult.error);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);

@@ -246,10 +246,17 @@ export function onAuthStateChange(callback) {
 /**
  * Verify session with backend and sync local session
  * Called after Supabase auth to create backend session
+ * @param {object} existingSession - Optional session object to use instead of fetching
  */
-export async function verifyWithBackend() {
-  console.log('[Supabase] verifyWithBackend called');
-  const session = await getSession();
+export async function verifyWithBackend(existingSession = null) {
+  console.log('[Supabase] verifyWithBackend called, existingSession:', existingSession ? 'provided' : 'not provided');
+
+  // Use provided session or fetch it
+  let session = existingSession;
+  if (!session) {
+    console.log('[Supabase] Fetching session...');
+    session = await getSession();
+  }
   console.log('[Supabase] Session for verify:', session ? 'exists' : 'null');
 
   if (!session?.access_token) {
