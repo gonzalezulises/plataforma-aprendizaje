@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import InteractiveNotebook from '../components/InteractiveNotebook';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * NotebookPage - Page wrapper for interactive notebooks

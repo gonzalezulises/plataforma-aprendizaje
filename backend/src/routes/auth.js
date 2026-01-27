@@ -1,147 +1,186 @@
 import express from 'express';
 import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
+import { verifySupabaseToken, extractBearerToken } from '../lib/supabase.js';
+
 // Feature #144 - Added userId parameter to dev-login for enrollment testing
 // Feature #40: Sensitive operations log audit trail
+// Migration: Now using shared Supabase auth instead of custom OAuth
 
 const router = express.Router();
 
-// Get OAuth configuration from environment
-const OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID || 'your-client-id';
-const OAUTH_AUTHORIZATION_URL = process.env.OAUTH_AUTHORIZATION_URL || 'https://rizo.ma/oauth/authorize';
-const OAUTH_CALLBACK_URL = process.env.OAUTH_CALLBACK_URL || 'http://localhost:3001/api/auth/callback';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const SUPABASE_URL = process.env.SUPABASE_URL;
 
 /**
  * GET /api/auth/login
- * Initiates the OAuth flow by returning the authorization URL
- * Frontend will redirect the user to rizo.ma OAuth page
+ * Returns Supabase auth configuration for frontend to initiate login
+ * Frontend uses Supabase Auth UI or redirects to Magic Link
  */
 router.get('/login', (req, res) => {
-  // Store the return URL in session for after OAuth callback
   const returnUrl = req.query.returnUrl || '/dashboard';
+
+  // Store return URL in session for after auth
   req.session.returnUrl = returnUrl;
 
-  // Generate state parameter for CSRF protection
-  const state = generateState();
-  req.session.oauthState = state;
-
-  // Build the authorization URL with required OAuth parameters
-  const authParams = new URLSearchParams({
-    client_id: OAUTH_CLIENT_ID,
-    redirect_uri: OAUTH_CALLBACK_URL,
-    response_type: 'code',
-    scope: 'openid profile email',
-    state: state,
-  });
-
-  const authorizationUrl = `${OAUTH_AUTHORIZATION_URL}?${authParams.toString()}`;
-
-  // Log for development purposes (since we don't have real OAuth)
   console.log('[Auth] Login initiated');
-  console.log('[Auth] Authorization URL:', authorizationUrl);
   console.log('[Auth] Return URL:', returnUrl);
 
-  // In development mode without real OAuth, we provide info about the redirect
-  if (OAUTH_CLIENT_ID === 'your-client-id') {
-    // Development mode - OAuth not configured
-    console.log('[Auth] OAuth not configured - development mode');
+  // Check if Supabase is configured
+  if (!SUPABASE_URL) {
+    console.log('[Auth] Supabase not configured - development mode');
     return res.json({
-      authorizationUrl,
-      message: 'OAuth en modo desarrollo. En produccion, seras redirigido a rizo.ma para autenticarte.',
+      message: 'Auth en modo desarrollo. Usa /api/auth/dev-login para testing.',
       development: true,
+      supabaseConfigured: false,
       info: {
-        description: 'Para configurar OAuth, actualiza las variables de entorno en .env',
+        description: 'Para configurar Supabase, actualiza las variables de entorno en .env',
         requiredVars: [
-          'OAUTH_CLIENT_ID',
-          'OAUTH_CLIENT_SECRET',
-          'OAUTH_AUTHORIZATION_URL',
-          'OAUTH_TOKEN_URL',
+          'SUPABASE_URL',
+          'SUPABASE_ANON_KEY',
+          'SUPABASE_SERVICE_KEY',
         ],
       },
     });
   }
 
-  // Production mode - return the URL for redirect
+  // Return Supabase config for frontend to use
   res.json({
-    authorizationUrl,
-    message: 'Redirigiendo a rizo.ma...',
+    supabaseUrl: SUPABASE_URL,
+    returnUrl,
+    message: 'Usa Supabase Auth para iniciar sesion',
+    supabaseConfigured: true,
   });
 });
 
 /**
- * GET /api/auth/callback
- * OAuth callback handler - receives the authorization code from rizo.ma
+ * POST /api/auth/verify
+ * Verifies a Supabase JWT token and creates/updates local session
+ * Called by frontend after successful Supabase authentication
  */
-router.get('/callback', async (req, res) => {
-  const { code, state, error } = req.query;
+router.post('/verify', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = extractBearerToken(authHeader);
 
-  // Handle OAuth errors
-  if (error) {
-    console.error('[Auth] OAuth error:', error);
-    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(error)}`);
-  }
-
-  // Verify state parameter to prevent CSRF attacks
-  if (!state || state !== req.session.oauthState) {
-    console.error('[Auth] Invalid state parameter');
-    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent('Estado de autenticacion invalido')}`);
-  }
-
-  // Check for authorization code
-  if (!code) {
-    console.error('[Auth] No authorization code received');
-    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent('No se recibio el codigo de autorizacion')}`);
+  if (!token) {
+    return res.status(401).json({
+      error: 'No se proporcionó token de autenticación',
+      isAuthenticated: false,
+    });
   }
 
   try {
-    // In a real implementation, we would:
-    // 1. Exchange the code for access token
-    // 2. Get user info from rizo.ma
-    // 3. Create or update user in our database
-    // 4. Create session
+    const { user, error } = await verifySupabaseToken(token);
 
-    console.log('[Auth] OAuth callback received');
-    console.log('[Auth] Authorization code:', code);
+    if (error || !user) {
+      console.error('[Auth] Token verification failed:', error);
+      return res.status(401).json({
+        error: error || 'Token inválido',
+        isAuthenticated: false,
+      });
+    }
 
-    // For development - simulate successful login
-    // In production, this would involve actual token exchange
-
-    // Store user info in session (simulated)
+    // Create local session with Supabase user info
     req.session.user = {
-      id: 1,
-      email: 'test@rizo.ma',
-      name: 'Usuario de Prueba',
-      role: 'student_free',
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+      role: user.user_metadata?.role || 'student_free',
+      supabaseId: user.id,
+      avatar: user.user_metadata?.avatar_url,
     };
 
     req.session.isAuthenticated = true;
-    req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
+    req.session.lastActivity = Date.now();
+    req.session.supabaseToken = token;
 
-    // Clear OAuth state
-    delete req.session.oauthState;
+    console.log('[Auth] Supabase token verified, user:', req.session.user.email);
 
-    // Redirect to the original destination or dashboard
+    // Feature #40: Log audit event for successful login
+    logAuditEvent(user.id, AUDIT_EVENTS.LOGIN_SUCCESS, {
+      action: 'User logged in via Supabase',
+      email: user.email,
+      role: req.session.user.role,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.headers?.['user-agent'],
+    });
+
+    res.json({
+      success: true,
+      isAuthenticated: true,
+      user: req.session.user,
+    });
+  } catch (err) {
+    console.error('[Auth] Verification error:', err);
+    res.status(500).json({
+      error: 'Error durante la verificación',
+      isAuthenticated: false,
+    });
+  }
+});
+
+/**
+ * GET /api/auth/callback
+ * Handles redirect from Supabase auth (Magic Link, OAuth providers)
+ * Stores session and redirects to frontend
+ */
+router.get('/callback', async (req, res) => {
+  const { access_token, refresh_token, error, error_description } = req.query;
+
+  // Handle auth errors
+  if (error) {
+    console.error('[Auth] Supabase callback error:', error, error_description);
+    return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(error_description || error)}`);
+  }
+
+  // If no token, redirect to frontend to handle the hash fragment
+  // (Supabase puts tokens in URL hash, not query params for Magic Link)
+  if (!access_token) {
+    console.log('[Auth] No access_token in query, redirecting to frontend callback');
+    return res.redirect(`${FRONTEND_URL}/auth/callback`);
+  }
+
+  try {
+    const { user, error: verifyError } = await verifySupabaseToken(access_token);
+
+    if (verifyError || !user) {
+      console.error('[Auth] Token verification failed:', verifyError);
+      return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent('Token de autenticación inválido')}`);
+    }
+
+    // Create local session
+    req.session.user = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+      role: user.user_metadata?.role || 'student_free',
+      supabaseId: user.id,
+    };
+
+    req.session.isAuthenticated = true;
+    req.session.lastActivity = Date.now();
+    req.session.supabaseToken = access_token;
+    if (refresh_token) {
+      req.session.supabaseRefreshToken = refresh_token;
+    }
+
     const returnUrl = req.session.returnUrl || '/dashboard';
     delete req.session.returnUrl;
 
-    console.log('[Auth] Login successful, redirecting to:', returnUrl);
+    console.log('[Auth] Supabase login successful, redirecting to:', returnUrl);
 
-    // Feature #40: Log audit event for successful login
-    logAuditEvent(req.session.user.id, AUDIT_EVENTS.LOGIN_SUCCESS, {
-      action: 'User logged in via OAuth',
-      email: req.session.user.email,
+    // Feature #40: Log audit event
+    logAuditEvent(user.id, AUDIT_EVENTS.LOGIN_SUCCESS, {
+      action: 'User logged in via Supabase callback',
+      email: user.email,
       role: req.session.user.role,
       ip: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers?.['user-agent']
+      userAgent: req.headers?.['user-agent'],
     });
 
-    // Redirect to frontend auth callback page which will handle the session check
-    // and show appropriate feedback before redirecting to the final destination
-    res.redirect(`${FRONTEND_URL}/auth/callback`);
-
+    res.redirect(`${FRONTEND_URL}${returnUrl}`);
   } catch (err) {
     console.error('[Auth] Callback error:', err);
-    res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent('Error durante la autenticacion')}`);
+    res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent('Error durante la autenticación')}`);
   }
 });
 
@@ -157,7 +196,7 @@ router.post('/logout', (req, res) => {
       action: 'User logged out',
       email: req.session.user.email,
       ip: req.ip || req.connection?.remoteAddress,
-      userAgent: req.headers?.['user-agent']
+      userAgent: req.headers?.['user-agent'],
     });
   }
 
@@ -191,9 +230,22 @@ router.get('/me', (req, res) => {
 });
 
 /**
+ * POST /api/auth/refresh
+ * Refresh session activity timestamp
+ */
+router.post('/refresh', (req, res) => {
+  if (!req.session.isAuthenticated) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+
+  req.session.lastActivity = Date.now();
+  res.json({ success: true, lastActivity: req.session.lastActivity });
+});
+
+/**
  * POST /api/auth/dev-login
- * Development-only endpoint to simulate OAuth login
- * This bypasses the actual OAuth flow for testing purposes
+ * Development-only endpoint to simulate login
+ * This bypasses Supabase auth for testing purposes
  *
  * Optional body parameters:
  * - role: 'student_free', 'student_premium', or 'instructor_admin'
@@ -228,7 +280,7 @@ router.post('/dev-login', (req, res) => {
   };
 
   req.session.isAuthenticated = true;
-  req.session.lastActivity = Date.now(); // Feature #12: Track session activity for inactivity timeout
+  req.session.lastActivity = Date.now();
 
   console.log('[Auth] Dev login successful, user:', req.session.user);
 
@@ -239,7 +291,7 @@ router.post('/dev-login', (req, res) => {
     role: userRole,
     isDev: true,
     ip: req.ip || req.connection?.remoteAddress,
-    userAgent: req.headers?.['user-agent']
+    userAgent: req.headers?.['user-agent'],
   });
 
   res.json({
@@ -248,17 +300,5 @@ router.post('/dev-login', (req, res) => {
     user: req.session.user,
   });
 });
-
-/**
- * Utility: Generate a random state string for OAuth CSRF protection
- */
-function generateState() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let state = '';
-  for (let i = 0; i < 32; i++) {
-    state += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return state;
-}
 
 export default router;

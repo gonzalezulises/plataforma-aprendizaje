@@ -122,6 +122,9 @@ app.use(cors({
       'http://localhost:5210',
       'https://www.rizo.ma',
       'https://rizo.ma',
+      'https://cursos.rizo.ma',
+      'https://academia.rizo.ma',
+      'https://academia-rizoma.vercel.app',
       'https://frontend-one-sigma-58.vercel.app',
       'https://plataforma-aprendizaje-api-production.up.railway.app'
     ];

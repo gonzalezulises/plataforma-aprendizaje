@@ -53,3 +53,16 @@ uploads/
 *.cache
 .parcel-cache/
 .turbo/
+
+# Debug and test files
+*.cjs
+cookies-*.txt
+*.backup
+*.bak
+*_backup.js
+*_backup2.js
+feature-*.txt
+progress-*.txt
+.agent.lock
+.claude_settings.json
+.autocoder/

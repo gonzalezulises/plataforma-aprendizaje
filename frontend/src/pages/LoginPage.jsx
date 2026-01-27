@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import { signInWithMagicLink, isSupabaseConfigured } from '../lib/supabase';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -8,14 +9,17 @@ function LoginPage() {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { isAuthenticated, refreshAuth } = useAuth();
+  const [successMessage, setSuccessMessage] = useState(null);
+  const { isAuthenticated, refreshAuth, isSupabaseConfigured: supabaseReady } = useAuth();
 
-  // Direct login form state
-  const [showDirectLogin, setShowDirectLogin] = useState(false);
+  // Login method state: 'magic-link' | 'password' | 'dev'
+  const [loginMethod, setLoginMethod] = useState('magic-link');
+
+  // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [rateLimitInfo, setRateLimitInfo] = useState(null); // Feature #33: Rate limit countdown
+  const [rateLimitInfo, setRateLimitInfo] = useState(null);
 
   // Email validation regex
   const isValidEmail = (emailToValidate) => {
@@ -27,7 +31,6 @@ function LoginPage() {
   const handleEmailChange = (e) => {
     const newEmail = e.target.value;
     setEmail(newEmail);
-    // Clear error when user starts typing
     if (emailError) {
       setEmailError('');
     }
@@ -40,11 +43,10 @@ function LoginPage() {
     }
   };
 
-  // Track if we've initiated a login attempt (to prevent useEffect from handling redirect)
+  // Track if we've initiated a login attempt
   const [loginInitiated, setLoginInitiated] = useState(false);
 
-  // If already authenticated on initial page load, redirect
-  // Skip this if we just completed a login (loginInitiated=true) - the login handler will redirect
+  // If already authenticated, redirect
   useEffect(() => {
     if (isAuthenticated && !loginInitiated) {
       const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
@@ -53,14 +55,14 @@ function LoginPage() {
     }
   }, [isAuthenticated, loginInitiated, navigate]);
 
-  // Feature #33: Rate limit countdown timer
+  // Rate limit countdown timer
   useEffect(() => {
     if (rateLimitInfo && rateLimitInfo.remainingSeconds > 0) {
       const timer = setInterval(() => {
         setRateLimitInfo(prev => {
           if (!prev || prev.remainingSeconds <= 1) {
             clearInterval(timer);
-            return null; // Clear rate limit info when countdown reaches 0
+            return null;
           }
           return {
             ...prev,
@@ -72,63 +74,60 @@ function LoginPage() {
     }
   }, [rateLimitInfo?.remainingSeconds > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check for OAuth callback params and location state (Feature #55)
+  // Check for callback params and location state
   useEffect(() => {
     const errorParam = searchParams.get('error');
     const returnUrlFromParams = searchParams.get('returnUrl');
-    // Also check React Router location state (used by protected routes like DashboardPage)
     const returnUrlFromState = location.state?.from;
 
     if (errorParam) {
       setError(errorParam);
     }
 
-    // Store return URL for after login (prefer params over state)
     const returnUrl = returnUrlFromParams || returnUrlFromState;
     if (returnUrl) {
       sessionStorage.setItem('loginReturnUrl', returnUrl);
     }
   }, [searchParams, location.state]);
 
-  const handleLoginWithRizoMa = async () => {
+  // Handle Magic Link login
+  const handleMagicLinkLogin = async (e) => {
+    e.preventDefault();
+
+    if (!isValidEmail(email)) {
+      setEmailError('Formato de correo electronico invalido');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    setLoginInitiated(true); // Prevent useEffect from handling redirect
+    setSuccessMessage(null);
+    setLoginInitiated(true);
 
     try {
-      // Get the OAuth authorization URL from the backend
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+      const redirectTo = window.location.origin + '/auth/callback';
+      await signInWithMagicLink(email, redirectTo);
 
-      if (!response.ok) {
-        throw new Error('Error al iniciar el proceso de autenticacion');
-      }
-
-      const data = await response.json();
-
-      if (data.authorizationUrl && !data.development) {
-        // Redirect to rizo.ma OAuth authorization page
-        window.location.href = data.authorizationUrl;
-      } else if (data.development) {
-        // Development mode - use dev-login endpoint instead
-        setError(null);
-        await handleDevLogin();
-      }
+      setSuccessMessage(
+        'Te hemos enviado un enlace magico a tu correo. ' +
+        'Revisa tu bandeja de entrada y haz clic en el enlace para iniciar sesion.'
+      );
+      setIsLoading(false);
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Error al conectar con el servidor');
+      console.error('Magic link error:', err);
+      setError(err.message || 'Error al enviar el enlace magico');
       setIsLoading(false);
     }
   };
 
-  // Development mode login - bypasses OAuth
+  // Development mode login
   const handleDevLogin = async () => {
-    setLoginInitiated(true); // Prevent useEffect from handling redirect
+    setIsLoading(true);
+    setError(null);
+    setLoginInitiated(true);
+
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const API_BASE = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(`${API_BASE}/auth/dev-login`, {
         method: 'POST',
         credentials: 'include',
@@ -144,7 +143,6 @@ function LoginPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Refresh auth context and redirect
         await refreshAuth();
         const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
         sessionStorage.removeItem('loginReturnUrl');
@@ -161,7 +159,6 @@ function LoginPage() {
   const handleDirectLogin = async (e) => {
     e.preventDefault();
 
-    // Validate email format before submitting
     if (!isValidEmail(email)) {
       setEmailError('Formato de correo electronico invalido');
       return;
@@ -169,10 +166,10 @@ function LoginPage() {
 
     setIsLoading(true);
     setError(null);
-    setLoginInitiated(true); // Prevent useEffect from handling redirect
+    setLoginInitiated(true);
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const API_BASE = import.meta.env.VITE_API_URL || '/api';
       const response = await fetch(`${API_BASE}/direct-auth/login`, {
         method: 'POST',
         credentials: 'include',
@@ -185,21 +182,18 @@ function LoginPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        // Feature #33: Handle rate limiting error with countdown
         if (response.status === 429 && data.rateLimited) {
           setRateLimitInfo({
             remainingSeconds: data.retryAfter || 60,
             message: data.error
           });
         } else {
-          // Display error message from server
           setError(data.error || 'Error al iniciar sesion');
         }
         setIsLoading(false);
         return;
       }
 
-      // Login successful - refresh auth context and redirect
       await refreshAuth();
       const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
       sessionStorage.removeItem('loginReturnUrl');
@@ -229,16 +223,8 @@ function LoginPage() {
                 strokeWidth="2"
                 strokeLinejoin="round"
               />
-              <path
-                d="M16 16V24"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M8 12L16 16L24 12"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
+              <path d="M16 16V24" stroke="currentColor" strokeWidth="2" />
+              <path d="M8 12L16 16L24 12" stroke="currentColor" strokeWidth="2" />
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -251,221 +237,218 @@ function LoginPage() {
 
         {/* Login Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-          {/* Feature #33: Rate Limit Warning Message */}
-          {rateLimitInfo && (
+          {/* Success Message */}
+          {successMessage && (
             <div
-              className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-start gap-3"
+              className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3"
               role="alert"
-              aria-live="assertive"
             >
-              <svg className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              <svg className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
-                  Demasiados intentos de inicio de sesion
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Enlace enviado
                 </p>
-                <p className="text-sm text-orange-600 dark:text-orange-300 mt-1">
-                  Por favor espera <span className="font-bold">{rateLimitInfo.remainingSeconds}</span> segundos antes de intentar nuevamente.
+                <p className="text-sm text-green-600 dark:text-green-300 mt-1">
+                  {successMessage}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Error Message - Screen reader accessible */}
+          {/* Rate Limit Warning */}
+          {rateLimitInfo && (
+            <div
+              className="mb-6 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-start gap-3"
+              role="alert"
+            >
+              <svg className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                  Demasiados intentos
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-300 mt-1">
+                  Espera <span className="font-bold">{rateLimitInfo.remainingSeconds}</span> segundos.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && !rateLimitInfo && (
             <div
               className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3"
               role="alert"
-              aria-live="assertive"
             >
-              <svg className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <svg className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
-          {!showDirectLogin ? (
-            <>
-              {/* OAuth Login Button */}
+          {/* Login Method Tabs */}
+          <div className="flex mb-6 border-b border-gray-200 dark:border-gray-700">
+            {isSupabaseConfigured() && (
               <button
-                onClick={handleLoginWithRizoMa}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                onClick={() => { setLoginMethod('magic-link'); setError(null); setSuccessMessage(null); }}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  loginMethod === 'magic-link'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Magic Link
+              </button>
+            )}
+            <button
+              onClick={() => { setLoginMethod('password'); setError(null); setSuccessMessage(null); }}
+              className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                loginMethod === 'password'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Email y Contrasena
+            </button>
+          </div>
+
+          {/* Magic Link Form */}
+          {loginMethod === 'magic-link' && isSupabaseConfigured() && (
+            <form onSubmit={handleMagicLinkLogin} className="space-y-4">
+              <div>
+                <label htmlFor="magic-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Correo electronico
+                </label>
+                <input
+                  type="email"
+                  id="magic-email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={handleEmailBlur}
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 ${
+                    emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-500">{emailError}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || !!successMessage}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors"
               >
                 {isLoading ? (
                   <>
                     <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <span>Conectando...</span>
+                    <span>Enviando...</span>
                   </>
                 ) : (
                   <>
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                      />
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <span>Iniciar Sesion con rizo.ma</span>
+                    <span>Enviar enlace magico</span>
                   </>
                 )}
               </button>
 
-              {/* Info text */}
-              <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                Seras redirigido a rizo.ma para autenticarte de forma segura
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                Te enviaremos un enlace a tu correo para iniciar sesion sin contrasena
               </p>
+            </form>
+          )}
 
-              {/* Divider */}
-              <div className="my-6 flex items-center">
-                <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-                <span className="px-4 text-sm text-gray-500 dark:text-gray-400">o</span>
-                <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+          {/* Password Form */}
+          {loginMethod === 'password' && (
+            <form onSubmit={handleDirectLogin} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Correo electronico
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  onBlur={handleEmailBlur}
+                  placeholder="tu@email.com"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 ${
+                    emailError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-500">{emailError}</p>
+                )}
               </div>
 
-              {/* Direct login toggle button */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Contrasena
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Tu contrasena"
+                  required
+                  disabled={isLoading}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                />
+              </div>
+
               <button
-                onClick={() => setShowDirectLogin(true)}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                type="submit"
+                disabled={isLoading || emailError || rateLimitInfo}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>Iniciar sesion con email</span>
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Iniciando sesion...</span>
+                  </>
+                ) : (
+                  <span>Iniciar sesion</span>
+                )}
               </button>
-            </>
-          ) : (
+            </form>
+          )}
+
+          {/* Development Login (only in dev mode) */}
+          {process.env.NODE_ENV !== 'production' && (
             <>
-              {/* Direct Login Form */}
-              <form onSubmit={handleDirectLogin} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Correo electronico <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={email}
-                    onChange={handleEmailChange}
-                    onBlur={handleEmailBlur}
-                    placeholder="tu@email.com"
-                    required
-                    disabled={isLoading}
-                    aria-invalid={emailError ? 'true' : 'false'}
-                    aria-describedby={emailError ? 'email-error' : undefined}
-                    className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed ${
-                      emailError
-                        ? 'border-red-500 dark:border-red-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                  />
-                  {emailError && (
-                    <p
-                      id="email-error"
-                      className="mt-1 text-sm text-red-500 dark:text-red-400 flex items-center gap-1"
-                      role="alert"
-                      aria-live="polite"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      {emailError}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Contrasena <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Tu contrasena"
-                    required
-                    disabled={isLoading}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading || emailError || rateLimitInfo}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span>Iniciando sesion...</span>
-                    </>
-                  ) : (
-                    <span>Iniciar sesion</span>
-                  )}
-                </button>
-              </form>
-
-              {/* Divider */}
               <div className="my-6 flex items-center">
                 <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
                 <span className="px-4 text-sm text-gray-500 dark:text-gray-400">o</span>
                 <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
               </div>
 
-              {/* Back to OAuth button */}
               <button
-                onClick={() => {
-                  setShowDirectLogin(false);
-                  setError(null);
-                  setEmailError('');
-                }}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                onClick={handleDevLogin}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                 </svg>
-                <span>Volver a opciones de login</span>
+                <span>Login de Desarrollo</span>
               </button>
             </>
           )}
@@ -477,7 +460,7 @@ function LoginPage() {
               href="https://rizo.ma/register"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
+              className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
             >
               Registrate en rizo.ma
             </a>

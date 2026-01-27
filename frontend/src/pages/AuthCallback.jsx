@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import { handleAuthCallback as handleSupabaseCallback, isSupabaseConfigured } from '../lib/supabase';
 
 /**
- * AuthCallback component handles the OAuth callback from rizo.ma
- * The backend redirects here after successful OAuth authentication
- * This component:
- * 1. Checks for error parameters
- * 2. Refreshes the auth context to get user data
- * 3. Redirects to the dashboard or original destination
+ * AuthCallback component handles authentication callbacks
+ * Supports both:
+ * 1. Traditional OAuth callback from backend
+ * 2. Supabase Magic Link callback (code in URL)
  */
 function AuthCallback() {
   const navigate = useNavigate();
@@ -19,27 +18,45 @@ function AuthCallback() {
 
   useEffect(() => {
     const processCallback = async () => {
-      // Check for error parameter from OAuth
+      // Check for error parameter
       const errorParam = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
       if (errorParam) {
-        setError(errorParam);
+        setError(errorDescription || errorParam);
         setIsProcessing(false);
         return;
       }
 
       try {
-        // Refresh auth context to get the user data from session
+        // Check if this is a Supabase auth callback (has code parameter)
+        const code = searchParams.get('code');
+
+        if (code && isSupabaseConfigured()) {
+          // Handle Supabase PKCE callback
+          console.log('[AuthCallback] Processing Supabase code exchange');
+          const { session, error: supabaseError } = await handleSupabaseCallback();
+
+          if (supabaseError) {
+            setError(supabaseError);
+            setIsProcessing(false);
+            return;
+          }
+
+          if (session) {
+            // Supabase auth successful - refresh context
+            const user = await refreshAuth();
+            if (user) {
+              redirectToDestination();
+              return;
+            }
+          }
+        }
+
+        // Try refreshing auth from backend session (traditional OAuth flow)
         const user = await refreshAuth();
 
         if (user) {
-          // Successfully authenticated - redirect to dashboard or stored return URL
-          const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
-          sessionStorage.removeItem('loginReturnUrl');
-
-          // Small delay to show success message
-          setTimeout(() => {
-            navigate(returnUrl, { replace: true });
-          }, 1000);
+          redirectToDestination();
         } else {
           // No user data - something went wrong
           setError('No se pudo obtener la informacion del usuario');
@@ -50,6 +67,16 @@ function AuthCallback() {
         setError('Error al procesar la autenticacion');
         setIsProcessing(false);
       }
+    };
+
+    const redirectToDestination = () => {
+      const returnUrl = sessionStorage.getItem('loginReturnUrl') || '/dashboard';
+      sessionStorage.removeItem('loginReturnUrl');
+
+      // Small delay to show success message
+      setTimeout(() => {
+        navigate(returnUrl, { replace: true });
+      }, 1000);
     };
 
     processCallback();
