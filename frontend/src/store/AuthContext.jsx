@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Initialize auth - check backend session first, then Supabase
+  // Initialize auth - check Supabase FIRST, then backend
   useEffect(() => {
     const initAuth = async () => {
       // Skip auth init if there's a hash fragment with tokens - let HashFragmentHandler handle it
@@ -84,20 +84,16 @@ export function AuthProvider({ children }) {
       }
 
       setIsLoading(true);
+      console.log('[AuthContext] Initializing auth...');
 
-      // First check if we have a backend session
-      const backendUser = await fetchCurrentUser();
-
-      if (backendUser) {
-        setIsLoading(false);
-        return;
-      }
-
-      // If no backend session and Supabase is configured, check Supabase
+      // If Supabase is configured, check Supabase session FIRST
+      // This ensures the token is available for API calls
       if (isSupabaseConfigured()) {
         const supabase = getSupabaseClient();
         if (supabase) {
+          console.log('[AuthContext] Checking Supabase session...');
           const { data: { session } } = await supabase.auth.getSession();
+
           if (session) {
             setSupabaseSession(session);
             console.log('[AuthContext] Supabase session found:', session.user?.email);
@@ -109,15 +105,30 @@ export function AuthProvider({ children }) {
               setIsAuthenticated(true);
               fetchCsrfToken();
               console.log('[AuthContext] Backend session created for:', verifyResult.user.email);
+              setIsLoading(false);
+              return;
             } else {
               // Fallback to Supabase user if backend verification fails
               // This allows the app to work while the fetch interceptor adds auth headers
               setUser(session.user);
               setIsAuthenticated(true);
               console.log('[AuthContext] Using Supabase session (backend verify failed)');
+              setIsLoading(false);
+              return;
             }
+          } else {
+            console.log('[AuthContext] No Supabase session found');
           }
         }
+      }
+
+      // No Supabase session - try backend session (for cookie-based auth on same domain)
+      console.log('[AuthContext] Checking backend session...');
+      const backendUser = await fetchCurrentUser();
+      if (backendUser) {
+        console.log('[AuthContext] Backend session found');
+      } else {
+        console.log('[AuthContext] No session found - user not authenticated');
       }
 
       setIsLoading(false);
