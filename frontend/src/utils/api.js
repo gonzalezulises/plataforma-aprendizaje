@@ -106,17 +106,20 @@ export function setupCsrfInterceptor() {
       const headers = new Headers(init.headers || {});
 
       // Add Supabase Authorization header for cross-domain auth
-      try {
-        const authHeaders = await getAuthHeaders();
-        console.log('[API Interceptor] Auth headers to add:', Object.keys(authHeaders));
-        Object.entries(authHeaders).forEach(([key, value]) => {
-          if (!headers.has(key)) {
+      // Skip if request already has Authorization header (to avoid deadlock)
+      if (!headers.has('Authorization')) {
+        try {
+          const authHeaders = await getAuthHeaders();
+          console.log('[API Interceptor] Auth headers to add:', Object.keys(authHeaders));
+          Object.entries(authHeaders).forEach(([key, value]) => {
             headers.set(key, value);
             console.log('[API Interceptor] Added header:', key);
-          }
-        });
-      } catch (error) {
-        console.warn('[API Interceptor] Could not add auth header:', error);
+          });
+        } catch (error) {
+          console.warn('[API Interceptor] Could not add auth header:', error);
+        }
+      } else {
+        console.log('[API Interceptor] Skipping auth - request already has Authorization header');
       }
 
       // Add CSRF token for state-changing methods
