@@ -1,6 +1,6 @@
 {
   "name": "plataforma-aprendizaje-frontend",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Frontend for Plataforma de Aprendizaje - Active Learning Platform",
   "type": "module",
   "scripts": {
