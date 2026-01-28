@@ -502,6 +502,34 @@ export default function CourseCreatorPage() {
     }
   };
 
+  // Unpublish course
+  const handleUnpublish = async () => {
+    if (!course?.id) return;
+
+    if (!window.confirm('¿Estás seguro de que quieres despublicar este curso? Los estudiantes no podrán verlo en el catálogo.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/courses/${course.id}/unpublish`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to unpublish course');
+      }
+
+      const data = await response.json();
+      setCourse(data.course);
+      toast.success('Curso despublicado. Ahora está en modo borrador.');
+    } catch (error) {
+      console.error('Error unpublishing course:', error);
+      toast.error(error.message || 'Error al despublicar el curso');
+    }
+  };
+
   // Show loading state
   if (authLoading || (courseId && isLoading)) {
     return (
@@ -533,12 +561,19 @@ export default function CourseCreatorPage() {
               }`}>
                 {course.is_published ? 'Publicado' : 'Borrador'}
               </span>
-              {!course.is_published && (
+              {!course.is_published ? (
                 <button
                   onClick={handlePublish}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   Publicar Curso
+                </button>
+              ) : (
+                <button
+                  onClick={handleUnpublish}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                  Despublicar
                 </button>
               )}
             </div>
@@ -1080,21 +1115,28 @@ export default function CourseCreatorPage() {
                       }
                     </p>
                   </div>
-                  {!course.is_published && (
+                  {!course.is_published ? (
                     <button
                       onClick={handlePublish}
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                       Publicar Curso
                     </button>
-                  )}
-                  {course.is_published && (
-                    <Link
-                      to={`/course/${course.slug}`}
-                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                    >
-                      Ver en Catalogo
-                    </Link>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Link
+                        to={`/course/${course.slug}`}
+                        className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      >
+                        Ver en Catalogo
+                      </Link>
+                      <button
+                        onClick={handleUnpublish}
+                        className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                      >
+                        Despublicar
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
