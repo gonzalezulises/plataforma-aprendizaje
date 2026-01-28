@@ -210,8 +210,17 @@ app.use((req, res, next) => {
 // Checks Authorization header and creates session from valid Supabase token
 // This enables cross-domain authentication (Vercel frontend -> Railway backend)
 app.use(async (req, res, next) => {
-  // Skip if already authenticated via session
+  // If already authenticated, refresh role from database (in case it changed)
   if (req.session && req.session.isAuthenticated && req.session.user) {
+    try {
+      const freshUser = queryOne('SELECT role FROM users WHERE id = ?', [req.session.user.id]);
+      if (freshUser && freshUser.role !== req.session.user.role) {
+        console.log('[Auth Middleware] Refreshing role from DB:', req.session.user.role, '->', freshUser.role);
+        req.session.user.role = freshUser.role;
+      }
+    } catch (e) {
+      // Ignore errors, continue with existing session
+    }
     return next();
   }
 
