@@ -14,6 +14,9 @@ import { csrfTokenGenerator, csrfProtection, getCsrfTokenHandler } from './middl
 // Import Supabase token verification
 import { verifySupabaseToken, extractBearerToken } from './lib/supabase.js';
 
+// Import database functions for user sync
+import { queryOne, run } from './config/database.js';
+
 // Import routes
 import authRoutes from './routes/auth.js';
 import videoProgressRoutes from './routes/video-progress.js';
@@ -228,21 +231,49 @@ app.use(async (req, res, next) => {
       return next();
     }
 
-    // Create session from Supabase user
+    // Sync Supabase user with local database
+    // Check if user exists by email or external_id (Supabase UUID)
+    let localUser = queryOne(
+      'SELECT id, email, name, role, avatar_url, external_id FROM users WHERE email = ? OR external_id = ?',
+      [user.email, user.id]
+    );
+
+    if (!localUser) {
+      // Create user in local database
+      const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+      const userRole = user.user_metadata?.role || 'student_free';
+      const now = new Date().toISOString();
+
+      run(`
+        INSERT INTO users (email, name, role, external_id, avatar_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [user.email, userName, userRole, user.id, user.user_metadata?.avatar_url || null, now, now]);
+
+      // Get the newly created user
+      localUser = queryOne('SELECT id, email, name, role, avatar_url FROM users WHERE email = ?', [user.email]);
+      console.log('[Auth Middleware] Created new local user:', localUser?.id, user.email);
+    } else {
+      // Update external_id if not set
+      if (!localUser.external_id) {
+        run('UPDATE users SET external_id = ? WHERE id = ?', [user.id, localUser.id]);
+      }
+    }
+
+    // Create session using LOCAL user ID (integer), not Supabase UUID
     req.session.user = {
-      id: user.id,
+      id: localUser?.id || user.id, // Prefer local ID
       email: user.email,
-      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
-      role: user.user_metadata?.role || 'student_free',
+      name: localUser?.name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+      role: localUser?.role || user.user_metadata?.role || 'student_free',
       supabaseId: user.id,
-      avatar: user.user_metadata?.avatar_url,
+      avatar: localUser?.avatar_url || user.user_metadata?.avatar_url,
     };
 
     req.session.isAuthenticated = true;
     req.session.lastActivity = Date.now();
     req.session.supabaseToken = token;
 
-    console.log('[Auth Middleware] Session created from Supabase token for:', user.email);
+    console.log('[Auth Middleware] Session created for:', user.email, 'Local ID:', req.session.user.id);
   } catch (err) {
     console.error('[Auth Middleware] Supabase token verification error:', err);
   }
