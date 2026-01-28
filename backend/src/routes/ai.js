@@ -26,7 +26,7 @@ router.get('/status', async (req, res) => {
     rag: {
       available: ragAvailable,
       url: process.env.CEREBRO_RAG_URL || 'http://100.116.242.33:8002',
-      description: 'Cerebro-RAG: 128 Data Science books indexed (454,272 chunks)'
+      description: 'Cerebro-RAG: ~145 books indexed (562,834 chunks)'
     },
     features: {
       lessonContent: isClaudeConfigured() && (llmAvailable || provider === 'anthropic'),

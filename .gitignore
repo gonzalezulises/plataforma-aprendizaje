@@ -6,6 +6,10 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.check
+.env.vercel
+frontend/.env.check
+frontend/.env.vercel
 
 # Build output
 dist/
@@ -66,3 +70,4 @@ progress-*.txt
 .agent.lock
 .claude_settings.json
 .autocoder/
+.vercel

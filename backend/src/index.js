@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
+dotenv.config();
 
 // Import CSRF middleware
 import { csrfTokenGenerator, csrfProtection, getCsrfTokenHandler } from './middleware/csrf.js';
@@ -50,7 +51,6 @@ import { initDatabase } from './config/database.js';
 import { wsEventBus } from './utils/websocket-events.js';
 
 // Load environment variables
-dotenv.config();
 
 // Initialize database
 initDatabase().then(db => {
