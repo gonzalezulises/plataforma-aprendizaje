@@ -325,10 +325,15 @@ function Navbar() {
         return 'Premium';
       case 'instructor':
         return 'Instructor';
+      case 'instructor_admin':
+        return 'Admin';
       default:
         return 'Usuario';
     }
   };
+
+  // Check if user has admin/instructor privileges
+  const isAdmin = user?.role === 'instructor' || user?.role === 'instructor_admin';
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
@@ -599,7 +604,7 @@ function Navbar() {
                     </Link>
 
                     {/* Admin link for instructors */}
-                    {user.role === 'instructor' && (
+                    {isAdmin && (
                       <Link
                         to="/admin"
                         onClick={() => setShowUserMenu(false)}
@@ -684,7 +689,7 @@ function Navbar() {
                   </svg>
                   Mi Perfil
                 </Link>
-                {user.role === 'instructor' && (
+                {isAdmin && (
                   <Link
                     to="/admin"
                     onClick={() => setShowMobileMenu(false)}
