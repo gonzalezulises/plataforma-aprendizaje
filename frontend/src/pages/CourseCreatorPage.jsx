@@ -76,6 +76,9 @@ export default function CourseCreatorPage() {
   const [quizImportLessonId, setQuizImportLessonId] = useState(null);
   const [quizImportLessonTitle, setQuizImportLessonTitle] = useState('');
 
+  // AI Content Generation state
+  const [generatingContentForLesson, setGeneratingContentForLesson] = useState(null);
+
   // Track original form state for unsaved changes detection
   const originalFormRef = useRef(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -433,6 +436,66 @@ export default function CourseCreatorPage() {
     } catch (error) {
       console.error('Error deleting lesson:', error);
       toast.error('Error al eliminar la leccion');
+    }
+  };
+
+  // Generate content with AI
+  const handleGenerateContent = async (lesson, module) => {
+    if (generatingContentForLesson) {
+      toast.error('Ya hay una generacion en progreso');
+      return;
+    }
+
+    setGeneratingContentForLesson(lesson.id);
+    toast.loading('Generando contenido con IA...', { id: 'ai-content' });
+
+    try {
+      const response = await csrfFetch(`${API_BASE}/ai/generate-lesson-content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId: lesson.id,
+          lessonTitle: lesson.title,
+          lessonType: lesson.content_type || 'text',
+          courseTitle: course?.title || 'Curso',
+          moduleTitle: module?.title || 'Modulo',
+          level: course?.level || 'Principiante'
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate content');
+      }
+
+      const data = await response.json();
+      toast.success('Contenido generado exitosamente!', { id: 'ai-content' });
+
+      // Update lesson in local state with new content
+      setModules(modules.map(m => {
+        if (m.id === module.id) {
+          return {
+            ...m,
+            lessons: m.lessons.map(l => {
+              if (l.id === lesson.id) {
+                return { ...l, content: data.content };
+              }
+              return l;
+            })
+          };
+        }
+        return m;
+      }));
+
+      // Open content modal to show/edit the generated content
+      setSelectedLessonId(lesson.id);
+      setContentForm({ type: lesson.content_type || 'text', content: { text: data.content } });
+      setShowContentModal(true);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast.error(error.message || 'Error al generar contenido', { id: 'ai-content' });
+    } finally {
+      setGeneratingContentForLesson(null);
     }
   };
 
@@ -921,6 +984,21 @@ export default function CourseCreatorPage() {
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleGenerateContent(lesson, module)}
+                                    disabled={generatingContentForLesson === lesson.id}
+                                    className={`p-1.5 transition-colors ${
+                                      generatingContentForLesson === lesson.id
+                                        ? 'text-yellow-500 animate-pulse'
+                                        : 'text-gray-400 hover:text-yellow-600'
+                                    }`}
+                                    title={generatingContentForLesson === lesson.id ? 'Generando...' : 'Generar contenido con IA'}
+                                    aria-label={`Generar contenido con IA para ${lesson.title}`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                   </button>
                                   <button

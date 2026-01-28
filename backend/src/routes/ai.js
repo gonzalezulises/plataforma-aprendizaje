@@ -1,6 +1,6 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
-import { generateLessonContent, isClaudeConfigured } from '../lib/claude.js';
+import { generateLessonContent, isClaudeConfigured, getAIProvider } from '../lib/claude.js';
 
 const router = express.Router();
 
@@ -9,8 +9,10 @@ const router = express.Router();
  * Check if AI content generation is available
  */
 router.get('/status', (req, res) => {
+  const provider = getAIProvider();
   res.json({
-    claudeConfigured: isClaudeConfigured(),
+    configured: isClaudeConfigured(),
+    provider: provider, // 'local', 'anthropic', or null
     features: {
       lessonContent: isClaudeConfigured(),
       quizGeneration: true, // Uses templates

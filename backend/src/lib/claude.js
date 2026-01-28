@@ -1,37 +1,109 @@
 /**
- * Claude AI Client for Content Generation
- * Uses Anthropic SDK to generate educational content
+ * AI Client for Content Generation
+ * Supports both local models (DGX/Ollama/vLLM) and Anthropic Claude API
+ *
+ * Configuration:
+ * - LOCAL_LLM_URL: URL for local OpenAI-compatible API (e.g., http://dgx:8000/v1)
+ * - LOCAL_LLM_MODEL: Model name for local LLM (default: 'default')
+ * - ANTHROPIC_API_KEY: Anthropic API key (fallback if local not configured)
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL; // e.g., http://dgx:8000/v1
+const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'default';
+const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed'; // Some local APIs require a dummy key
 
-let client = null;
+let anthropicClient = null;
 
 /**
- * Get or create Claude client
+ * Determine which AI provider to use
+ * Priority: Local LLM > Anthropic
+ */
+export function getAIProvider() {
+  if (LOCAL_LLM_URL) {
+    return 'local';
+  }
+  if (ANTHROPIC_API_KEY) {
+    return 'anthropic';
+  }
+  return null;
+}
+
+/**
+ * Get or create Anthropic client
  */
 export function getClaudeClient() {
   if (!ANTHROPIC_API_KEY) {
-    console.warn('[Claude] ANTHROPIC_API_KEY not configured. AI content generation will not work.');
     return null;
   }
 
-  if (!client) {
-    client = new Anthropic({
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
       apiKey: ANTHROPIC_API_KEY,
     });
   }
 
-  return client;
+  return anthropicClient;
 }
 
 /**
- * Check if Claude is configured
+ * Check if AI is configured (either local or Anthropic)
  */
 export function isClaudeConfigured() {
-  return !!ANTHROPIC_API_KEY;
+  return !!(LOCAL_LLM_URL || ANTHROPIC_API_KEY);
+}
+
+/**
+ * Call local LLM with OpenAI-compatible API
+ */
+async function callLocalLLM(systemPrompt, userPrompt) {
+  const response = await fetch(`${LOCAL_LLM_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${LOCAL_LLM_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: LOCAL_LLM_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: 4096,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Local LLM error: ${response.status} - ${error}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || '';
+}
+
+/**
+ * Call Anthropic Claude API
+ */
+async function callAnthropic(systemPrompt, userPrompt) {
+  const claude = getClaudeClient();
+  if (!claude) {
+    throw new Error('Anthropic client not configured');
+  }
+
+  const message = await claude.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [
+      { role: 'user', content: userPrompt }
+    ]
+  });
+
+  return message.content[0]?.text || '';
 }
 
 /**
@@ -55,10 +127,10 @@ export async function generateLessonContent({
   targetAudience = '',
   context = ''
 }) {
-  const claude = getClaudeClient();
+  const provider = getAIProvider();
 
-  if (!claude) {
-    return { content: null, error: 'Claude API not configured' };
+  if (!provider) {
+    return { content: null, error: 'No AI provider configured. Set LOCAL_LLM_URL or ANTHROPIC_API_KEY.' };
   }
 
   try {
@@ -73,24 +145,20 @@ export async function generateLessonContent({
       context
     });
 
-    console.log('[Claude] Generating content for:', lessonTitle);
+    console.log(`[AI] Generating content for: ${lessonTitle} (provider: ${provider})`);
 
-    const message = await claude.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [
-        { role: 'user', content: userPrompt }
-      ]
-    });
+    let content;
+    if (provider === 'local') {
+      content = await callLocalLLM(systemPrompt, userPrompt);
+    } else {
+      content = await callAnthropic(systemPrompt, userPrompt);
+    }
 
-    const content = message.content[0]?.text || '';
-
-    console.log('[Claude] Content generated successfully, length:', content.length);
+    console.log(`[AI] Content generated successfully, length: ${content.length}`);
 
     return { content, error: null };
   } catch (error) {
-    console.error('[Claude] Error generating content:', error);
+    console.error('[AI] Error generating content:', error);
     return { content: null, error: error.message };
   }
 }
@@ -193,6 +261,7 @@ function buildUserPrompt({
 
 export default {
   getClaudeClient,
+  getAIProvider,
   isClaudeConfigured,
   generateLessonContent,
 };
