@@ -1,6 +1,6 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
-import { generateLessonContent, isClaudeConfigured, getAIProvider } from '../lib/claude.js';
+import { generateLessonContent, isClaudeConfigured, getAIProvider, queryCerebroRAG, isCerebroRAGAvailable, isLocalLLMAvailable } from '../lib/claude.js';
 
 const router = express.Router();
 
@@ -8,22 +8,73 @@ const router = express.Router();
  * GET /api/ai/status
  * Check if AI content generation is available
  */
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   const provider = getAIProvider();
+  const [ragAvailable, llmAvailable] = await Promise.all([
+    isCerebroRAGAvailable(),
+    provider === 'local' ? isLocalLLMAvailable() : Promise.resolve(false)
+  ]);
+
   res.json({
     configured: isClaudeConfigured(),
     provider: provider, // 'local', 'anthropic', or null
+    providerDetails: provider === 'local' ? {
+      model: process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4',
+      url: process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1',
+      available: llmAvailable
+    } : null,
+    rag: {
+      available: ragAvailable,
+      url: process.env.CEREBRO_RAG_URL || 'http://100.116.242.33:8002',
+      description: 'Cerebro-RAG: 128 Data Science books indexed (454,272 chunks)'
+    },
     features: {
-      lessonContent: isClaudeConfigured(),
-      quizGeneration: true, // Uses templates
-      courseStructure: true // Uses templates
+      lessonContent: isClaudeConfigured() && (llmAvailable || provider === 'anthropic'),
+      ragEnhanced: ragAvailable,
+      quizGeneration: true,
+      courseStructure: true
     }
   });
 });
 
 /**
+ * POST /api/ai/rag/search
+ * Search Cerebro-RAG directly for knowledge retrieval
+ */
+router.post('/rag/search', async (req, res) => {
+  try {
+    const { query, topK = 5 } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ error: 'query is required' });
+    }
+
+    const { context, sources, error } = await queryCerebroRAG(query, topK);
+
+    if (error) {
+      return res.status(503).json({
+        error: 'RAG search failed',
+        details: error
+      });
+    }
+
+    res.json({
+      success: true,
+      results: sources.map((s, i) => ({
+        ...s,
+        snippet: context.split('\n\n---\n\n')[i]?.substring(0, 500) + '...'
+      })),
+      totalResults: sources.length
+    });
+  } catch (error) {
+    console.error('[RAG] Search error:', error);
+    res.status(500).json({ error: 'RAG search failed' });
+  }
+});
+
+/**
  * POST /api/ai/generate-lesson-content
- * Generate content for a lesson using Claude AI
+ * Generate content for a lesson using AI with optional RAG enhancement
  */
 router.post('/generate-lesson-content', async (req, res) => {
   try {
@@ -35,7 +86,8 @@ router.post('/generate-lesson-content', async (req, res) => {
       moduleTitle,
       level = 'Principiante',
       targetAudience,
-      context
+      context,
+      useRAG = true // Enable RAG by default
     } = req.body;
 
     if (!lessonTitle) {
@@ -45,20 +97,22 @@ router.post('/generate-lesson-content', async (req, res) => {
     if (!isClaudeConfigured()) {
       return res.status(503).json({
         error: 'AI content generation not available',
-        message: 'ANTHROPIC_API_KEY not configured'
+        message: 'No AI provider configured (LOCAL_LLM_URL or ANTHROPIC_API_KEY required)'
       });
     }
 
-    console.log('[AI] Generating content for lesson:', lessonTitle);
+    const provider = getAIProvider();
+    console.log(`[AI] Generating content for lesson: ${lessonTitle} (provider: ${provider}, RAG: ${useRAG})`);
 
-    const { content, error } = await generateLessonContent({
+    const { content, sources, error } = await generateLessonContent({
       lessonTitle,
       lessonType,
       courseTitle: courseTitle || 'Curso',
       moduleTitle: moduleTitle || 'Modulo',
       level,
       targetAudience,
-      context
+      context,
+      useRAG
     });
 
     if (error) {
@@ -82,11 +136,15 @@ router.post('/generate-lesson-content', async (req, res) => {
     res.json({
       success: true,
       content,
+      sources: sources || [], // Books used as reference
       metadata: {
         generatedAt: new Date().toISOString(),
         lessonTitle,
         lessonType,
-        contentLength: content.length
+        contentLength: content.length,
+        provider,
+        ragUsed: useRAG && sources.length > 0,
+        sourcesCount: sources.length
       }
     });
   } catch (error) {

@@ -1,27 +1,31 @@
 /**
  * AI Client for Content Generation
  * Supports both local models (DGX/Ollama/vLLM) and Anthropic Claude API
+ * Integrates with Cerebro-RAG for knowledge retrieval from Data Science books
  *
  * Configuration:
- * - LOCAL_LLM_URL: URL for local OpenAI-compatible API (e.g., http://dgx:8000/v1)
- * - LOCAL_LLM_MODEL: Model name for local LLM (default: 'default')
+ * - LOCAL_LLM_URL: URL for local OpenAI-compatible API (e.g., http://100.116.242.33:8000/v1)
+ * - LOCAL_LLM_MODEL: Model name for local LLM (default: 'nvidia/Qwen3-14B-NVFP4')
  * - ANTHROPIC_API_KEY: Anthropic API key (fallback if local not configured)
+ * - CEREBRO_RAG_URL: URL for Cerebro-RAG API (e.g., http://100.116.242.33:8002)
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL; // e.g., http://dgx:8000/v1
-const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'default';
-const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed'; // Some local APIs require a dummy key
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1'; // DGX Spark vLLM
+const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
+const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
+const CEREBRO_RAG_URL = process.env.CEREBRO_RAG_URL || 'http://100.116.242.33:8002'; // Cerebro RAG proxy
 
 let anthropicClient = null;
 
 /**
  * Determine which AI provider to use
- * Priority: Local LLM > Anthropic
+ * Priority: Local LLM (DGX Spark) > Anthropic
  */
 export function getAIProvider() {
+  // Local LLM is now configured by default for DGX Spark
   if (LOCAL_LLM_URL) {
     return 'local';
   }
@@ -29,6 +33,101 @@ export function getAIProvider() {
     return 'anthropic';
   }
   return null;
+}
+
+/**
+ * Query Cerebro-RAG for relevant context from Data Science books
+ * Falls back gracefully if RAG service is unavailable
+ * @param {string} query - Search query
+ * @param {number} topK - Number of results (default: 5)
+ * @returns {Promise<{context: string, sources: Array, error: string|null}>}
+ */
+export async function queryCerebroRAG(query, topK = 5) {
+  try {
+    console.log(`[RAG] Querying Cerebro-RAG for: "${query.substring(0, 50)}..."`);
+
+    const response = await fetch(`${CEREBRO_RAG_URL}/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query,
+        top_k: topK,
+        use_rerank: true
+      }),
+      signal: AbortSignal.timeout(10000) // 10 second timeout (reduced for faster fallback)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn(`[RAG] Cerebro-RAG error: ${response.status} - ${errorText}`);
+      return { context: '', sources: [], error: `RAG error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+
+    if (results.length === 0) {
+      console.log('[RAG] No relevant results found');
+      return { context: '', sources: [], error: null };
+    }
+
+    // Format context from RAG results
+    const contextParts = results.map((r, i) => {
+      const book = r.book_title || r.metadata?.book || 'Unknown';
+      const chapter = r.chapter || r.metadata?.chapter || '';
+      return `[${i + 1}] ${book}${chapter ? ` - ${chapter}` : ''}:\n${r.content}`;
+    });
+
+    const sources = results.map(r => ({
+      book: r.book_title || r.metadata?.book || 'Unknown',
+      chapter: r.chapter || r.metadata?.chapter || '',
+      score: r.score || 0
+    }));
+
+    console.log(`[RAG] Found ${results.length} relevant chunks from ${new Set(sources.map(s => s.book)).size} books`);
+
+    return {
+      context: contextParts.join('\n\n---\n\n'),
+      sources,
+      error: null
+    };
+  } catch (error) {
+    console.warn('[RAG] Cerebro-RAG not available, proceeding without knowledge base:', error.message);
+    // Return empty context - generation will proceed without RAG
+    return { context: '', sources: [], error: error.message };
+  }
+}
+
+/**
+ * Check if Cerebro-RAG is available
+ */
+export async function isCerebroRAGAvailable() {
+  try {
+    const response = await fetch(`${CEREBRO_RAG_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000)
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if local LLM (DGX Spark) is available
+ */
+export async function isLocalLLMAvailable() {
+  try {
+    const response = await fetch(`${LOCAL_LLM_URL}/models`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000)
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -107,7 +206,7 @@ async function callAnthropic(systemPrompt, userPrompt) {
 }
 
 /**
- * Generate lesson content using Claude
+ * Generate lesson content using AI (local LLM or Anthropic)
  * @param {Object} params - Generation parameters
  * @param {string} params.lessonTitle - Title of the lesson
  * @param {string} params.lessonType - Type: text, code, notebook
@@ -116,7 +215,8 @@ async function callAnthropic(systemPrompt, userPrompt) {
  * @param {string} params.level - Difficulty level
  * @param {string} params.targetAudience - Target audience
  * @param {string} params.context - Additional context or RAG content
- * @returns {Promise<{content: string, error: string|null}>}
+ * @param {boolean} params.useRAG - Whether to use Cerebro-RAG for context (default: true)
+ * @returns {Promise<{content: string, sources: Array, error: string|null}>}
  */
 export async function generateLessonContent({
   lessonTitle,
@@ -125,13 +225,32 @@ export async function generateLessonContent({
   moduleTitle,
   level = 'Principiante',
   targetAudience = '',
-  context = ''
+  context = '',
+  useRAG = true
 }) {
   const provider = getAIProvider();
 
   if (!provider) {
-    return { content: null, error: 'No AI provider configured. Set LOCAL_LLM_URL or ANTHROPIC_API_KEY.' };
+    return { content: null, sources: [], error: 'No AI provider configured. Set LOCAL_LLM_URL or ANTHROPIC_API_KEY.' };
   }
+
+  let ragContext = '';
+  let sources = [];
+
+  // Query Cerebro-RAG for relevant context if enabled
+  if (useRAG) {
+    const ragQuery = `${lessonTitle} ${courseTitle} ${moduleTitle}`.trim();
+    const ragResult = await queryCerebroRAG(ragQuery, 5);
+
+    if (ragResult.context) {
+      ragContext = ragResult.context;
+      sources = ragResult.sources;
+      console.log(`[AI] Using RAG context from ${sources.length} sources`);
+    }
+  }
+
+  // Combine provided context with RAG context
+  const fullContext = [context, ragContext].filter(Boolean).join('\n\n---\n\n');
 
   try {
     const systemPrompt = buildSystemPrompt(lessonType);
@@ -142,10 +261,10 @@ export async function generateLessonContent({
       moduleTitle,
       level,
       targetAudience,
-      context
+      context: fullContext
     });
 
-    console.log(`[AI] Generating content for: ${lessonTitle} (provider: ${provider})`);
+    console.log(`[AI] Generating content for: ${lessonTitle} (provider: ${provider}, RAG: ${useRAG && sources.length > 0})`);
 
     let content;
     if (provider === 'local') {
@@ -156,10 +275,10 @@ export async function generateLessonContent({
 
     console.log(`[AI] Content generated successfully, length: ${content.length}`);
 
-    return { content, error: null };
+    return { content, sources, error: null };
   } catch (error) {
     console.error('[AI] Error generating content:', error);
-    return { content: null, error: error.message };
+    return { content: null, sources: [], error: error.message };
   }
 }
 
@@ -264,4 +383,7 @@ export default {
   getAIProvider,
   isClaudeConfigured,
   generateLessonContent,
+  queryCerebroRAG,
+  isCerebroRAGAvailable,
+  isLocalLLMAvailable,
 };
