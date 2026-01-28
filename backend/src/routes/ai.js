@@ -722,59 +722,79 @@ async function processBatchGeneration(batchId, courseId, course, lessons) {
       status: 'generating'
     });
 
-    try {
-      // Parse structure_4c if it's a string
-      let structure4c = null;
-      if (lesson.structure_4c) {
-        try {
-          structure4c = typeof lesson.structure_4c === 'string'
-            ? JSON.parse(lesson.structure_4c)
-            : lesson.structure_4c;
-        } catch (e) {
-          // Ignore parse errors
+    // Parse structure_4c if it's a string
+    let structure4c = null;
+    if (lesson.structure_4c) {
+      try {
+        structure4c = typeof lesson.structure_4c === 'string'
+          ? JSON.parse(lesson.structure_4c)
+          : lesson.structure_4c;
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+
+    // Retry logic: up to 2 attempts (1 retry) for transient LLM timeouts
+    const MAX_ATTEMPTS = 2;
+    let lastError = null;
+    let success = false;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      if (batch.cancelled) break;
+
+      try {
+        const { content, sources, error } = await generateLessonContent({
+          lessonTitle: lesson.title,
+          lessonType: lesson.content_type || 'text',
+          courseTitle: course.title,
+          moduleTitle: lesson.module_title,
+          level: course.level || 'Principiante',
+          targetAudience: '',
+          useRAG: true,
+          enhanced: true,
+          structure_4c: structure4c
+        });
+
+        if (error) {
+          throw new Error(error);
+        }
+
+        // Save content to lesson_content table
+        saveLessonContent(lesson.id, lesson.content_type, content);
+
+        batch.completed++;
+        success = true;
+
+        // Broadcast: completed
+        emitGlobalBroadcast({
+          type: 'batch_content_progress',
+          batchId,
+          courseId,
+          currentLesson: i + 1,
+          totalLessons: lessons.length,
+          lessonId: lesson.id,
+          lessonTitle: lesson.title,
+          moduleTitle: lesson.module_title,
+          status: 'completed',
+          contentLength: content.length
+        });
+
+        console.log(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} completed - ${lesson.title} (${content.length} chars)`);
+        break; // Success, exit retry loop
+
+      } catch (err) {
+        lastError = err;
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn(`[AI] Batch ${batchId}: Lesson ${i + 1} attempt ${attempt} failed, retrying... (${err.message})`);
+          // Brief pause before retry
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
+    }
 
-      const { content, sources, error } = await generateLessonContent({
-        lessonTitle: lesson.title,
-        lessonType: lesson.content_type || 'text',
-        courseTitle: course.title,
-        moduleTitle: lesson.module_title,
-        level: course.level || 'Principiante',
-        targetAudience: '',
-        useRAG: true,
-        enhanced: true,
-        structure_4c: structure4c
-      });
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      // Save content to lesson_content table
-      saveLessonContent(lesson.id, lesson.content_type, content);
-
-      batch.completed++;
-
-      // Broadcast: completed
-      emitGlobalBroadcast({
-        type: 'batch_content_progress',
-        batchId,
-        courseId,
-        currentLesson: i + 1,
-        totalLessons: lessons.length,
-        lessonId: lesson.id,
-        lessonTitle: lesson.title,
-        moduleTitle: lesson.module_title,
-        status: 'completed',
-        contentLength: content.length
-      });
-
-      console.log(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} completed - ${lesson.title} (${content.length} chars)`);
-
-    } catch (err) {
+    if (!success && !batch.cancelled) {
       batch.failed++;
-      batch.errors.push({ lessonId: lesson.id, lessonTitle: lesson.title, error: err.message });
+      batch.errors.push({ lessonId: lesson.id, lessonTitle: lesson.title, error: lastError?.message || 'Unknown error' });
 
       // Broadcast: failed, continue with next
       emitGlobalBroadcast({
@@ -787,10 +807,10 @@ async function processBatchGeneration(batchId, courseId, course, lessons) {
         lessonTitle: lesson.title,
         moduleTitle: lesson.module_title,
         status: 'failed',
-        error: err.message
+        error: lastError?.message || 'Unknown error'
       });
 
-      console.error(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} failed - ${lesson.title}:`, err.message);
+      console.error(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} failed - ${lesson.title}:`, lastError?.message);
     }
   }
 
