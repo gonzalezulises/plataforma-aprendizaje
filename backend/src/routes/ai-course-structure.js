@@ -7,7 +7,7 @@ import { queryCerebroRAG, isClaudeConfigured, getAIProvider } from '../lib/claud
 const router = express.Router();
 
 // LLM Configuration - match defaults from claude.js
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1';
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://localhost:8000/v1';
 const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
 const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;

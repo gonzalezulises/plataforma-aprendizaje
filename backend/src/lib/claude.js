@@ -4,7 +4,7 @@
  * Integrates with Cerebro-RAG for knowledge retrieval from Data Science books
  *
  * Configuration:
- * - LOCAL_LLM_URL: URL for local OpenAI-compatible API (e.g., http://100.116.242.33:8000/v1)
+ * - LOCAL_LLM_URL: URL for local OpenAI-compatible API (e.g., http://localhost:8000/v1)
  * - LOCAL_LLM_MODEL: Model name for local LLM (default: 'nvidia/Qwen3-14B-NVFP4')
  * - ANTHROPIC_API_KEY: Anthropic API key (fallback if local not configured)
  * - CEREBRO_RAG_URL: URL for Cerebro-RAG API (e.g., http://localhost:8001)
@@ -13,7 +13,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1'; // DGX Spark vLLM
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://localhost:8000/v1'; // DGX Spark vLLM (localhost when running on DGX)
 const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
 const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
 const CEREBRO_RAG_URL = process.env.CEREBRO_RAG_URL || 'http://localhost:8001'; // Cerebro RAG proxy
