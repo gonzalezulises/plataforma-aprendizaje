@@ -1,7 +1,97 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
+import { generateLessonContent, isClaudeConfigured } from '../lib/claude.js';
 
 const router = express.Router();
+
+/**
+ * GET /api/ai/status
+ * Check if AI content generation is available
+ */
+router.get('/status', (req, res) => {
+  res.json({
+    claudeConfigured: isClaudeConfigured(),
+    features: {
+      lessonContent: isClaudeConfigured(),
+      quizGeneration: true, // Uses templates
+      courseStructure: true // Uses templates
+    }
+  });
+});
+
+/**
+ * POST /api/ai/generate-lesson-content
+ * Generate content for a lesson using Claude AI
+ */
+router.post('/generate-lesson-content', async (req, res) => {
+  try {
+    const {
+      lessonId,
+      lessonTitle,
+      lessonType = 'text',
+      courseTitle,
+      moduleTitle,
+      level = 'Principiante',
+      targetAudience,
+      context
+    } = req.body;
+
+    if (!lessonTitle) {
+      return res.status(400).json({ error: 'lessonTitle is required' });
+    }
+
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({
+        error: 'AI content generation not available',
+        message: 'ANTHROPIC_API_KEY not configured'
+      });
+    }
+
+    console.log('[AI] Generating content for lesson:', lessonTitle);
+
+    const { content, error } = await generateLessonContent({
+      lessonTitle,
+      lessonType,
+      courseTitle: courseTitle || 'Curso',
+      moduleTitle: moduleTitle || 'Modulo',
+      level,
+      targetAudience,
+      context
+    });
+
+    if (error) {
+      console.error('[AI] Content generation error:', error);
+      return res.status(500).json({ error: 'Failed to generate content', details: error });
+    }
+
+    // If lessonId provided, optionally save to database
+    if (lessonId) {
+      const lesson = queryOne('SELECT * FROM lessons WHERE id = ?', [lessonId]);
+      if (lesson) {
+        run('UPDATE lessons SET content = ?, updated_at = ? WHERE id = ?', [
+          content,
+          new Date().toISOString(),
+          lessonId
+        ]);
+        console.log('[AI] Content saved to lesson:', lessonId);
+      }
+    }
+
+    res.json({
+      success: true,
+      content,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        lessonTitle,
+        lessonType,
+        contentLength: content.length
+      }
+    });
+  } catch (error) {
+    console.error('[AI] Error in generate-lesson-content:', error);
+    res.status(500).json({ error: 'Failed to generate lesson content' });
+  }
+});
 
 /**
  * POST /api/ai/generate-quiz
