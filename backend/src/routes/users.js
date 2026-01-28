@@ -914,13 +914,16 @@ router.get('/:id/submissions', (req, res) => {
 /**
  * POST /api/users/admin/set-role
  * Admin endpoint to update user role
- * Requires admin secret key for security
+ * Requires ADMIN_SECRET_KEY environment variable
  */
 router.post('/admin/set-role', (req, res) => {
   const { email, role, adminKey } = req.body;
 
-  // Verify admin key (use environment variable in production)
-  const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || 'rizoma-admin-2024';
+  // Verify admin key - MUST be set in environment variables
+  const ADMIN_KEY = process.env.ADMIN_SECRET_KEY;
+  if (!ADMIN_KEY) {
+    return res.status(500).json({ success: false, error: 'Admin key not configured' });
+  }
   if (adminKey !== ADMIN_KEY) {
     return res.status(403).json({ success: false, error: 'Invalid admin key' });
   }
