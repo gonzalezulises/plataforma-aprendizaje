@@ -1,14 +1,16 @@
 import express from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 import { queryOne, run } from '../config/database.js';
 import { addStructure4CToTemplate } from '../utils/pedagogical4C.js';
 import { queryCerebroRAG, isClaudeConfigured, getAIProvider } from '../lib/claude.js';
 
 const router = express.Router();
 
-// LLM Configuration
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1';
+// LLM Configuration - only use local when explicitly configured
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL;
 const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
 const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 /**
  * Clean thinking blocks from Qwen3 model responses
@@ -19,9 +21,29 @@ function cleanThinkingBlocks(content) {
 }
 
 /**
+ * Call Anthropic Claude API
+ */
+async function callAnthropicForStructure(systemPrompt, userPrompt) {
+  if (!ANTHROPIC_API_KEY) {
+    throw new Error('Anthropic API key not configured');
+  }
+
+  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }]
+  });
+
+  return message.content[0]?.text || '';
+}
+
+/**
  * Call local LLM for course structure generation
  */
-async function callLLMForStructure(systemPrompt, userPrompt) {
+async function callLocalLLMForStructure(systemPrompt, userPrompt) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for structure
 
@@ -60,6 +82,22 @@ async function callLLMForStructure(systemPrompt, userPrompt) {
       throw new Error('LLM request timed out');
     }
     throw error;
+  }
+}
+
+/**
+ * Call LLM for structure - uses local if configured, otherwise Anthropic
+ */
+async function callLLMForStructure(systemPrompt, userPrompt) {
+  const provider = getAIProvider();
+  console.log(`[AI Structure] Using provider: ${provider}`);
+
+  if (provider === 'local') {
+    return callLocalLLMForStructure(systemPrompt, userPrompt);
+  } else if (provider === 'anthropic') {
+    return callAnthropicForStructure(systemPrompt, userPrompt);
+  } else {
+    throw new Error('No AI provider configured');
   }
 }
 

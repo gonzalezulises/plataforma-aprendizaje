@@ -13,10 +13,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1'; // DGX Spark vLLM
+// Local LLM only used when explicitly configured (for local development with DGX Spark)
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL; // e.g., http://100.116.242.33:8000/v1
 const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
 const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
-const CEREBRO_RAG_URL = process.env.CEREBRO_RAG_URL || 'http://100.116.242.33:8002'; // Cerebro RAG proxy
+// Cerebro RAG only used when explicitly configured
+const CEREBRO_RAG_URL = process.env.CEREBRO_RAG_URL; // e.g., http://100.116.242.33:8002
 
 let anthropicClient = null;
 
