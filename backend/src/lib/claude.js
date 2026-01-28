@@ -155,33 +155,64 @@ export function isClaudeConfigured() {
 }
 
 /**
+ * Clean thinking blocks from Qwen3 model responses
+ * Qwen3 outputs <think>...</think> blocks before the actual response
+ */
+function cleanThinkingBlocks(content) {
+  if (!content) return '';
+  // Remove <think>...</think> blocks (including multiline)
+  return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
+}
+
+/**
  * Call local LLM with OpenAI-compatible API
+ * Includes timeout and response cleaning for Qwen3 model
  */
 async function callLocalLLM(systemPrompt, userPrompt) {
-  const response = await fetch(`${LOCAL_LLM_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LOCAL_LLM_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: LOCAL_LLM_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 4096,
-      temperature: 0.7
-    })
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Local LLM error: ${response.status} - ${error}`);
+  try {
+    const response = await fetch(`${LOCAL_LLM_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOCAL_LLM_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: LOCAL_LLM_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4096,
+        temperature: 0.7
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Local LLM error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices[0]?.message?.content || '';
+
+    // Clean thinking blocks from Qwen3 responses
+    const cleanedContent = cleanThinkingBlocks(rawContent);
+    console.log(`[AI] LLM response cleaned: ${rawContent.length} -> ${cleanedContent.length} chars`);
+
+    return cleanedContent;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('LLM request timed out after 2 minutes');
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || '';
 }
 
 /**
@@ -289,12 +320,15 @@ function buildSystemPrompt(lessonType) {
   const basePrompt = `Eres un experto creador de contenido educativo para una plataforma de aprendizaje en linea.
 Tu objetivo es crear contenido claro, practico y atractivo que ayude a los estudiantes a aprender efectivamente.
 
+IMPORTANTE: Responde directamente con el contenido solicitado. No incluyas explicaciones previas ni razonamientos.
+
 Directrices:
 - Escribe en espanol
 - Usa un tono amigable pero profesional
 - Incluye ejemplos practicos
-- Estructura el contenido de forma clara
-- Adapta el nivel de complejidad al publico objetivo`;
+- Estructura el contenido de forma clara con Markdown
+- Adapta el nivel de complejidad al publico objetivo
+- Mantén el contenido conciso pero completo (800-1500 palabras)`;
 
   const typeSpecificPrompts = {
     text: `${basePrompt}

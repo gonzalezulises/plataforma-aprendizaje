@@ -26,6 +26,8 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
   // Generated structure state
   const [generatedStructure, setGeneratedStructure] = useState(null);
   const [editingModuleIndex, setEditingModuleIndex] = useState(null);
+  const [ragSources, setRagSources] = useState([]);
+  const [generationMetadata, setGenerationMetadata] = useState(null);
 
   const handleGenerate = async () => {
     if (!topic.trim()) {
@@ -59,8 +61,12 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
 
       const data = await response.json();
       setGeneratedStructure(data.structure);
+      setRagSources(data.sources || []);
+      setGenerationMetadata(data.metadata || null);
       setStep(2);
-      toast.success(`Se generaron ${data.structure.modules.length} modulos`);
+
+      const sourcesMsg = data.sources?.length > 0 ? ` usando ${data.sources.length} fuentes` : '';
+      toast.success(`Se generaron ${data.structure.modules.length} modulos${sourcesMsg}`);
     } catch (error) {
       console.error('Error generating structure:', error);
       toast.error(error.message || 'Error al generar la estructura');
@@ -138,6 +144,8 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
     setTargetAudience('');
     setGeneratedStructure(null);
     setEditingModuleIndex(null);
+    setRagSources([]);
+    setGenerationMetadata(null);
     onClose();
   };
 
@@ -275,14 +283,14 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
                   <svg className="w-6 h-6 text-green-600 dark:text-green-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-medium text-green-800 dark:text-green-300">
                       {generatedStructure.suggestedTitle}
                     </h3>
                     <p className="text-sm text-green-700 dark:text-green-400 mt-1">
                       {generatedStructure.suggestedDescription}
                     </p>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-green-600 dark:text-green-500">
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-green-600 dark:text-green-500">
                       <span>📚 {generatedStructure.modules.length} modulos</span>
                       <span>⏱️ ~{generatedStructure.estimatedDurationHours} horas</span>
                       <span>🎯 {generatedStructure.level}</span>
@@ -290,6 +298,29 @@ export default function AICourseStructureModal({ isOpen, onClose, courseId, onSt
                   </div>
                 </div>
               </div>
+
+              {/* RAG Sources Info */}
+              {ragSources.length > 0 && (
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                      Generado con IA + RAG
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-600 dark:text-purple-400">
+                    Fuentes consultadas: {ragSources.map(s => s.book).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3).join(', ')}
+                    {ragSources.length > 3 && ` y ${ragSources.length - 3} más`}
+                  </p>
+                  {generationMetadata?.provider && (
+                    <p className="text-xs text-purple-500 dark:text-purple-500 mt-1">
+                      Modelo: {generationMetadata.provider === 'local' ? 'DGX Spark (Qwen3-14B)' : 'Claude'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Learning Objectives */}
               <div>

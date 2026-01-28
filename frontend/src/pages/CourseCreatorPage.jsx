@@ -79,6 +79,14 @@ export default function CourseCreatorPage() {
   // AI Content Generation state
   const [generatingContentForLesson, setGeneratingContentForLesson] = useState(null);
 
+  // AI Objectives Generation state
+  const [generatingObjectives, setGeneratingObjectives] = useState(false);
+  const [generatedObjectives, setGeneratedObjectives] = useState([]);
+  const [objectivesSources, setObjectivesSources] = useState([]);
+
+  // AI Description Generation state
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+
   // Track original form state for unsaved changes detection
   const originalFormRef = useRef(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -530,6 +538,89 @@ export default function CourseCreatorPage() {
     }
   };
 
+  // Generate objectives with AI
+  const handleGenerateObjectives = async () => {
+    if (!courseForm.title.trim()) {
+      toast.error('Primero ingresa el titulo del curso');
+      return;
+    }
+
+    setGeneratingObjectives(true);
+    toast.loading('Generando objetivos con IA...', { id: 'ai-objectives' });
+
+    try {
+      const response = await csrfFetch(`${API_BASE}/ai/generate-course-objectives`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: courseForm.title,
+          level: courseForm.level,
+          targetAudience: courseForm.category
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error al generar objetivos');
+      }
+
+      const data = await response.json();
+      setGeneratedObjectives(data.objectives || []);
+      setObjectivesSources(data.sources || []);
+
+      toast.success(`${data.objectives?.length || 0} objetivos generados!`, { id: 'ai-objectives' });
+    } catch (error) {
+      console.error('Error generating objectives:', error);
+      toast.error(error.message || 'Error al generar objetivos', { id: 'ai-objectives' });
+    } finally {
+      setGeneratingObjectives(false);
+    }
+  };
+
+  // Generate description with AI
+  const handleGenerateDescription = async () => {
+    if (!courseForm.title.trim()) {
+      toast.error('Primero ingresa el titulo del curso');
+      return;
+    }
+
+    setGeneratingDescription(true);
+    toast.loading('Generando descripcion con IA...', { id: 'ai-description' });
+
+    try {
+      const response = await csrfFetch(`${API_BASE}/ai/generate-course-description`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: courseForm.title,
+          level: courseForm.level,
+          targetAudience: courseForm.category,
+          objectives: generatedObjectives.length > 0 ? generatedObjectives : undefined
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error al generar descripcion');
+      }
+
+      const data = await response.json();
+
+      // Update form with generated description
+      setCourseForm(prev => ({
+        ...prev,
+        description: data.description || prev.description
+      }));
+
+      toast.success('Descripcion generada!', { id: 'ai-description' });
+    } catch (error) {
+      console.error('Error generating description:', error);
+      toast.error(error.message || 'Error al generar descripcion', { id: 'ai-description' });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
   // Publish course
   const handlePublish = async () => {
     if (!course) return;
@@ -727,9 +818,34 @@ export default function CourseCreatorPage() {
 
               {/* Description */}
               <div>
-                <label htmlFor="course-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Descripcion
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="course-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Descripcion
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription || !courseForm.title.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1 text-sm bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generatingDescription ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Generando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Generar con IA</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <textarea
                   id="course-description"
                   value={courseForm.description}
@@ -738,6 +854,68 @@ export default function CourseCreatorPage() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Describe tu curso..."
                 />
+              </div>
+
+              {/* AI Learning Objectives Section */}
+              <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    <h3 className="font-medium text-purple-800 dark:text-purple-300">Objetivos de Aprendizaje (IA)</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateObjectives}
+                    disabled={generatingObjectives || !courseForm.title.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generatingObjectives ? (
+                      <>
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Generando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Generar Objetivos</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {generatedObjectives.length > 0 ? (
+                  <div className="space-y-2">
+                    <ul className="space-y-2">
+                      {generatedObjectives.map((objective, index) => (
+                        <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <span className="text-purple-600 dark:text-purple-400 font-medium mt-0.5">{index + 1}.</span>
+                          <span>{objective}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {objectivesSources.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-700">
+                        <p className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          Fuentes: {objectivesSources.map(s => s.book).join(', ')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                    Genera objetivos de aprendizaje automaticamente usando IA y la base de conocimiento de 128 libros de Data Science.
+                  </p>
+                )}
               </div>
 
               {/* Category & Level */}

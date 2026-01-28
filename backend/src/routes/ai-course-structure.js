@@ -1,14 +1,93 @@
 import express from 'express';
 import { queryOne, run } from '../config/database.js';
 import { addStructure4CToTemplate } from '../utils/pedagogical4C.js';
+import { queryCerebroRAG, isClaudeConfigured, getAIProvider } from '../lib/claude.js';
 
 const router = express.Router();
 
+// LLM Configuration
+const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1';
+const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
+const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
+
+/**
+ * Clean thinking blocks from Qwen3 model responses
+ */
+function cleanThinkingBlocks(content) {
+  if (!content) return '';
+  return content.replace(/<think>[\s\S]*?<\/think>\s*/gi, '').trim();
+}
+
+/**
+ * Call local LLM for course structure generation
+ */
+async function callLLMForStructure(systemPrompt, userPrompt) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout for structure
+
+  try {
+    const response = await fetch(`${LOCAL_LLM_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOCAL_LLM_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: LOCAL_LLM_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 4096,
+        temperature: 0.7
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`LLM error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices[0]?.message?.content || '';
+    return cleanThinkingBlocks(rawContent);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('LLM request timed out');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Parse JSON from LLM response (handles markdown code blocks)
+ */
+function parseJSONFromLLM(content) {
+  // Try to extract JSON from markdown code block
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const jsonStr = jsonMatch ? jsonMatch[1].trim() : content.trim();
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    // Try to find JSON object in the content
+    const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+      return JSON.parse(objectMatch[0]);
+    }
+    throw new Error('Could not parse JSON from LLM response');
+  }
+}
+
 /**
  * POST /generate-course-structure
- * Generate course structure based on topic and goals
+ * Generate course structure using LLM + RAG
  */
-router.post('/generate-course-structure', (req, res) => {
+router.post('/generate-course-structure', async (req, res) => {
   try {
     const { topic, goals, level = 'Principiante', targetAudience } = req.body;
 
@@ -16,7 +95,95 @@ router.post('/generate-course-structure', (req, res) => {
       return res.status(400).json({ error: 'Topic is required' });
     }
 
-    let structure = generateCourseStructure(topic, goals, level, targetAudience);
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({ error: 'AI not configured' });
+    }
+
+    console.log(`[AI Structure] Generating structure for: ${topic} (level: ${level})`);
+
+    // Query RAG for relevant context
+    let ragContext = '';
+    let sources = [];
+
+    const ragQuery = `${topic} ${goals || ''} curso estructura modulos lecciones`;
+    const ragResult = await queryCerebroRAG(ragQuery, 5);
+
+    if (ragResult.context) {
+      ragContext = ragResult.context;
+      sources = ragResult.sources;
+      console.log(`[AI Structure] Using RAG context from ${sources.length} sources`);
+    }
+
+    // Build prompts for LLM
+    const systemPrompt = `Eres un experto disenador instruccional que crea estructuras de cursos educativos.
+Tu tarea es generar una estructura de curso completa y bien organizada.
+
+IMPORTANTE: Responde SOLO con un objeto JSON valido, sin explicaciones adicionales.
+
+El JSON debe tener exactamente esta estructura:
+{
+  "suggestedTitle": "Titulo del curso",
+  "suggestedDescription": "Descripcion breve del curso (2-3 oraciones)",
+  "learningObjectives": ["Objetivo 1", "Objetivo 2", "Objetivo 3", "Objetivo 4", "Objetivo 5"],
+  "level": "Principiante|Intermedio|Avanzado",
+  "estimatedDurationHours": 8,
+  "modules": [
+    {
+      "title": "Titulo del modulo",
+      "description": "Descripcion del modulo",
+      "bloom_objective": "recordar|comprender|aplicar|analizar|evaluar|crear",
+      "lessons": [
+        {
+          "title": "Titulo de la leccion",
+          "content_type": "text|code|video|notebook|challenge",
+          "duration_minutes": 15
+        }
+      ]
+    }
+  ]
+}
+
+Directrices:
+- Genera entre 3-5 modulos
+- Cada modulo debe tener entre 3-5 lecciones
+- Los objetivos de Bloom deben progresar (recordar -> crear)
+- Incluye variedad de tipos de contenido
+- La duracion de lecciones: text (10-20min), code (15-25min), video (10-20min), notebook (20-30min), challenge (20-30min)`;
+
+    let userPrompt = `Genera la estructura para un curso sobre: ${topic}
+
+Nivel: ${level}`;
+
+    if (goals) {
+      userPrompt += `\n\nObjetivos de aprendizaje deseados:\n${goals}`;
+    }
+
+    if (targetAudience) {
+      userPrompt += `\n\nAudiencia objetivo: ${targetAudience}`;
+    }
+
+    if (ragContext) {
+      userPrompt += `\n\nInformacion de referencia de libros especializados:\n${ragContext.substring(0, 3000)}`;
+    }
+
+    userPrompt += '\n\nGenera el JSON de la estructura del curso:';
+
+    // Call LLM
+    const llmResponse = await callLLMForStructure(systemPrompt, userPrompt);
+
+    // Parse JSON response
+    let structure;
+    try {
+      structure = parseJSONFromLLM(llmResponse);
+    } catch (parseError) {
+      console.error('[AI Structure] Failed to parse LLM response:', parseError);
+      console.log('[AI Structure] Raw response:', llmResponse.substring(0, 500));
+      // Fallback to template
+      structure = getFallbackStructure(topic, level);
+    }
+
+    // Ensure level is set correctly
+    structure.level = level;
 
     // Add 4C pedagogical structure to all lessons
     structure = addStructure4CToTemplate(structure, topic);
@@ -24,15 +191,187 @@ router.post('/generate-course-structure', (req, res) => {
     res.json({
       success: true,
       structure,
+      sources: sources.map(s => ({ book: s.book, chapter: s.chapter })),
       metadata: {
         generatedAt: new Date().toISOString(),
         topic,
-        level
+        level,
+        provider: getAIProvider(),
+        ragUsed: sources.length > 0,
+        sourcesCount: sources.length
       }
     });
   } catch (error) {
-    console.error('Error generating course structure:', error);
-    res.status(500).json({ error: 'Failed to generate course structure' });
+    console.error('[AI Structure] Error generating course structure:', error);
+    res.status(500).json({
+      error: 'Failed to generate course structure',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /generate-course-objectives
+ * Generate learning objectives using LLM + RAG
+ */
+router.post('/generate-course-objectives', async (req, res) => {
+  try {
+    const { topic, level = 'Principiante', targetAudience, count = 5 } = req.body;
+
+    if (!topic) {
+      return res.status(400).json({ error: 'Topic is required' });
+    }
+
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({ error: 'AI not configured' });
+    }
+
+    console.log(`[AI Objectives] Generating objectives for: ${topic}`);
+
+    // Query RAG for context
+    let ragContext = '';
+    let sources = [];
+
+    const ragResult = await queryCerebroRAG(`${topic} objetivos aprendizaje competencias`, 3);
+    if (ragResult.context) {
+      ragContext = ragResult.context;
+      sources = ragResult.sources;
+    }
+
+    const systemPrompt = `Eres un experto en diseno instruccional.
+Genera objetivos de aprendizaje claros y medibles usando la taxonomia de Bloom.
+
+IMPORTANTE: Responde SOLO con un array JSON de strings, sin explicaciones.
+
+Ejemplo: ["Objetivo 1", "Objetivo 2", "Objetivo 3"]
+
+Los objetivos deben:
+- Comenzar con un verbo de accion (Comprender, Aplicar, Analizar, Crear, etc.)
+- Ser especificos y medibles
+- Progresar en complejidad cognitiva`;
+
+    let userPrompt = `Genera ${count} objetivos de aprendizaje para un curso de ${topic} nivel ${level}.`;
+
+    if (targetAudience) {
+      userPrompt += `\nAudiencia: ${targetAudience}`;
+    }
+
+    if (ragContext) {
+      userPrompt += `\n\nContexto de referencia:\n${ragContext.substring(0, 2000)}`;
+    }
+
+    const llmResponse = await callLLMForStructure(systemPrompt, userPrompt);
+
+    let objectives;
+    try {
+      objectives = parseJSONFromLLM(llmResponse);
+      if (!Array.isArray(objectives)) {
+        throw new Error('Response is not an array');
+      }
+    } catch {
+      // Fallback
+      objectives = [
+        `Comprender los fundamentos de ${topic}`,
+        `Aplicar conceptos basicos de ${topic} en ejercicios practicos`,
+        `Analizar problemas relacionados con ${topic}`,
+        `Evaluar diferentes enfoques para resolver problemas de ${topic}`,
+        `Crear proyectos aplicando ${topic}`
+      ];
+    }
+
+    res.json({
+      success: true,
+      objectives,
+      sources: sources.map(s => ({ book: s.book })),
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        topic,
+        level,
+        ragUsed: sources.length > 0
+      }
+    });
+  } catch (error) {
+    console.error('[AI Objectives] Error:', error);
+    res.status(500).json({ error: 'Failed to generate objectives', details: error.message });
+  }
+});
+
+/**
+ * POST /generate-course-description
+ * Generate course description using LLM + RAG
+ */
+router.post('/generate-course-description', async (req, res) => {
+  try {
+    const { topic, level = 'Principiante', objectives, targetAudience } = req.body;
+
+    if (!topic) {
+      return res.status(400).json({ error: 'Topic is required' });
+    }
+
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({ error: 'AI not configured' });
+    }
+
+    console.log(`[AI Description] Generating description for: ${topic}`);
+
+    // Query RAG
+    let ragContext = '';
+    let sources = [];
+
+    const ragResult = await queryCerebroRAG(`${topic} descripcion curso introduccion`, 3);
+    if (ragResult.context) {
+      ragContext = ragResult.context;
+      sources = ragResult.sources;
+    }
+
+    const systemPrompt = `Eres un experto en marketing educativo.
+Genera una descripcion atractiva para un curso online.
+
+IMPORTANTE: Responde SOLO con un objeto JSON:
+{
+  "title": "Titulo sugerido del curso",
+  "description": "Descripcion del curso (3-4 oraciones, atractiva y profesional)"
+}`;
+
+    let userPrompt = `Genera titulo y descripcion para un curso de ${topic} nivel ${level}.`;
+
+    if (objectives && Array.isArray(objectives)) {
+      userPrompt += `\n\nObjetivos del curso:\n${objectives.join('\n')}`;
+    }
+
+    if (targetAudience) {
+      userPrompt += `\nAudiencia: ${targetAudience}`;
+    }
+
+    if (ragContext) {
+      userPrompt += `\n\nContexto:\n${ragContext.substring(0, 1500)}`;
+    }
+
+    const llmResponse = await callLLMForStructure(systemPrompt, userPrompt);
+
+    let result;
+    try {
+      result = parseJSONFromLLM(llmResponse);
+    } catch {
+      result = {
+        title: `Curso de ${topic}: De Principiante a Experto`,
+        description: `Aprende ${topic} de forma practica y estructurada. Este curso te llevara desde los fundamentos hasta conceptos avanzados, con ejercicios practicos y proyectos reales.`
+      };
+    }
+
+    res.json({
+      success: true,
+      ...result,
+      sources: sources.map(s => ({ book: s.book })),
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        topic,
+        ragUsed: sources.length > 0
+      }
+    });
+  } catch (error) {
+    console.error('[AI Description] Error:', error);
+    res.status(500).json({ error: 'Failed to generate description', details: error.message });
   }
 });
 
@@ -102,227 +441,53 @@ router.post('/apply-course-structure/:courseId', (req, res) => {
 });
 
 /**
- * Helper: Generate course structure based on topic
+ * Fallback structure when LLM fails
  */
-function generateCourseStructure(topic, goals, level, targetAudience) {
-  const lowerTopic = topic.toLowerCase();
-
-  // Default Python template
-  let template = {
-    suggestedTitle: 'Python desde Cero: Fundamentos de Programacion',
-    suggestedDescription: 'Aprende los fundamentos de Python, desde variables y tipos de datos hasta funciones y programacion orientada a objetos.',
+function getFallbackStructure(topic, level) {
+  return {
+    suggestedTitle: `Curso de ${topic}`,
+    suggestedDescription: `Aprende ${topic} de forma practica y estructurada. Este curso cubre desde los fundamentos hasta conceptos mas avanzados.`,
     learningObjectives: [
-      'Comprender la sintaxis basica de Python',
-      'Trabajar con variables, tipos de datos y operadores',
-      'Crear y utilizar funciones',
-      'Entender estructuras de control de flujo',
-      'Manejar listas, diccionarios y tuplas'
+      `Comprender los conceptos fundamentales de ${topic}`,
+      `Aplicar ${topic} en situaciones practicas`,
+      `Analizar problemas relacionados con ${topic}`,
+      `Crear proyectos usando ${topic}`
     ],
     level: level,
     estimatedDurationHours: 8,
     modules: [
       {
-        title: 'Introduccion a Python',
-        description: 'Primeros pasos con Python: instalacion, configuracion y conceptos basicos.',
+        title: `Introduccion a ${topic}`,
+        description: 'Fundamentos y conceptos basicos.',
         bloom_objective: 'recordar',
         lessons: [
-          { title: 'Que es Python y por que aprenderlo', content_type: 'text', duration_minutes: 10 },
-          { title: 'Instalacion y configuracion del entorno', content_type: 'video', duration_minutes: 15 },
-          { title: 'Tu primer programa: Hola Mundo', content_type: 'code', duration_minutes: 10 },
-          { title: 'Usando el interprete de Python', content_type: 'notebook', duration_minutes: 15 }
+          { title: `Que es ${topic}`, content_type: 'text', duration_minutes: 15 },
+          { title: 'Configuracion del entorno', content_type: 'video', duration_minutes: 15 },
+          { title: 'Primeros pasos', content_type: 'code', duration_minutes: 20 }
         ]
       },
       {
-        title: 'Variables y Tipos de Datos',
-        description: 'Aprende a trabajar con diferentes tipos de datos y variables en Python.',
+        title: 'Conceptos Intermedios',
+        description: 'Profundizando en los conceptos.',
         bloom_objective: 'comprender',
         lessons: [
-          { title: 'Variables y asignacion', content_type: 'text', duration_minutes: 15 },
-          { title: 'Numeros: enteros y flotantes', content_type: 'code', duration_minutes: 15 },
-          { title: 'Strings y manipulacion de texto', content_type: 'code', duration_minutes: 20 },
-          { title: 'Booleanos y operadores logicos', content_type: 'text', duration_minutes: 15 },
-          { title: 'Practica: Variables y tipos', content_type: 'challenge', duration_minutes: 20 }
+          { title: 'Conceptos clave', content_type: 'text', duration_minutes: 20 },
+          { title: 'Ejercicios practicos', content_type: 'code', duration_minutes: 25 },
+          { title: 'Practica guiada', content_type: 'challenge', duration_minutes: 25 }
         ]
       },
       {
-        title: 'Estructuras de Control',
-        description: 'Control de flujo con condicionales y bucles.',
+        title: 'Aplicaciones Practicas',
+        description: 'Aplicando lo aprendido.',
         bloom_objective: 'aplicar',
         lessons: [
-          { title: 'Condicionales: if, elif, else', content_type: 'text', duration_minutes: 20 },
-          { title: 'Bucle while', content_type: 'code', duration_minutes: 15 },
-          { title: 'Bucle for y range', content_type: 'code', duration_minutes: 20 },
-          { title: 'break, continue y pass', content_type: 'text', duration_minutes: 10 },
-          { title: 'Practica: Estructuras de control', content_type: 'challenge', duration_minutes: 25 }
-        ]
-      },
-      {
-        title: 'Funciones',
-        description: 'Crear y utilizar funciones para modularizar el codigo.',
-        bloom_objective: 'analizar',
-        lessons: [
-          { title: 'Definir funciones con def', content_type: 'code', duration_minutes: 15 },
-          { title: 'Parametros y argumentos', content_type: 'code', duration_minutes: 20 },
-          { title: 'Valores de retorno', content_type: 'text', duration_minutes: 15 },
-          { title: 'Funciones lambda', content_type: 'code', duration_minutes: 15 },
-          { title: 'Practica: Funciones', content_type: 'challenge', duration_minutes: 25 }
+          { title: 'Proyecto practico', content_type: 'notebook', duration_minutes: 30 },
+          { title: 'Casos de uso', content_type: 'text', duration_minutes: 15 },
+          { title: 'Reto final', content_type: 'challenge', duration_minutes: 30 }
         ]
       }
     ]
   };
-
-  // JavaScript template
-  if (lowerTopic.includes('javascript') || lowerTopic.includes('js')) {
-    template = {
-      suggestedTitle: 'JavaScript Moderno: De Cero a Desarrollador',
-      suggestedDescription: 'Domina JavaScript moderno con ES6+, desde conceptos basicos hasta programacion asincrona.',
-      learningObjectives: [
-        'Dominar la sintaxis moderna de JavaScript (ES6+)',
-        'Manipular el DOM efectivamente',
-        'Trabajar con funciones, objetos y clases',
-        'Entender promesas y async/await'
-      ],
-      level: level,
-      estimatedDurationHours: 10,
-      modules: [
-        {
-          title: 'Fundamentos de JavaScript',
-          description: 'Variables, tipos de datos y operadores en JavaScript moderno.',
-          bloom_objective: 'recordar',
-          lessons: [
-            { title: 'Introduccion a JavaScript', content_type: 'text', duration_minutes: 10 },
-            { title: 'Variables: let, const y var', content_type: 'code', duration_minutes: 15 },
-            { title: 'Tipos de datos primitivos', content_type: 'code', duration_minutes: 15 },
-            { title: 'Operadores y expresiones', content_type: 'text', duration_minutes: 15 }
-          ]
-        },
-        {
-          title: 'Funciones y Scope',
-          description: 'Funciones tradicionales, arrow functions y closures.',
-          bloom_objective: 'aplicar',
-          lessons: [
-            { title: 'Declaracion de funciones', content_type: 'code', duration_minutes: 15 },
-            { title: 'Arrow functions', content_type: 'code', duration_minutes: 15 },
-            { title: 'Parametros y valores por defecto', content_type: 'text', duration_minutes: 15 },
-            { title: 'Closures y scope', content_type: 'code', duration_minutes: 20 },
-            { title: 'Practica: Funciones', content_type: 'challenge', duration_minutes: 25 }
-          ]
-        },
-        {
-          title: 'Arrays y Objetos',
-          description: 'Manipulacion avanzada de arrays y objetos.',
-          bloom_objective: 'aplicar',
-          lessons: [
-            { title: 'Arrays y sus metodos', content_type: 'code', duration_minutes: 20 },
-            { title: 'map, filter, reduce', content_type: 'code', duration_minutes: 25 },
-            { title: 'Objetos y destructuring', content_type: 'code', duration_minutes: 20 },
-            { title: 'Spread operator', content_type: 'code', duration_minutes: 15 },
-            { title: 'Practica: Arrays y objetos', content_type: 'challenge', duration_minutes: 30 }
-          ]
-        }
-      ]
-    };
-  }
-
-  // SQL template
-  if (lowerTopic.includes('sql') || lowerTopic.includes('base de datos') || lowerTopic.includes('database')) {
-    template = {
-      suggestedTitle: 'SQL: Bases de Datos Relacionales',
-      suggestedDescription: 'Domina SQL desde consultas basicas hasta queries avanzados.',
-      learningObjectives: [
-        'Escribir consultas SELECT efectivas',
-        'Realizar JOINs entre tablas',
-        'Agregar y agrupar datos',
-        'Crear y modificar tablas'
-      ],
-      level: level,
-      estimatedDurationHours: 8,
-      modules: [
-        {
-          title: 'Introduccion a SQL',
-          description: 'Fundamentos de bases de datos relacionales.',
-          bloom_objective: 'recordar',
-          lessons: [
-            { title: 'Que son las bases de datos relacionales', content_type: 'text', duration_minutes: 15 },
-            { title: 'Instalacion y herramientas', content_type: 'video', duration_minutes: 15 },
-            { title: 'Tu primera consulta SELECT', content_type: 'code', duration_minutes: 15 }
-          ]
-        },
-        {
-          title: 'Consultas Basicas',
-          description: 'SELECT, WHERE, ORDER BY y LIMIT.',
-          bloom_objective: 'comprender',
-          lessons: [
-            { title: 'SELECT y FROM', content_type: 'code', duration_minutes: 15 },
-            { title: 'Filtros con WHERE', content_type: 'code', duration_minutes: 20 },
-            { title: 'ORDER BY y LIMIT', content_type: 'code', duration_minutes: 15 },
-            { title: 'Practica: Consultas basicas', content_type: 'challenge', duration_minutes: 25 }
-          ]
-        },
-        {
-          title: 'JOINs',
-          description: 'Combinar datos de multiples tablas.',
-          bloom_objective: 'aplicar',
-          lessons: [
-            { title: 'INNER JOIN', content_type: 'code', duration_minutes: 20 },
-            { title: 'LEFT y RIGHT JOIN', content_type: 'code', duration_minutes: 20 },
-            { title: 'Self JOIN', content_type: 'code', duration_minutes: 15 },
-            { title: 'Practica: JOINs', content_type: 'challenge', duration_minutes: 30 }
-          ]
-        }
-      ]
-    };
-  }
-
-  // Data Science template
-  if (lowerTopic.includes('data science') || lowerTopic.includes('ciencia de datos') || lowerTopic.includes('pandas')) {
-    template = {
-      suggestedTitle: 'Ciencia de Datos con Python',
-      suggestedDescription: 'Aprende analisis de datos con Python usando Pandas y NumPy.',
-      learningObjectives: [
-        'Manipular datos con Pandas',
-        'Realizar calculos con NumPy',
-        'Crear visualizaciones',
-        'Limpiar y preparar datos'
-      ],
-      level: level,
-      estimatedDurationHours: 12,
-      modules: [
-        {
-          title: 'Introduccion a Data Science',
-          description: 'Conceptos fundamentales.',
-          bloom_objective: 'recordar',
-          lessons: [
-            { title: 'Que es Data Science', content_type: 'text', duration_minutes: 15 },
-            { title: 'Jupyter Notebooks', content_type: 'notebook', duration_minutes: 20 },
-            { title: 'Introduccion a NumPy', content_type: 'code', duration_minutes: 20 }
-          ]
-        },
-        {
-          title: 'Pandas Fundamentals',
-          description: 'Manipulacion de datos.',
-          bloom_objective: 'comprender',
-          lessons: [
-            { title: 'Series y DataFrames', content_type: 'code', duration_minutes: 20 },
-            { title: 'Lectura de datos', content_type: 'code', duration_minutes: 15 },
-            { title: 'Seleccion y filtrado', content_type: 'code', duration_minutes: 20 }
-          ]
-        },
-        {
-          title: 'Analisis Exploratorio',
-          description: 'EDA y estadisticas.',
-          bloom_objective: 'analizar',
-          lessons: [
-            { title: 'Estadisticas descriptivas', content_type: 'code', duration_minutes: 20 },
-            { title: 'Agrupaciones', content_type: 'code', duration_minutes: 25 },
-            { title: 'Correlaciones', content_type: 'code', duration_minutes: 20 }
-          ]
-        }
-      ]
-    };
-  }
-
-  return template;
 }
 
 export default router;
