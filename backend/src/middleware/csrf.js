@@ -67,6 +67,7 @@ export function csrfProtection(req, res, next) {
     '/api/direct-auth/register',
     '/api/direct-auth/forgot-password',
     '/api/direct-auth/reset-password',
+    '/api/users/admin/set-role', // Admin role management
     '/api/test/' // All test endpoints excluded
   ];
 

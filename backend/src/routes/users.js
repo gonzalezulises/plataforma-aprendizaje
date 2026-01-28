@@ -911,4 +911,45 @@ router.get('/:id/submissions', (req, res) => {
   }
 });
 
+/**
+ * POST /api/users/admin/set-role
+ * Admin endpoint to update user role
+ * Requires admin secret key for security
+ */
+router.post('/admin/set-role', (req, res) => {
+  const { email, role, adminKey } = req.body;
+
+  // Verify admin key (use environment variable in production)
+  const ADMIN_KEY = process.env.ADMIN_SECRET_KEY || 'rizoma-admin-2024';
+  if (adminKey !== ADMIN_KEY) {
+    return res.status(403).json({ success: false, error: 'Invalid admin key' });
+  }
+
+  // Validate role
+  const validRoles = ['student_free', 'student_premium', 'instructor', 'instructor_admin'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({ success: false, error: 'Invalid role', validRoles });
+  }
+
+  try {
+    const user = queryOne('SELECT id, email, role FROM users WHERE email = ?', [email]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    run('UPDATE users SET role = ?, updated_at = ? WHERE email = ?', [role, new Date().toISOString(), email]);
+
+    console.log('[Admin] Updated role for', email, 'from', user.role, 'to', role);
+
+    res.json({
+      success: true,
+      message: `Role updated to ${role}`,
+      user: { email, oldRole: user.role, newRole: role }
+    });
+  } catch (err) {
+    console.error('[Admin] Set role error:', err);
+    res.status(500).json({ success: false, error: 'Error updating role' });
+  }
+});
+
 export default router;
