@@ -142,6 +142,7 @@ function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ role: 'instructor' }),
       });
 
       if (!response.ok) {

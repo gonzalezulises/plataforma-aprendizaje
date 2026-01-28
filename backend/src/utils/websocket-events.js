@@ -14,7 +14,9 @@ export const WS_EVENTS = {
   FORUM_NEW_REPLY: 'forum:new_reply',
   FORUM_THREAD_RESOLVED: 'forum:thread_resolved',
   FORUM_VOTE_UPDATED: 'forum:vote_updated',
-  NOTIFICATION_NEW: 'notification:new'
+  NOTIFICATION_NEW: 'notification:new',
+  BATCH_CONTENT_PROGRESS: 'batch_content_progress',
+  BATCH_CONTENT_COMPLETE: 'batch_content_complete'
 };
 
 /**

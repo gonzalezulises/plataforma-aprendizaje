@@ -6,6 +6,7 @@ import AIQuizGeneratorModal from '../components/AIQuizGeneratorModal';
 import AICourseStructureModal from '../components/AICourseStructureModal';
 import QuizImportModal from '../components/QuizImportModal';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
+import { useWebSocket } from '../hooks/useWebSocket';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 import { csrfFetch } from '../utils/csrf';
 
@@ -86,6 +87,17 @@ export default function CourseCreatorPage() {
 
   // AI Description Generation state
   const [generatingDescription, setGeneratingDescription] = useState(false);
+
+  // Batch content generation state
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchId, setBatchId] = useState(null);
+  const [batchProgress, setBatchProgress] = useState(null);
+  const [batchLessonStatuses, setBatchLessonStatuses] = useState({});
+  const [batchComplete, setBatchComplete] = useState(false);
+  const [batchSummary, setBatchSummary] = useState(null);
+
+  // WebSocket for batch progress
+  const ws = useWebSocket();
 
   // Track original form state for unsaved changes detection
   const originalFormRef = useRef(null);
@@ -621,6 +633,129 @@ export default function CourseCreatorPage() {
     }
   };
 
+  // WebSocket: listen for batch content progress
+  useEffect(() => {
+    if (!batchId) return;
+
+    ws.connect();
+
+    const cleanupProgress = ws.onMessage('batch_content_progress', (data) => {
+      if (data.batchId !== batchId) return;
+
+      setBatchProgress({
+        currentLesson: data.currentLesson,
+        totalLessons: data.totalLessons,
+        lessonTitle: data.lessonTitle,
+        moduleTitle: data.moduleTitle,
+        status: data.status
+      });
+
+      if (data.status === 'completed' || data.status === 'failed') {
+        setBatchLessonStatuses(prev => ({
+          ...prev,
+          [data.lessonId]: {
+            status: data.status,
+            contentLength: data.contentLength || 0,
+            error: data.error || null,
+            title: data.lessonTitle,
+            moduleTitle: data.moduleTitle
+          }
+        }));
+      }
+    });
+
+    const cleanupComplete = ws.onMessage('batch_content_complete', (data) => {
+      if (data.batchId !== batchId) return;
+
+      setBatchComplete(true);
+      setBatchGenerating(false);
+      setBatchSummary({
+        completed: data.completed,
+        failed: data.failed,
+        total: data.total,
+        cancelled: data.cancelled
+      });
+
+      if (data.completed > 0) {
+        toast.success(`Contenido generado para ${data.completed} lecciones`);
+        loadCourse(); // Reload to see content
+      }
+    });
+
+    return () => {
+      cleanupProgress();
+      cleanupComplete();
+    };
+  }, [batchId, ws]);
+
+  // Start batch content generation for all lessons
+  const handleBatchGenerateContent = async () => {
+    if (!course?.id) return;
+    if (batchGenerating) {
+      toast.error('Ya hay una generacion en progreso');
+      return;
+    }
+
+    // Count total lessons
+    const totalLessons = modules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0);
+    if (totalLessons === 0) {
+      toast.error('No hay lecciones en el curso');
+      return;
+    }
+
+    setBatchGenerating(true);
+    setBatchComplete(false);
+    setBatchSummary(null);
+    setBatchLessonStatuses({});
+    setBatchProgress(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/ai/batch-generate-course-content/${course.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error al iniciar generacion');
+      }
+
+      const data = await response.json();
+      setBatchId(data.batchId);
+      toast.success(`Generando contenido para ${data.totalLessons} lecciones...`);
+    } catch (error) {
+      console.error('Error starting batch generation:', error);
+      toast.error(error.message || 'Error al iniciar generacion');
+      setBatchGenerating(false);
+    }
+  };
+
+  // Cancel batch generation
+  const handleCancelBatch = async () => {
+    if (!batchId) return;
+
+    try {
+      await fetch(`${API_BASE}/ai/batch-cancel/${batchId}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      toast('Cancelando generacion...', { icon: '\u26A0\uFE0F' });
+    } catch (error) {
+      console.error('Error cancelling batch:', error);
+    }
+  };
+
+  // Dismiss batch progress bar
+  const handleDismissBatchProgress = () => {
+    setBatchId(null);
+    setBatchGenerating(false);
+    setBatchComplete(false);
+    setBatchSummary(null);
+    setBatchLessonStatuses({});
+    setBatchProgress(null);
+  };
+
   // Publish course
   const handlePublish = async () => {
     if (!course) return;
@@ -1026,6 +1161,30 @@ export default function CourseCreatorPage() {
                   </svg>
                   Generar con IA
                 </button>
+                {modules.length > 0 && modules.some(m => m.lessons?.length > 0) && (
+                  <button
+                    onClick={handleBatchGenerateContent}
+                    disabled={batchGenerating}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {batchGenerating ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Generando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span>Generar Todo el Contenido</span>
+                      </>
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setModuleForm({ title: '', description: '', bloom_objective: '' });
@@ -1041,6 +1200,109 @@ export default function CourseCreatorPage() {
                 </button>
               </div>
             </div>
+
+            {/* Batch Content Generation Progress */}
+            {batchId && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {!batchComplete && (
+                      <svg className="w-5 h-5 animate-spin text-primary-600" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    <h3 className="font-medium text-gray-900 dark:text-white">
+                      {batchComplete
+                        ? (batchSummary?.cancelled ? 'Generacion Cancelada' : 'Generacion Completada')
+                        : 'Generando Contenido del Curso'}
+                    </h3>
+                    {batchProgress && !batchComplete && (
+                      <span className="text-sm font-medium text-primary-600 dark:text-primary-400">
+                        [{batchProgress.currentLesson}/{batchProgress.totalLessons}]
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!batchComplete && (
+                      <button
+                        onClick={handleCancelBatch}
+                        className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                    {batchComplete && (
+                      <button
+                        onClick={handleDismissBatchProgress}
+                        className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                      >
+                        Cerrar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                {batchProgress && (
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-500 ${
+                        batchComplete
+                          ? (batchSummary?.failed > 0 ? 'bg-yellow-500' : 'bg-green-500')
+                          : 'bg-gradient-to-r from-green-500 to-blue-500'
+                      }`}
+                      style={{ width: `${Math.round((Object.keys(batchLessonStatuses).length / batchProgress.totalLessons) * 100)}%` }}
+                    />
+                  </div>
+                )}
+
+                {/* Current lesson */}
+                {batchProgress && !batchComplete && batchProgress.status === 'generating' && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Generando: <strong>{batchProgress.lessonTitle}</strong>
+                    <span className="text-gray-400 ml-1">({batchProgress.moduleTitle})</span>
+                  </p>
+                )}
+
+                {/* Summary */}
+                {batchComplete && batchSummary && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-green-600 font-medium">{batchSummary.completed} completadas</span>
+                    {batchSummary.failed > 0 && (
+                      <span className="text-red-600 font-medium ml-2">{batchSummary.failed} con error</span>
+                    )}
+                    <span className="ml-2">de {batchSummary.total} lecciones</span>
+                  </p>
+                )}
+
+                {/* Completed lessons detail (collapsible) */}
+                {Object.keys(batchLessonStatuses).length > 0 && (
+                  <details className="text-sm">
+                    <summary className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                      Ver detalle ({Object.keys(batchLessonStatuses).length} procesadas)
+                    </summary>
+                    <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
+                      {Object.entries(batchLessonStatuses).map(([lessonId, info]) => (
+                        <div key={lessonId} className="flex items-center justify-between py-1 px-2 rounded bg-gray-50 dark:bg-gray-900">
+                          <div className="flex items-center gap-1.5">
+                            {info.status === 'completed' ? (
+                              <span className="text-green-600">&#10003;</span>
+                            ) : (
+                              <span className="text-red-600">&#10007;</span>
+                            )}
+                            <span className="text-gray-700 dark:text-gray-300 truncate">{info.title}</span>
+                          </div>
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                            {info.status === 'completed' ? `${(info.contentLength / 1000).toFixed(1)}k` : 'Error'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
 
             {/* Modules List */}
             {modules.length === 0 ? (
@@ -1713,8 +1975,15 @@ export default function CourseCreatorPage() {
         courseCategory={courseForm.category}
         courseObjectives={generatedObjectives}
         onStructureApplied={(result) => {
-          toast.success(`Estructura aplicada: ${result.totalModules} modulos y ${result.totalLessons} lecciones creadas`);
-          loadCourse();
+          if (result?.reload) {
+            // Coming from step 3 (content generation) - just reload
+            loadCourse();
+          } else if (result?.totalModules !== undefined) {
+            toast.success(`Estructura aplicada: ${result.totalModules} modulos y ${result.totalLessons} lecciones creadas`);
+            loadCourse();
+          } else {
+            loadCourse();
+          }
           setShowAICourseModal(false);
         }}
       />

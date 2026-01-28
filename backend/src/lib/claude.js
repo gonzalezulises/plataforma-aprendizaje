@@ -216,6 +216,8 @@ async function callAnthropic(systemPrompt, userPrompt) {
  * @param {string} params.targetAudience - Target audience
  * @param {string} params.context - Additional context or RAG content
  * @param {boolean} params.useRAG - Whether to use Cerebro-RAG for context (default: true)
+ * @param {boolean} params.enhanced - Whether to use enhanced prompts with pedagogical sections (default: false)
+ * @param {object} params.structure_4c - 4C pedagogical structure data for the lesson
  * @returns {Promise<{content: string, sources: Array, error: string|null}>}
  */
 export async function generateLessonContent({
@@ -226,7 +228,9 @@ export async function generateLessonContent({
   level = 'Principiante',
   targetAudience = '',
   context = '',
-  useRAG = true
+  useRAG = true,
+  enhanced = false,
+  structure_4c = null
 }) {
   const provider = getAIProvider();
 
@@ -253,7 +257,7 @@ export async function generateLessonContent({
   const fullContext = [context, ragContext].filter(Boolean).join('\n\n---\n\n');
 
   try {
-    const systemPrompt = buildSystemPrompt(lessonType);
+    const systemPrompt = buildSystemPrompt(lessonType, enhanced);
     const userPrompt = buildUserPrompt({
       lessonTitle,
       lessonType,
@@ -261,7 +265,9 @@ export async function generateLessonContent({
       moduleTitle,
       level,
       targetAudience,
-      context: fullContext
+      context: fullContext,
+      enhanced,
+      structure_4c
     });
 
     console.log(`[AI] Generating content for: ${lessonTitle} (provider: ${provider}, RAG: ${useRAG && sources.length > 0})`);
@@ -284,8 +290,10 @@ export async function generateLessonContent({
 
 /**
  * Build system prompt based on lesson type
+ * @param {string} lessonType - Type of lesson content
+ * @param {boolean} enhanced - Whether to use enhanced pedagogical prompts
  */
-function buildSystemPrompt(lessonType) {
+function buildSystemPrompt(lessonType, enhanced = false) {
   const basePrompt = `Eres un experto creador de contenido educativo para una plataforma de aprendizaje en linea.
 Tu objetivo es crear contenido claro, practico y atractivo que ayude a los estudiantes a aprender efectivamente.
 
@@ -296,8 +304,48 @@ Directrices:
 - Estructura el contenido de forma clara
 - Adapta el nivel de complejidad al publico objetivo`;
 
+  const enhancedDirectives = enhanced ? `
+
+ESTRUCTURA OBLIGATORIA del contenido (usa estos encabezados de nivel 2 en Markdown):
+
+## Introduccion
+Conecta con conocimientos previos del estudiante. Explica por que este tema es importante y como se relaciona con lo que ya saben. Usa una pregunta motivadora o escenario real.
+
+## Contenido Principal
+Explicacion detallada del tema con ejemplos intercalados. Usa sub-secciones (###) para organizar conceptos. Incluye notas importantes con blockquotes (>) y resalta terminos clave en **negrita**.
+
+## Ejemplos Practicos
+Minimo 2 ejemplos resueltos paso a paso. Cada ejemplo debe:
+- Presentar el problema/situacion
+- Mostrar la solucion completa con explicacion de cada paso
+- Incluir el resultado o output esperado
+
+## Ejercicios
+3 ejercicios con dificultad progresiva:
+1. **Basico**: Ejercicio directo para verificar comprension
+2. **Intermedio**: Requiere combinar conceptos
+3. **Avanzado**: Requiere analisis o aplicacion creativa
+
+Para cada ejercicio incluye el enunciado y la solucion entre tags:
+<details><summary>Ver solucion</summary>
+(solucion aqui)
+</details>
+
+## Dinamica de Aprendizaje
+Una actividad interactiva o reflexion. Puede ser:
+- Pregunta de reflexion sobre aplicaciones del tema
+- Mini-proyecto o reto rapido
+- Ejercicio de autoevaluacion
+- Actividad colaborativa sugerida
+
+## Resumen y Puntos Clave
+Lista concisa de los conceptos mas importantes cubiertos. Usa viñetas para cada punto clave.
+
+## Que Sigue
+Breve preview del siguiente tema y como se conecta con lo aprendido. Genera curiosidad.` : '';
+
   const typeSpecificPrompts = {
-    text: `${basePrompt}
+    text: `${basePrompt}${enhancedDirectives}
 
 Para lecciones de tipo TEXTO:
 - Usa formato Markdown
@@ -305,7 +353,7 @@ Para lecciones de tipo TEXTO:
 - Agrega notas importantes con blockquotes (>)
 - Si es relevante, incluye bloques de codigo con sintaxis highlighting`,
 
-    code: `${basePrompt}
+    code: `${basePrompt}${enhancedDirectives}
 
 Para lecciones de tipo CODIGO:
 - Enfocate en ejemplos de codigo practicos
@@ -314,7 +362,7 @@ Para lecciones de tipo CODIGO:
 - Presenta el codigo de forma progresiva (simple a complejo)
 - Usa formato Markdown con bloques de codigo`,
 
-    notebook: `${basePrompt}
+    notebook: `${basePrompt}${enhancedDirectives}
 
 Para lecciones de tipo NOTEBOOK (Jupyter):
 - Estructura el contenido como celdas de notebook
@@ -323,7 +371,7 @@ Para lecciones de tipo NOTEBOOK (Jupyter):
 - Marca claramente las secciones: ## Titulo, codigo, output
 - Formato: usa \`\`\`python para codigo y texto normal para markdown`,
 
-    video: `${basePrompt}
+    video: `${basePrompt}${enhancedDirectives}
 
 Para lecciones de tipo VIDEO:
 - Crea un guion/script para el video
@@ -332,7 +380,7 @@ Para lecciones de tipo VIDEO:
 - Estructura: introduccion, desarrollo, conclusion
 - Agrega timestamps sugeridos`,
 
-    challenge: `${basePrompt}
+    challenge: `${basePrompt}${enhancedDirectives}
 
 Para lecciones de tipo RETO/EJERCICIO:
 - Define claramente el problema
@@ -355,7 +403,9 @@ function buildUserPrompt({
   moduleTitle,
   level,
   targetAudience,
-  context
+  context,
+  enhanced = false,
+  structure_4c = null
 }) {
   let prompt = `Genera el contenido para la siguiente leccion:
 
@@ -369,11 +419,33 @@ function buildUserPrompt({
     prompt += `\n**Audiencia objetivo:** ${targetAudience}`;
   }
 
+  // Include 4C pedagogical structure data if available
+  if (structure_4c && typeof structure_4c === 'object') {
+    const s4c = structure_4c;
+    prompt += `\n\n**Estructura Pedagogica 4C para esta leccion:**`;
+    if (s4c.conexiones) {
+      prompt += `\n- **Conexiones (conocimientos previos):** ${s4c.conexiones}`;
+    }
+    if (s4c.conceptos) {
+      prompt += `\n- **Conceptos clave:** ${s4c.conceptos}`;
+    }
+    if (s4c.practica) {
+      prompt += `\n- **Practica sugerida:** ${s4c.practica}`;
+    }
+    if (s4c.conclusion) {
+      prompt += `\n- **Conclusion esperada:** ${s4c.conclusion}`;
+    }
+  }
+
   if (context) {
     prompt += `\n\n**Contexto adicional/Informacion de referencia:**\n${context}`;
   }
 
-  prompt += `\n\nGenera contenido educativo completo y de alta calidad para esta leccion.`;
+  if (enhanced) {
+    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion. DEBES incluir TODAS las secciones obligatorias: Introduccion, Contenido Principal, Ejemplos Practicos (minimo 2), Ejercicios (3 niveles con soluciones ocultas), Dinamica de Aprendizaje, Resumen y Puntos Clave, y Que Sigue. El contenido debe ser extenso, minimo 2000 palabras.`;
+  } else {
+    prompt += `\n\nGenera contenido educativo completo y de alta calidad para esta leccion.`;
+  }
 
   return prompt;
 }

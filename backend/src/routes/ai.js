@@ -1,8 +1,12 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
 import { generateLessonContent, isClaudeConfigured, getAIProvider, queryCerebroRAG, isCerebroRAGAvailable, isLocalLLMAvailable } from '../lib/claude.js';
+import { emitGlobalBroadcast } from '../utils/websocket-events.js';
 
 const router = express.Router();
+
+// Active batch generation processes
+const activeBatches = new Map();
 
 /**
  * GET /api/ai/status
@@ -580,6 +584,250 @@ function generateQuestionsForTopic(topic, count, difficulty) {
     explanation: q.explanation,
     points: difficulty === 'hard' ? 2 : 1
   }));
+}
+
+/**
+ * POST /api/ai/batch-generate-course-content/:courseId
+ * Generate content for ALL lessons in a course using AI (background process)
+ * Returns immediately with batchId, broadcasts progress via WebSocket
+ */
+router.post('/batch-generate-course-content/:courseId', async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({
+        error: 'AI content generation not available',
+        message: 'No AI provider configured'
+      });
+    }
+
+    // Query course info
+    const course = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Query all lessons for the course with module info
+    const lessons = queryAll(`
+      SELECT l.id, l.title, l.content_type, l.structure_4c, l.duration_minutes,
+             m.id as module_id, m.title as module_title, m.order_index as module_order,
+             l.order_index as lesson_order
+      FROM lessons l
+      JOIN modules m ON l.module_id = m.id
+      WHERE m.course_id = ?
+      ORDER BY m.order_index ASC, l.order_index ASC
+    `, [courseId]);
+
+    if (lessons.length === 0) {
+      return res.status(400).json({ error: 'No lessons found in this course' });
+    }
+
+    // Generate a batch ID
+    const batchId = `batch_${courseId}_${Date.now()}`;
+
+    // Register the batch
+    activeBatches.set(batchId, {
+      cancelled: false,
+      completed: 0,
+      failed: 0,
+      total: lessons.length,
+      errors: []
+    });
+
+    // Return immediately with batch info
+    res.status(202).json({
+      success: true,
+      batchId,
+      courseId: parseInt(courseId),
+      totalLessons: lessons.length,
+      message: `Batch generation started for ${lessons.length} lessons`
+    });
+
+    // Process in background (no await)
+    processBatchGeneration(batchId, parseInt(courseId), course, lessons);
+
+  } catch (error) {
+    console.error('[AI] Error starting batch generation:', error);
+    res.status(500).json({ error: 'Failed to start batch generation' });
+  }
+});
+
+/**
+ * POST /api/ai/batch-cancel/:batchId
+ * Cancel an in-progress batch generation
+ */
+router.post('/batch-cancel/:batchId', (req, res) => {
+  const { batchId } = req.params;
+  const batch = activeBatches.get(batchId);
+
+  if (!batch) {
+    return res.status(404).json({ error: 'Batch not found or already completed' });
+  }
+
+  batch.cancelled = true;
+  res.json({ success: true, message: 'Batch cancellation requested' });
+});
+
+/**
+ * GET /api/ai/batch-status/:batchId
+ * Get current status of a batch generation
+ */
+router.get('/batch-status/:batchId', (req, res) => {
+  const { batchId } = req.params;
+  const batch = activeBatches.get(batchId);
+
+  if (!batch) {
+    return res.status(404).json({ error: 'Batch not found' });
+  }
+
+  res.json({
+    batchId,
+    completed: batch.completed,
+    failed: batch.failed,
+    total: batch.total,
+    cancelled: batch.cancelled,
+    errors: batch.errors
+  });
+});
+
+/**
+ * Background processor for batch content generation
+ */
+async function processBatchGeneration(batchId, courseId, course, lessons) {
+  const batch = activeBatches.get(batchId);
+  if (!batch) return;
+
+  console.log(`[AI] Starting batch generation: ${batchId} (${lessons.length} lessons)`);
+
+  for (let i = 0; i < lessons.length; i++) {
+    // Check if cancelled
+    if (batch.cancelled) {
+      console.log(`[AI] Batch ${batchId} cancelled at lesson ${i + 1}/${lessons.length}`);
+      break;
+    }
+
+    const lesson = lessons[i];
+
+    // Broadcast: generating lesson
+    emitGlobalBroadcast({
+      type: 'batch_content_progress',
+      batchId,
+      courseId,
+      currentLesson: i + 1,
+      totalLessons: lessons.length,
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      moduleTitle: lesson.module_title,
+      status: 'generating'
+    });
+
+    try {
+      // Parse structure_4c if it's a string
+      let structure4c = null;
+      if (lesson.structure_4c) {
+        try {
+          structure4c = typeof lesson.structure_4c === 'string'
+            ? JSON.parse(lesson.structure_4c)
+            : lesson.structure_4c;
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+
+      const { content, sources, error } = await generateLessonContent({
+        lessonTitle: lesson.title,
+        lessonType: lesson.content_type || 'text',
+        courseTitle: course.title,
+        moduleTitle: lesson.module_title,
+        level: course.level || 'Principiante',
+        targetAudience: '',
+        useRAG: true,
+        enhanced: true,
+        structure_4c: structure4c
+      });
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      // Save content to lesson_content table
+      saveLessonContent(lesson.id, lesson.content_type, content);
+
+      batch.completed++;
+
+      // Broadcast: completed
+      emitGlobalBroadcast({
+        type: 'batch_content_progress',
+        batchId,
+        courseId,
+        currentLesson: i + 1,
+        totalLessons: lessons.length,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        moduleTitle: lesson.module_title,
+        status: 'completed',
+        contentLength: content.length
+      });
+
+      console.log(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} completed - ${lesson.title} (${content.length} chars)`);
+
+    } catch (err) {
+      batch.failed++;
+      batch.errors.push({ lessonId: lesson.id, lessonTitle: lesson.title, error: err.message });
+
+      // Broadcast: failed, continue with next
+      emitGlobalBroadcast({
+        type: 'batch_content_progress',
+        batchId,
+        courseId,
+        currentLesson: i + 1,
+        totalLessons: lessons.length,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        moduleTitle: lesson.module_title,
+        status: 'failed',
+        error: err.message
+      });
+
+      console.error(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} failed - ${lesson.title}:`, err.message);
+    }
+  }
+
+  // Broadcast: batch complete
+  emitGlobalBroadcast({
+    type: 'batch_content_complete',
+    batchId,
+    courseId,
+    completed: batch.completed,
+    failed: batch.failed,
+    total: batch.total,
+    cancelled: batch.cancelled,
+    errors: batch.errors
+  });
+
+  console.log(`[AI] Batch ${batchId} finished: ${batch.completed} completed, ${batch.failed} failed, cancelled: ${batch.cancelled}`);
+
+  // Clean up after a delay (keep status available for a bit)
+  setTimeout(() => {
+    activeBatches.delete(batchId);
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+/**
+ * Helper: Save generated content to lesson_content table
+ */
+function saveLessonContent(lessonId, contentType, rawContent) {
+  const now = new Date().toISOString();
+
+  // Delete existing content for this lesson
+  run('DELETE FROM lesson_content WHERE lesson_id = ?', [lessonId]);
+
+  // Insert new content
+  run(`INSERT INTO lesson_content (lesson_id, type, content, order_index, created_at, updated_at)
+       VALUES (?, ?, ?, 0, ?, ?)`,
+    [lessonId, contentType || 'text', JSON.stringify({ text: rawContent }), now, now]
+  );
 }
 
 export default router;
