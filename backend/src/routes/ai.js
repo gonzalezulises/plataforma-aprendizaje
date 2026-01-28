@@ -91,7 +91,8 @@ router.post('/generate-lesson-content', async (req, res) => {
       level = 'Principiante',
       targetAudience,
       context,
-      useRAG = true // Enable RAG by default
+      useRAG = true, // Enable RAG by default
+      enhanced = true // Use enhanced pedagogical prompts by default
     } = req.body;
 
     if (!lessonTitle) {
@@ -105,8 +106,23 @@ router.post('/generate-lesson-content', async (req, res) => {
       });
     }
 
+    // Fetch structure_4c from the lesson if lessonId provided
+    let structure4c = null;
+    if (lessonId) {
+      const lessonRow = queryOne('SELECT structure_4c FROM lessons WHERE id = ?', [lessonId]);
+      if (lessonRow?.structure_4c) {
+        try {
+          structure4c = typeof lessonRow.structure_4c === 'string'
+            ? JSON.parse(lessonRow.structure_4c)
+            : lessonRow.structure_4c;
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+
     const provider = getAIProvider();
-    console.log(`[AI] Generating content for lesson: ${lessonTitle} (provider: ${provider}, RAG: ${useRAG})`);
+    console.log(`[AI] Generating content for lesson: ${lessonTitle} (provider: ${provider}, RAG: ${useRAG}, enhanced: ${enhanced})`);
 
     const { content, sources, error } = await generateLessonContent({
       lessonTitle,
@@ -116,7 +132,9 @@ router.post('/generate-lesson-content', async (req, res) => {
       level,
       targetAudience,
       context,
-      useRAG
+      useRAG,
+      enhanced,
+      structure_4c: structure4c
     });
 
     if (error) {
@@ -124,17 +142,10 @@ router.post('/generate-lesson-content', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate content', details: error });
     }
 
-    // If lessonId provided, optionally save to database
+    // Save to lesson_content table if lessonId provided
     if (lessonId) {
-      const lesson = queryOne('SELECT * FROM lessons WHERE id = ?', [lessonId]);
-      if (lesson) {
-        run('UPDATE lessons SET content = ?, updated_at = ? WHERE id = ?', [
-          content,
-          new Date().toISOString(),
-          lessonId
-        ]);
-        console.log('[AI] Content saved to lesson:', lessonId);
-      }
+      saveLessonContent(lessonId, lessonType, content);
+      console.log('[AI] Content saved to lesson_content for lesson:', lessonId);
     }
 
     res.json({
