@@ -1707,6 +1707,11 @@ export default function CourseCreatorPage() {
         isOpen={showAICourseModal}
         onClose={() => setShowAICourseModal(false)}
         courseId={course?.id}
+        courseTitle={courseForm.title}
+        courseDescription={courseForm.description}
+        courseLevel={courseForm.level}
+        courseCategory={courseForm.category}
+        courseObjectives={generatedObjectives}
         onStructureApplied={(result) => {
           toast.success(`Estructura aplicada: ${result.totalModules} modulos y ${result.totalLessons} lecciones creadas`);
           loadCourse();
