@@ -7,6 +7,7 @@ import AICourseStructureModal from '../components/AICourseStructureModal';
 import QuizImportModal from '../components/QuizImportModal';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
+import { csrfFetch } from '../utils/csrf';
 
 // Use the base URL without /api since the env var already includes it
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -483,9 +484,8 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/publish`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/publish`, {
+        method: 'POST'
       });
 
       if (!response.ok) {
@@ -511,9 +511,8 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/unpublish`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/unpublish`, {
+        method: 'POST'
       });
 
       if (!response.ok) {
