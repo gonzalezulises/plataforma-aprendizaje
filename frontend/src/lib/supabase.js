@@ -11,6 +11,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabaseClient = null;
+let cachedSession = null; // Cache session to avoid getSession() deadlocks
 
 /**
  * Get or create the Supabase browser client
@@ -43,19 +44,44 @@ export function isSupabaseConfigured() {
 }
 
 /**
- * Get current session
+ * Get current session (uses cache if available to avoid deadlocks)
  */
 export async function getSession() {
+  // Return cached session if available (avoids deadlock during auth events)
+  if (cachedSession) {
+    console.log('[Supabase] Using cached session');
+    return cachedSession;
+  }
+
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
+  console.log('[Supabase] Fetching session from Supabase...');
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error) {
     console.error('[Supabase] Error getting session:', error);
     return null;
   }
 
+  // Cache the session
+  cachedSession = session;
   return session;
+}
+
+/**
+ * Update cached session (called from onAuthStateChange)
+ */
+export function setCachedSession(session) {
+  console.log('[Supabase] Caching session:', session ? session.user?.email : 'null');
+  cachedSession = session;
+}
+
+/**
+ * Clear cached session (called on sign out)
+ */
+export function clearCachedSession() {
+  console.log('[Supabase] Clearing cached session');
+  cachedSession = null;
 }
 
 /**
@@ -308,4 +334,6 @@ export default {
   handleAuthCallback,
   onAuthStateChange,
   verifyWithBackend,
+  setCachedSession,
+  clearCachedSession,
 };

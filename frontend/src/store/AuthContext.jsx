@@ -6,6 +6,8 @@ import {
   onAuthStateChange,
   signOut as supabaseSignOut,
   verifyWithBackend,
+  setCachedSession,
+  clearCachedSession,
 } from '../lib/supabase';
 
 const AuthContext = createContext(null);
@@ -96,6 +98,7 @@ export function AuthProvider({ children }) {
 
           if (session) {
             setSupabaseSession(session);
+            setCachedSession(session); // Cache immediately
             console.log('[AuthContext] Supabase session found:', session.user?.email);
 
             // Verify with backend to create server session (for cross-domain auth)
@@ -148,6 +151,9 @@ export function AuthProvider({ children }) {
       console.log('[Auth] Supabase auth event:', event);
       setSupabaseSession(session);
 
+      // Cache the session immediately to avoid deadlocks in getSession()
+      setCachedSession(session);
+
       if (event === 'SIGNED_IN' && session) {
         console.log('[Auth] User signed in:', session.user?.email);
 
@@ -166,6 +172,7 @@ export function AuthProvider({ children }) {
           console.log('[Auth] Using Supabase session (backend verify failed):', verifyResult.error);
         }
       } else if (event === 'SIGNED_OUT') {
+        clearCachedSession();
         setUser(null);
         setIsAuthenticated(false);
         clearCsrfToken();
