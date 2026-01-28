@@ -1,6 +1,6 @@
 import express from 'express';
 import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
-import { verifySupabaseToken, extractBearerToken } from '../lib/supabase.js';
+import { verifySupabaseToken, extractBearerToken, getSupabaseProfile } from '../lib/supabase.js';
 import { queryOne, run } from '../config/database.js';
 
 // Feature #144 - Added userId parameter to dev-login for enrollment testing
@@ -80,35 +80,46 @@ router.post('/verify', async (req, res) => {
       });
     }
 
-    // Sync with local database to get correct role
+    // Fetch role from Supabase profiles table (source of truth)
+    const { profile: supabaseProfile } = await getSupabaseProfile(user.id);
+    console.log('[Auth] Supabase profile:', supabaseProfile);
+
+    // Sync with local database
     let localUser = queryOne(
       'SELECT id, email, name, role, avatar_url FROM users WHERE email = ? OR external_id = ?',
       [user.email, user.id]
     );
 
+    // Determine the correct role (Supabase profiles > local DB > user_metadata > default)
+    const finalRole = supabaseProfile?.role || localUser?.role || user.user_metadata?.role || 'student_free';
+    const finalName = supabaseProfile?.full_name || localUser?.name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+    const finalAvatar = supabaseProfile?.avatar_url || localUser?.avatar_url || user.user_metadata?.avatar_url || null;
+
     if (!localUser) {
       // Create user in local database
-      const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
-      const userRole = user.user_metadata?.role || 'student_free';
       const now = new Date().toISOString();
 
       run(`
         INSERT INTO users (email, name, role, external_id, avatar_url, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [user.email, userName, userRole, user.id, user.user_metadata?.avatar_url || null, now, now]);
+      `, [user.email, finalName, finalRole, user.id, finalAvatar, now, now]);
 
       localUser = queryOne('SELECT id, email, name, role, avatar_url FROM users WHERE email = ?', [user.email]);
-      console.log('[Auth] Created new local user:', localUser?.id, user.email);
+      console.log('[Auth] Created new local user:', localUser?.id, user.email, 'role:', finalRole);
+    } else if (localUser.role !== finalRole) {
+      // Update local user role if Supabase profile has different role
+      run('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', [finalRole, new Date().toISOString(), localUser.id]);
+      console.log('[Auth] Updated local user role:', localUser.id, localUser.role, '->', finalRole);
     }
 
-    // Create local session using LOCAL user data (has correct role from DB)
+    // Create local session using Supabase profile role as source of truth
     req.session.user = {
       id: localUser?.id || user.id,
       email: user.email,
-      name: localUser?.name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
-      role: localUser?.role || user.user_metadata?.role || 'student_free',
+      name: finalName,
+      role: finalRole,
       supabaseId: user.id,
-      avatar: localUser?.avatar_url || user.user_metadata?.avatar_url,
+      avatar: finalAvatar,
     };
 
     req.session.isAuthenticated = true;

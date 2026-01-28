@@ -110,10 +110,42 @@ export function extractBearerToken(authHeader) {
   return authHeader.substring(7);
 }
 
+/**
+ * Get user profile from Supabase profiles table
+ * @param {string} userId - The Supabase user UUID
+ * @returns {Promise<{profile: object|null, error: string|null}>}
+ */
+export async function getSupabaseProfile(userId) {
+  if (!userId) {
+    return { profile: null, error: 'No user ID provided' };
+  }
+
+  try {
+    const supabase = createSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, role')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Profile fetch error:', error.message);
+      return { profile: null, error: error.message };
+    }
+
+    console.log('[Supabase] Profile fetched:', data);
+    return { profile: data, error: null };
+  } catch (err) {
+    console.error('[Supabase] getSupabaseProfile failed:', err);
+    return { profile: null, error: 'Profile fetch failed' };
+  }
+}
+
 export default {
   createSupabaseAdmin,
   createSupabaseClient,
   verifySupabaseToken,
   getUserByEmail,
   extractBearerToken,
+  getSupabaseProfile,
 };
