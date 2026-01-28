@@ -62,6 +62,7 @@ export function csrfProtection(req, res, next) {
     '/api/auth/dev-login',
     '/api/auth/logout',
     '/api/auth/callback',
+    '/api/auth/verify', // Supabase token verification (establishes session)
     '/api/direct-auth/login',
     '/api/direct-auth/register',
     '/api/direct-auth/forgot-password',
