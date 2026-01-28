@@ -1,6 +1,7 @@
 import express from 'express';
 import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
 import { verifySupabaseToken, extractBearerToken } from '../lib/supabase.js';
+import { queryOne, run } from '../config/database.js';
 
 // Feature #144 - Added userId parameter to dev-login for enrollment testing
 // Feature #40: Sensitive operations log audit trail
@@ -79,21 +80,42 @@ router.post('/verify', async (req, res) => {
       });
     }
 
-    // Create local session with Supabase user info
+    // Sync with local database to get correct role
+    let localUser = queryOne(
+      'SELECT id, email, name, role, avatar_url FROM users WHERE email = ? OR external_id = ?',
+      [user.email, user.id]
+    );
+
+    if (!localUser) {
+      // Create user in local database
+      const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+      const userRole = user.user_metadata?.role || 'student_free';
+      const now = new Date().toISOString();
+
+      run(`
+        INSERT INTO users (email, name, role, external_id, avatar_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [user.email, userName, userRole, user.id, user.user_metadata?.avatar_url || null, now, now]);
+
+      localUser = queryOne('SELECT id, email, name, role, avatar_url FROM users WHERE email = ?', [user.email]);
+      console.log('[Auth] Created new local user:', localUser?.id, user.email);
+    }
+
+    // Create local session using LOCAL user data (has correct role from DB)
     req.session.user = {
-      id: user.id,
+      id: localUser?.id || user.id,
       email: user.email,
-      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
-      role: user.user_metadata?.role || 'student_free',
+      name: localUser?.name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+      role: localUser?.role || user.user_metadata?.role || 'student_free',
       supabaseId: user.id,
-      avatar: user.user_metadata?.avatar_url,
+      avatar: localUser?.avatar_url || user.user_metadata?.avatar_url,
     };
 
     req.session.isAuthenticated = true;
     req.session.lastActivity = Date.now();
     req.session.supabaseToken = token;
 
-    console.log('[Auth] Supabase token verified, user:', req.session.user.email);
+    console.log('[Auth] Supabase token verified, user:', req.session.user.email, 'role:', req.session.user.role);
 
     // Feature #40: Log audit event for successful login
     logAuditEvent(user.id, AUDIT_EVENTS.LOGIN_SUCCESS, {
