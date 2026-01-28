@@ -116,8 +116,9 @@ function WebinarSchedulePage() {
   };
 
   useEffect(() => {
-    // Check if user is instructor
-    if (isAuthenticated && user?.role !== 'instructor') {
+    // Check if user is instructor/admin
+    const isAdmin = user?.role === 'instructor' || user?.role === 'instructor_admin';
+    if (isAuthenticated && !isAdmin) {
       toast.error('Solo los instructores pueden programar webinars');
       navigate('/webinars');
     }

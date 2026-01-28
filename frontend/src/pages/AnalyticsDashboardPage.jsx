@@ -46,7 +46,8 @@ function AnalyticsDashboardPage() {
       return;
     }
 
-    if (user?.role !== 'instructor') {
+    const isAdmin = user?.role === 'instructor' || user?.role === 'instructor_admin';
+    if (!isAdmin) {
       navigate('/dashboard');
       return;
     }

@@ -23,8 +23,9 @@ export default function AdminCoursesPage() {
       navigate('/login');
       return;
     }
-    // Role-based access control: Only instructor can access admin pages
-    if (!authLoading && user && user.role !== 'instructor') {
+    // Role-based access control: Only instructor/admin can access admin pages
+    const isAdmin = user?.role === 'instructor' || user?.role === 'instructor_admin';
+    if (!authLoading && user && !isAdmin) {
       toast.error('Solo los instructores pueden acceder a esta pagina');
       navigate('/dashboard');
     }
