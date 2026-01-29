@@ -89,6 +89,11 @@ router.get('/:id', (req, res) => {
       ORDER BY order_index
     `, [id]);
 
+    // Get navigation info (previous/next lesson)
+    const navigation = lesson.module_id
+      ? getNavigationInfo(id, lesson.module_id)
+      : { previous: null, next: null };
+
     res.json({
       lesson: {
         ...lesson,
@@ -96,7 +101,8 @@ router.get('/:id', (req, res) => {
           ...c,
           content: JSON.parse(c.content || '{}')
         }))
-      }
+      },
+      navigation
     });
   } catch (error) {
     console.error('Error fetching lesson:', error);

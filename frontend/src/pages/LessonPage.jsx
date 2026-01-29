@@ -308,6 +308,10 @@ print(potencia(3, 3))   # 27 (3^3)`
           // Successfully fetched from API
           const data = await response.json();
           if (data.lesson && isMounted) {
+            // Use navigation from API if available
+            if (data.navigation) {
+              setNavigation(data.navigation);
+            }
             // Transform API data to match our component format
             const transformedLesson = {
               id: data.lesson.id,
@@ -410,13 +414,15 @@ print(potencia(3, 3))   # 27 (3^3)`
     fetchProgress();
     markLessonStarted();
 
-    // Set up navigation from sample data or API response
-    const lessonIds = Object.keys(lessonsData).map(Number);
-    const currentIndex = lessonIds.indexOf(currentLessonId);
-    setNavigation({
-      previous: currentIndex > 0 ? { id: lessonIds[currentIndex - 1], title: lessonsData[lessonIds[currentIndex - 1]]?.title } : null,
-      next: currentIndex < lessonIds.length - 1 ? { id: lessonIds[currentIndex + 1], title: lessonsData[lessonIds[currentIndex + 1]]?.title } : null
-    });
+    // Set up navigation from sample data only if API didn't provide it
+    if (!navigation.previous && !navigation.next && !apiLesson) {
+      const lessonIds = Object.keys(lessonsData).map(Number);
+      const currentIndex = lessonIds.indexOf(currentLessonId);
+      setNavigation({
+        previous: currentIndex > 0 ? { id: lessonIds[currentIndex - 1], title: lessonsData[lessonIds[currentIndex - 1]]?.title } : null,
+        next: currentIndex < lessonIds.length - 1 ? { id: lessonIds[currentIndex + 1], title: lessonsData[lessonIds[currentIndex + 1]]?.title } : null
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLessonId, isLoading, notFound, loadError]);
 
