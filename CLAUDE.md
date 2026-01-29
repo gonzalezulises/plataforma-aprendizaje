@@ -3,15 +3,29 @@
 ## Architecture (as of 2026-01-28)
 
 ```
-[Vercel Frontend] --HTTPS--> [Cloudflare Tunnel] --localhost:3001--> [Node.js Backend (PM2)]
-                                                                             |
-                                                               localhost:8000 (vLLM Qwen3-14B)
-                                                               localhost:8001 (Cerebro-RAG API)
-                                                               localhost:8002 (RAG Proxy)
-                                                                      [DGX Spark]
+www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/academia
+(rizo-web repo)                            (plataforma-aprendizaje/frontend)
+                                                        |
+                                                   VITE_API_URL
+                                                        |
+                                           [Cloudflare Quick Tunnel]
+                                           cloud-create-providers-average.trycloudflare.com
+                                                        |
+                                              [DGX Spark - localhost]
+                                              ├── :3001 Node.js Backend (PM2)
+                                              ├── :8000 vLLM Qwen3-14B
+                                              ├── :8001 Cerebro-RAG API
+                                              └── :8002 RAG Proxy
 ```
 
-- **Frontend**: React + Vite, hosted on Vercel (auto-deploys from `master`)
+### Two Repos
+- **rizo-web** (github.com/gonzalezulises/rizo-web) — Main site www.rizo.ma (Astro). Rewrites `/academia/*` to the plataforma frontend.
+- **plataforma-aprendizaje** (this repo) — Backend + Frontend for the learning platform.
+
+### Deployment
+- **rizo-web**: Vercel project, serves `www.rizo.ma`. Has rewrite in `vercel.json` for `/academia` → `frontend-one-sigma-58.vercel.app`
+- **plataforma-aprendizaje/frontend**: Vercel project `frontend` (`frontend-one-sigma-58.vercel.app`). Auto-deploys from `master`.
+- **plataforma-aprendizaje/backend**: Runs on DGX Spark via PM2, exposed via Cloudflare Tunnel.
 - **Backend**: Node.js + Express, runs on DGX Spark via PM2 (port 3001)
 - **LLM**: Qwen3-14B-NVFP4 via vLLM on DGX Spark (port 8000)
 - **RAG**: Cerebro-RAG with Milvus GPU, 145+ books, 562K chunks (port 8001)
