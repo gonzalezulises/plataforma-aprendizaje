@@ -153,8 +153,10 @@ app.use(cors({
 if (process.env.NODE_ENV === 'production') {
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 500, // SPA makes ~15-20 requests per page load; 100 was too low
     message: 'Too many requests, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
   });
   app.use('/api/', limiter);
 } else {
