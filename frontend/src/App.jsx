@@ -31,15 +31,11 @@ import UpgradeSuccessPage from './pages/UpgradeSuccessPage';
 import UpgradeErrorPage from './pages/UpgradeErrorPage';
 import CareerPathsPage from './pages/CareerPathsPage';
 import ServerErrorPage from './pages/ServerErrorPage';
-import ErrorTestPage from './pages/ErrorTestPage';
 import ProjectSubmissionPage from './pages/ProjectSubmissionPage';
 import SubmissionViewPage from './pages/SubmissionViewPage';
-import FileUploadTestPage from './pages/FileUploadTestPage';
-import VideoTestPage from './pages/VideoTestPage';
 import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import CourseCatalogPage from './pages/CourseCatalogPage';
-import RaceConditionTestPage from './pages/RaceConditionTestPage';
 import InstructorProfilePage from './pages/InstructorProfilePage';
 import ConfirmDeletionPage from './pages/ConfirmDeletionPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -656,10 +652,6 @@ function App() {
             <Route path="/career-paths" element={<CareerPathsPage />} />
             <Route path="/career-paths/:slug" element={<CareerPathsPage />} />
             <Route path="/server-error" element={<ServerErrorPage />} />
-            <Route path="/test-error" element={<ErrorTestPage />} />
-            <Route path="/test-upload" element={<FileUploadTestPage />} />
-            <Route path="/test-video" element={<VideoTestPage />} />
-            <Route path="/test-race-condition" element={<RaceConditionTestPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/:tab" element={<ProfilePage />} />
             <Route path="/confirm-deletion/:token" element={<ConfirmDeletionPage />} />

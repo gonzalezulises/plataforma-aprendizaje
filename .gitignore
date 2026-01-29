@@ -65,6 +65,7 @@ uploads/
 cookies-*.txt
 *.backup
 *.bak
+*.bak2
 *_backup.js
 *_backup2.js
 feature-*.txt

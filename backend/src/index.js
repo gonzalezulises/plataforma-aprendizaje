@@ -83,7 +83,25 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  // HSTS: 1 year, include subdomains, preload-ready
+  strictTransportSecurity: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  // CSP: restrictive since this is a JSON API (no HTML served)
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"]
+    }
+  },
+  // Prevent MIME sniffing
+  xContentTypeOptions: true,
+  // No referrer for API responses
+  referrerPolicy: { policy: 'no-referrer' }
+}));
 app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
