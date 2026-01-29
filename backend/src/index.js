@@ -89,61 +89,27 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // List of allowed origins
+    // Production origins
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:5173',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:5175',
-      'http://localhost:5176',
-      'http://localhost:5177',
-      'http://localhost:5178',
-      'http://localhost:5179',
-      'http://localhost:5180',
-      'http://localhost:5181',
-      'http://localhost:5182',
-      'http://localhost:5183',
-      'http://localhost:5184',
-      'http://localhost:5185',
-      'http://localhost:5186',
-      'http://localhost:5187',
-      'http://localhost:5188',
-      'http://localhost:5189',
-      'http://localhost:5190',
-      'http://localhost:5191',
-      'http://localhost:5192',
-      'http://localhost:5193',
-      'http://localhost:5194',
-      'http://localhost:5195',
-      'http://localhost:5196',
-      'http://localhost:5197',
-      'http://localhost:5198',
-      'http://localhost:5199',
-      'http://localhost:5200',
-      'http://localhost:5201',
-      'http://localhost:5202',
-      'http://localhost:5203',
-      'http://localhost:5204',
-      'http://localhost:5205',
-      'http://localhost:5206',
-      'http://localhost:5207',
-      'http://localhost:5208',
-      'http://localhost:5209',
-      'http://localhost:5210',
       'https://www.rizo.ma',
       'https://rizo.ma',
-      'https://cursos.rizo.ma',
-      'https://academia.rizo.ma',
-      'https://academia-rizoma.vercel.app',
+      'https://api.rizo.ma',
       'https://frontend-one-sigma-58.vercel.app',
-      'https://plataforma-aprendizaje-api-production.up.railway.app',
-      'https://api.rizo.ma'
+      // Current quick tunnel (update if tunnel URL changes)
+      'https://cloud-create-providers-average.trycloudflare.com'
     ];
 
-    // Also allow any trycloudflare.com origin (quick tunnels)
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.trycloudflare.com')) {
+    // In development, also allow localhost (any port in 3000-5999 range)
+    const isLocalhost = process.env.NODE_ENV !== 'production' &&
+      /^http:\/\/localhost:[3-5]\d{3}$/.test(origin);
+
+    // Allow extra origins from env var (comma-separated)
+    const extraOrigins = process.env.CORS_EXTRA_ORIGINS?.split(',').map(s => s.trim()) || [];
+
+    if (allowedOrigins.includes(origin) || extraOrigins.includes(origin) || isLocalhost) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -173,8 +139,16 @@ app.use(express.urlencoded({ extended: true }));
 // Feature #12: Session expires after 24 hours of inactivity
 const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret || sessionSecret.length < 32) {
+  console.error('[SECURITY] SESSION_SECRET must be set and at least 32 characters. Generate with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'development-secret-change-in-production',
+  secret: sessionSecret || 'dev-only-insecure-secret-do-not-use-in-prod',
   resave: false,
   saveUninitialized: false,
   rolling: true, // Reset session expiry on each request (implements inactivity timeout)
@@ -315,8 +289,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Test endpoint for simulating server errors (DEV ONLY)
-if (process.env.NODE_ENV !== 'production') {
+// Test endpoints (DEV ONLY — requires both NODE_ENV !== 'production' AND ENABLE_TEST_ENDPOINTS=true)
+if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_TEST_ENDPOINTS === 'true') {
   app.get('/api/test/error-500', (req, res) => {
     // Simulate an internal server error without exposing stack trace
     res.status(500).json({
@@ -408,9 +382,10 @@ if (process.env.NODE_ENV !== 'production') {
       const results = { actions: [] };
 
       // 1. Ensure instructor user exists and get their ID
+      const testPassword = process.env.TEST_USER_PASSWORD || crypto.randomBytes(16).toString('hex');
       let instructor = queryOne('SELECT * FROM users WHERE email = ?', ['instructor@test.com']);
       if (!instructor) {
-        const { hash, salt } = hashPassword('password123');
+        const { hash, salt } = hashPassword(testPassword);
         run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
           ['instructor@test.com', 'Test Instructor', 'instructor_admin', hash, salt, now]);
         instructor = queryOne('SELECT * FROM users WHERE email = ?', ['instructor@test.com']);
@@ -421,7 +396,7 @@ if (process.env.NODE_ENV !== 'production') {
       // 2. Create a second instructor to test access restriction
       let instructor2 = queryOne('SELECT * FROM users WHERE email = ?', ['instructor2@test.com']);
       if (!instructor2) {
-        const { hash, salt } = hashPassword('password123');
+        const { hash, salt } = hashPassword(testPassword);
         run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
           ['instructor2@test.com', 'Other Instructor', 'instructor_admin', hash, salt, now]);
         instructor2 = queryOne('SELECT * FROM users WHERE email = ?', ['instructor2@test.com']);
@@ -450,7 +425,7 @@ if (process.env.NODE_ENV !== 'production') {
       // 3. Create or get student user
       let student = queryOne('SELECT * FROM users WHERE email = ?', ['student@test.com']);
       if (!student) {
-        const { hash, salt } = hashPassword('password123');
+        const { hash, salt } = hashPassword(testPassword);
         run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
           ['student@test.com', 'Test Student', 'student_free', hash, salt, now]);
         student = queryOne('SELECT * FROM users WHERE email = ?', ['student@test.com']);

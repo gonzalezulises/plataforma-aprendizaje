@@ -46,6 +46,25 @@ function requireInstructor(req, res, next) {
 }
 
 /**
+ * Helper: Verify the current instructor owns the course.
+ * Returns the course if owned, or sends 403 and returns null.
+ */
+function verifyCourseOwnership(req, res, courseId) {
+  const course = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
+  if (!course) {
+    res.status(404).json({ error: 'Course not found' });
+    return null;
+  }
+  // instructor_admin with no instructor_id assigned (legacy courses) — allow
+  if (course.instructor_id && course.instructor_id !== req.session.user.id) {
+    console.log(`[Courses] Blocked instructor ${req.session.user.id} from modifying course ${courseId} owned by ${course.instructor_id}`);
+    res.status(403).json({ error: 'You do not own this course' });
+    return null;
+  }
+  return course;
+}
+
+/**
  * Helper: Recalculate course progress for a user after lesson deletion
  * This is used when lessons are deleted to update the enrollment progress
  */
@@ -367,11 +386,8 @@ router.post('/', requireInstructor, (req, res) => {
 router.put('/:id', requireInstructor, (req, res) => {
   try {
     const { id } = req.params;
-    const course = queryOne('SELECT * FROM courses WHERE id = ?', [id]);
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    const course = verifyCourseOwnership(req, res, id);
+    if (!course) return;
 
     const {
       title,
@@ -498,11 +514,8 @@ router.put('/:id', requireInstructor, (req, res) => {
 router.post('/:id/publish', requireInstructor, (req, res) => {
   try {
     const { id } = req.params;
-    const course = queryOne('SELECT * FROM courses WHERE id = ?', [id]);
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    const course = verifyCourseOwnership(req, res, id);
+    if (!course) return;
 
     // Check if course has at least one module with one lesson
     const modules = queryAll('SELECT id FROM modules WHERE course_id = ?', [id]);
@@ -542,11 +555,8 @@ router.post('/:id/publish', requireInstructor, (req, res) => {
 router.post('/:id/unpublish', requireInstructor, (req, res) => {
   try {
     const { id } = req.params;
-    const course = queryOne('SELECT * FROM courses WHERE id = ?', [id]);
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    const course = verifyCourseOwnership(req, res, id);
+    if (!course) return;
 
     run(
       'UPDATE courses SET is_published = 0, updated_at = ? WHERE id = ?',
@@ -644,11 +654,8 @@ function handleCourseDeletedFromCareerPaths(courseId) {
 router.delete('/:id', requireInstructor, (req, res) => {
   try {
     const { id } = req.params;
-    const course = queryOne('SELECT * FROM courses WHERE id = ?', [id]);
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    const course = verifyCourseOwnership(req, res, id);
+    if (!course) return;
 
     // Delete related data that may not have CASCADE constraints - updated 2026-01-25T16:56:44.797Z
     // 1. Delete enrollments for this course
@@ -740,11 +747,8 @@ router.get('/:courseId/modules', (req, res) => {
 router.post('/:courseId/modules', requireInstructor, (req, res) => {
   try {
     const { courseId } = req.params;
-    const course = queryOne('SELECT * FROM courses WHERE id = ?', [courseId]);
-
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+    const course = verifyCourseOwnership(req, res, courseId);
+    if (!course) return;
 
     const {
       title,
@@ -787,6 +791,7 @@ router.post('/:courseId/modules', requireInstructor, (req, res) => {
 router.put('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
     const module = queryOne(
       'SELECT * FROM modules WHERE id = ? AND course_id = ?',
       [moduleId, courseId]
@@ -856,6 +861,7 @@ router.put('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
 router.delete('/:courseId/modules/:moduleId', requireInstructor, (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
     const module = queryOne(
       'SELECT * FROM modules WHERE id = ? AND course_id = ?',
       [moduleId, courseId]
@@ -923,6 +929,7 @@ router.get('/:courseId/modules/:moduleId/lessons', (req, res) => {
 router.post('/:courseId/modules/:moduleId/lessons', requireInstructor, (req, res) => {
   try {
     const { courseId, moduleId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
     const module = queryOne(
       'SELECT * FROM modules WHERE id = ? AND course_id = ?',
       [moduleId, courseId]
@@ -974,6 +981,7 @@ router.post('/:courseId/modules/:moduleId/lessons', requireInstructor, (req, res
 router.put('/:courseId/modules/:moduleId/lessons/:lessonId', requireInstructor, (req, res) => {
   try {
     const { courseId, moduleId, lessonId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
 
     // Verify lesson exists and belongs to the correct module/course
     const module = queryOne(
@@ -1058,6 +1066,7 @@ router.put('/:courseId/modules/:moduleId/lessons/:lessonId', requireInstructor, 
 router.delete('/:courseId/modules/:moduleId/lessons/:lessonId', requireInstructor, (req, res) => {
   try {
     const { courseId, moduleId, lessonId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
 
     const module = queryOne(
       'SELECT * FROM modules WHERE id = ? AND course_id = ?',
@@ -1140,7 +1149,8 @@ router.get('/:courseId/modules/:moduleId/lessons/:lessonId/content', (req, res) 
  */
 router.post('/:courseId/modules/:moduleId/lessons/:lessonId/content', requireInstructor, (req, res) => {
   try {
-    const { lessonId } = req.params;
+    const { courseId, lessonId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
     const { type = 'text', content = {} } = req.body;
 
     // Get next order index
@@ -1176,7 +1186,8 @@ router.post('/:courseId/modules/:moduleId/lessons/:lessonId/content', requireIns
  */
 router.put('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId', requireInstructor, (req, res) => {
   try {
-    const { contentId } = req.params;
+    const { courseId, contentId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
     const { type, content, order_index } = req.body;
 
     const existingContent = queryOne('SELECT * FROM lesson_content WHERE id = ?', [contentId]);
@@ -1226,7 +1237,8 @@ router.put('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId', 
  */
 router.delete('/:courseId/modules/:moduleId/lessons/:lessonId/content/:contentId', requireInstructor, (req, res) => {
   try {
-    const { contentId } = req.params;
+    const { courseId, contentId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
 
     const existingContent = queryOne('SELECT * FROM lesson_content WHERE id = ?', [contentId]);
     if (!existingContent) {

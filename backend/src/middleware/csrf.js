@@ -4,8 +4,7 @@
 
 import crypto from 'crypto';
 
-// Log when module is loaded to confirm new code is running
-console.log('[CSRF] *** CSRF MODULE LOADED ***', new Date().toISOString());
+// CSRF Protection initialized
 
 // In-memory storage for CSRF tokens (per session)
 // In production, these would be stored in session or Redis
@@ -56,26 +55,18 @@ export function csrfProtection(req, res, next) {
     return next();
   }
 
-  // Skip CSRF for specific endpoints that need to work without tokens
-  // (e.g., login endpoints that establish the session)
+  // Skip CSRF only for endpoints that establish sessions or are read-only.
+  // All state-changing endpoints MUST require CSRF tokens.
   const excludedPaths = [
     '/api/auth/dev-login',
     '/api/auth/logout',
     '/api/auth/callback',
-    '/api/auth/verify', // Supabase token verification (establishes session)
+    '/api/auth/verify',
     '/api/direct-auth/login',
     '/api/direct-auth/register',
     '/api/direct-auth/forgot-password',
     '/api/direct-auth/reset-password',
-    '/api/users/admin/set-role', // Admin role management
-    '/api/test/', // All test endpoints excluded
-    '/api/courses', // Course management (already requires instructor auth)
-    '/api/ai', // AI generation endpoints (requires instructor auth)
-    '/api/enrollments', // Enrollment endpoints (already requires auth)
-    '/api/lessons', // Lesson progress tracking (start, complete, time)
-    '/api/inline-exercises', // Exercise progress tracking
-    '/api/youtube', // YouTube search (read-only)
-    '/api/video-upload' // Video upload signed URL generation
+    '/api/test/'
   ];
 
   const isExcluded = excludedPaths.some(path => req.path.startsWith(path));
