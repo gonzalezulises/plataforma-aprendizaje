@@ -19,6 +19,7 @@ function ExecutableCodeBlock({ code, language, courseContext = {} }) {
   const [error, setError] = useState(null);
   const [sqlResult, setSqlResult] = useState(null);
   const [runtimeLoaded, setRuntimeLoaded] = useState(false);
+  const [showSchema, setShowSchema] = useState(false);
   const textareaRef = useRef(null);
 
   const isPython = language === 'python';
@@ -133,6 +134,18 @@ function ExecutableCodeBlock({ code, language, courseContext = {} }) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {isSQL && (
+            <button
+              onClick={() => setShowSchema(s => !s)}
+              className={`text-xs flex items-center gap-1 transition-colors ${showSchema ? 'text-blue-400' : 'text-gray-400 hover:text-white'}`}
+              title="Ver tablas disponibles"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+              </svg>
+              Tablas
+            </button>
+          )}
           <button
             onClick={async () => {
               try {
@@ -150,6 +163,28 @@ function ExecutableCodeBlock({ code, language, courseContext = {} }) {
           </button>
         </div>
       </div>
+
+      {/* SQL Schema Panel */}
+      {isSQL && showSchema && (
+        <div className="bg-blue-950/40 border-b border-blue-800/30 px-4 py-3 text-xs font-mono">
+          <div className="text-blue-300 font-semibold mb-2">Tablas disponibles:</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-gray-300">
+            <div>
+              <span className="text-blue-400 font-semibold">empleados</span>
+              <div className="text-gray-500 mt-0.5">id, nombre, departamento, salario, fecha_ingreso</div>
+            </div>
+            <div>
+              <span className="text-blue-400 font-semibold">productos</span>
+              <div className="text-gray-500 mt-0.5">id, nombre, categoria, precio, stock</div>
+            </div>
+            <div>
+              <span className="text-blue-400 font-semibold">ventas</span>
+              <div className="text-gray-500 mt-0.5">id, producto_id, empleado_id, cantidad, fecha, total</div>
+            </div>
+          </div>
+          <div className="text-gray-500 mt-2">Prueba: <span className="text-green-400 cursor-pointer hover:underline" onClick={() => setCurrentCode('SELECT * FROM empleados LIMIT 5;')}>SELECT * FROM empleados LIMIT 5;</span></div>
+        </div>
+      )}
 
       {/* Code Editor */}
       <div className="relative bg-gray-900 dark:bg-gray-950">

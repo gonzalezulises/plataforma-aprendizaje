@@ -436,6 +436,11 @@ Para lecciones de tipo TEXTO:
 - Agrega notas importantes con blockquotes (>)
 - Si es relevante, incluye bloques de codigo ejecutable con \`\`\`python o \`\`\`sql
 - Los bloques de codigo con \`\`\`python o \`\`\`sql seran EJECUTABLES en el navegador del estudiante
+- Para SQL: el navegador tiene una base de datos SQLite con estas tablas precargadas:
+  * empleados (id, nombre, departamento, salario, fecha_ingreso) — 10 registros
+  * productos (id, nombre, categoria, precio, stock) — 10 registros
+  * ventas (id, producto_id, empleado_id, cantidad, fecha, total) — 10 registros con FK a empleados y productos
+  SIEMPRE usa estas tablas reales en los ejemplos SQL, NUNCA uses nombres genericos como "tabla", "tabla1", "mi_tabla"
 - Para ejercicios de codigo usa secciones ### Ejercicio con bloques de codigo editables
 - Para preguntas de opcion multiple usa formato A) B) C) D) con solucion en <details>
 - El contenido sera renderizado interactivamente: el estudiante puede ejecutar codigo y responder quizzes`,
@@ -450,6 +455,11 @@ Para lecciones de tipo CODIGO:
 - Usa formato Markdown con bloques de codigo (\`\`\`python o \`\`\`sql)
 - IMPORTANTE: Los bloques de codigo seran EJECUTABLES en el navegador (via Pyodide/sql.js)
 - El estudiante puede editar y ejecutar cada bloque de codigo directamente
+- Para SQL: el navegador tiene una base de datos SQLite con estas tablas precargadas:
+  * empleados (id, nombre, departamento, salario, fecha_ingreso) — 10 registros
+  * productos (id, nombre, categoria, precio, stock) — 10 registros
+  * ventas (id, producto_id, empleado_id, cantidad, fecha, total) — 10 registros con FK a empleados y productos
+  USA SIEMPRE estas tablas reales, NUNCA nombres genericos como "tabla", "tabla1"
 - Para ejercicios, usa ### Ejercicio con codigo starter incompleto para que el estudiante complete
 - Incluye la solucion en <details><summary>Ver solucion</summary>...</details>`,
 
