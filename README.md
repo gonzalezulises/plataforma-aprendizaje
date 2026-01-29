@@ -16,15 +16,14 @@ Plataforma de aprendizaje activo para crear cursos enriquecidos con:
 ┌─────────────────┐     ┌──────────────────────────────────────────────────┐
 │  Frontend       │     │              DGX Spark (GPU Server)              │
 │  (Vercel)       │     │                                                  │
-│                 │     │  ┌─────────────┐  ┌─────────────┐               │
+│                 │ CF  │  ┌─────────────┐  ┌─────────────┐               │
 │  React + Vite   │────▶│  │ Backend API │  │ vLLM        │               │
-│                 │     │  │ (PM2:3001)  │  │ Qwen3-14B   │               │
+│                 │Tunnel│  │ (PM2:3001)  │  │ Qwen3-14B   │               │
 └─────────────────┘     │  └──────┬──────┘  │ (GPU:8000)  │               │
-        │               │         │         └─────────────┘               │
-        │               │         │                                        │
-   Tailscale Funnel     │         ▼                                        │
-        │               │  ┌─────────────┐  ┌─────────────────────────┐   │
-        └──────────────▶│  │ RAG Server  │  │ Milvus (Vector DB)      │   │
+                        │         │         └─────────────┘               │
+                        │         ▼                                        │
+                        │  ┌─────────────┐  ┌─────────────────────────┐   │
+                        │  │ RAG Server  │  │ Milvus (Vector DB)      │   │
                         │  │ (8001)      │◀▶│ 562,834 chunks          │   │
                         │  └─────────────┘  │ 145+ books              │   │
                         │                    └─────────────────────────┘   │
@@ -55,9 +54,9 @@ Plataforma de aprendizaje activo para crear cursos enriquecidos con:
 
 ### Infrastructure
 - **DGX Spark** - NVIDIA GPU server (128GB unified memory)
-- **Tailscale Funnel** - Secure tunnel for API access
-- **Vercel** - Frontend hosting
-- **PM2** - Process management
+- **Cloudflare Tunnel** - Permanent tunnel exposing backend to internet
+- **Vercel** - Frontend hosting (auto-deploys from master)
+- **PM2** - Process management (backend + tunnel)
 
 ## Quick Start
 
@@ -98,7 +97,8 @@ cd frontend && npm run dev
 | Frontend (local) | http://localhost:5173 |
 | Backend API (local) | http://localhost:3001 |
 | Frontend (prod) | https://plataforma-aprendizaje-neon.vercel.app |
-| API (prod) | https://spark-279e.tail0b36db.ts.net/api |
+| API (prod) | https://cloud-create-providers-average.trycloudflare.com/api |
+| API (permanent, pending) | https://api.rizo.ma/api |
 
 ## Environment Variables
 
@@ -141,10 +141,10 @@ The platform uses Cerebro-RAG to generate pedagogically-sound content:
 
 ```bash
 # Check AI status
-curl https://spark-279e.tail0b36db.ts.net/api/ai/status
+curl https://cloud-create-providers-average.trycloudflare.com/api/ai/status
 
 # Search knowledge base
-curl -X POST https://spark-279e.tail0b36db.ts.net/api/ai/rag/search \
+curl -X POST https://cloud-create-providers-average.trycloudflare.com/api/ai/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query": "machine learning neural networks", "topK": 5}'
 ```
@@ -179,30 +179,40 @@ plataforma-aprendizaje/
 │   │   ├── services/      # API clients
 │   │   └── utils/         # Utilities
 │   └── .env.production    # Production config
+├── deploy/
+│   └── update-dgx.sh     # Update backend on DGX via SSH
+├── CLAUDE.md              # Claude Code project context
 └── README.md
 ```
 
 ## DGX Spark Deployment
 
-### Start All Services
+### PM2 Managed Services
 ```bash
-ssh spark
-~/start-academia.sh
+ssh dgx-spark
+pm2 status                  # View all services
+pm2 logs plataforma-api     # View backend logs
+pm2 restart plataforma-api  # Restart backend
 ```
 
-### Individual Services
-```bash
-# Backend (PM2)
-cd ~/plataforma-aprendizaje/backend
-pm2 start src/index.js --name plataforma-api
+| PM2 Process | Description |
+|-------------|-------------|
+| `plataforma-api` | Node.js backend on :3001 |
+| `cloudflare-tunnel` | Named tunnel (for api.rizo.ma) |
+| `quick-tunnel` | Temporary trycloudflare.com URL |
 
-# RAG Server (port 8001)
+### Update Backend
+```bash
+./deploy/update-dgx.sh
+# Or manually:
+ssh dgx-spark "cd ~/plataforma-aprendizaje && git pull && cd backend && npm install && pm2 restart plataforma-api"
+```
+
+### RAG Server (separate process)
+```bash
 cd ~/cerebro-ds
 source ~/.vllm/bin/activate
 python -m uvicorn src.rag_api.server:app --host 0.0.0.0 --port 8001
-
-# Tailscale Funnel
-tailscale funnel --bg 3001
 ```
 
 ### Service Ports
