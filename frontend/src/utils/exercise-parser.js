@@ -3,10 +3,11 @@
  *
  * Supports two modes:
  * 1. Structured markers: <!-- quiz-start --> / <!-- quiz-end -->, etc.
- * 2. Natural patterns: ### Ejercicio headings, A)/B)/C)/D) options, <details> solutions
+ * 2. Natural patterns: MCQ blocks (numbered question + A/B/C/D options + <details> answer)
+ *    detected ANYWHERE in the markdown, plus ### Ejercicio headings for code exercises.
  *
  * Exports:
- * - parseExercises(markdown): returns { segments, exercises }
+ * - parseExercises(markdown): returns { segments }
  *   where segments is an array of { type: 'markdown' | 'quiz' | 'exercise', content, ... }
  */
 
@@ -36,7 +37,6 @@ export function parseExercises(markdown) {
  */
 function parseStructuredMarkers(markdown) {
   const segments = [];
-  let remaining = markdown;
   let foundMarker = false;
 
   // Quiz markers
@@ -82,7 +82,6 @@ function parseStructuredMarkers(markdown) {
   // Build segments
   let pos = 0;
   for (const marker of markers) {
-    // Add markdown before this marker
     if (marker.start > pos) {
       const before = markdown.slice(pos, marker.start).trim();
       if (before) {
@@ -105,7 +104,6 @@ function parseStructuredMarkers(markdown) {
     pos = marker.end;
   }
 
-  // Add remaining markdown
   if (pos < markdown.length) {
     const after = markdown.slice(pos).trim();
     if (after) {
@@ -117,96 +115,262 @@ function parseStructuredMarkers(markdown) {
 }
 
 /**
- * Parse natural exercise patterns in markdown.
- * Detects:
- * - ### Ejercicio / ### Ejercicios headings
- * - MCQ patterns (A) / B) / C) / D) or a) / b) / c) / d))
- * - <details><summary>Ver solucion/Solucion</summary> blocks
+ * Parse natural exercise/quiz patterns in markdown.
+ *
+ * Strategy:
+ * 1. Scan line-by-line for MCQ blocks (numbered question + A/B/C/D options)
+ * 2. Also detect ### Ejercicio headings for code exercises
+ * 3. Everything else is plain markdown
+ *
+ * MCQ blocks are detected ANYWHERE — not limited to specific headings.
  */
 function parseNaturalPatterns(markdown) {
+  const lines = markdown.split('\n');
   const segments = [];
+  let markdownLines = [];
+  let quizQuestions = [];
+  let i = 0;
 
-  // Split by exercise headers
-  // Match ### Ejercicio, ### Ejercicios, ### Ejercicio 1, ### Quiz, ### Quiz de consolidacion, etc.
-  const exerciseHeaderRegex = /^(#{2,3}\s+(?:Ejercicio[s]?\s*\d*[.:]*|Quiz(?:\s+de\s+consolidacion)?[.:]*)\s*.*?)$/gmi;
+  while (i < lines.length) {
+    // Try to parse a code exercise block (### Ejercicio with ```python/sql)
+    const exercise = tryParseExerciseBlock(lines, i);
+    if (exercise) {
+      flushAccumulated(segments, markdownLines, quizQuestions);
+      markdownLines = [];
+      quizQuestions = [];
+      segments.push({
+        type: 'exercise',
+        content: exercise.raw,
+        language: exercise.language,
+        exerciseType: 'code'
+      });
+      i = exercise.endLine;
+      continue;
+    }
 
-  const headers = [];
-  let match;
-  while ((match = exerciseHeaderRegex.exec(markdown)) !== null) {
-    headers.push({
-      index: match.index,
-      header: match[1]
-    });
-  }
+    // Try to parse a MCQ question block (numbered question + A/B/C/D)
+    const mcq = tryParseMCQAt(lines, i);
+    if (mcq) {
+      // Flush markdown before quiz (but keep accumulating quiz questions)
+      if (markdownLines.length > 0) {
+        if (quizQuestions.length > 0) {
+          segments.push({ type: 'quiz', questions: quizQuestions, content: '' });
+          quizQuestions = [];
+        }
+        const md = markdownLines.join('\n').trim();
+        if (md) segments.push({ type: 'markdown', content: md });
+        markdownLines = [];
+      }
+      quizQuestions.push(mcq.question);
+      i = mcq.endLine;
+      continue;
+    }
 
-  if (headers.length === 0) {
-    // No exercise sections found - return as single markdown segment
-    return [{ type: 'markdown', content: markdown }];
-  }
-
-  // Build segments by splitting at exercise headers
-  let pos = 0;
-  for (let i = 0; i < headers.length; i++) {
-    const header = headers[i];
-
-    // Add markdown before this exercise section
-    if (header.index > pos) {
-      const before = markdown.slice(pos, header.index).trim();
-      if (before) {
-        segments.push({ type: 'markdown', content: before });
+    // Regular line — check if it's a blank between consecutive quiz questions
+    if (quizQuestions.length > 0 && lines[i].trim() === '') {
+      // Look ahead: is there another MCQ question coming within 3 lines?
+      let nextMCQNear = false;
+      for (let k = i + 1; k < Math.min(i + 4, lines.length); k++) {
+        if (tryParseMCQAt(lines, k)) {
+          nextMCQNear = true;
+          break;
+        }
+      }
+      if (nextMCQNear) {
+        i++;
+        continue; // Skip blank line between quiz questions
       }
     }
 
-    // Determine end of this exercise section
-    const nextHeaderIndex = i + 1 < headers.length ? headers[i + 1].index : undefined;
-    // Also look for the next ## heading (non-exercise) that would end the exercise zone
-    const nextH2Regex = /^#{2}\s+(?!Ejercicio)/gm;
-    nextH2Regex.lastIndex = header.index + header.header.length;
-    const nextH2Match = nextH2Regex.exec(markdown);
-    const sectionEnd = Math.min(
-      nextHeaderIndex || markdown.length,
-      nextH2Match ? nextH2Match.index : markdown.length
-    );
-
-    const sectionContent = markdown.slice(header.index, sectionEnd).trim();
-
-    // Detect if this is a quiz (MCQ) or code exercise
-    const hasOptions = /^\s*[A-Da-d]\)\s+/m.test(sectionContent);
-    const hasCodeBlock = /```(?:python|sql)/m.test(sectionContent);
-    const isQuizHeader = /^#{2,3}\s+Quiz/i.test(sectionContent);
-
-    if (hasOptions || isQuizHeader) {
-      const quiz = parseQuizFromNaturalContent(sectionContent);
-      segments.push({ type: 'quiz', ...quiz });
-    } else if (hasCodeBlock) {
-      segments.push({
-        type: 'exercise',
-        content: sectionContent,
-        language: /```sql/m.test(sectionContent) ? 'sql' : 'python',
-        exerciseType: 'code'
-      });
-    } else {
-      // Generic exercise section - still render as exercise
-      segments.push({
-        type: 'exercise',
-        content: sectionContent,
-        language: 'python',
-        exerciseType: 'text'
-      });
+    // Flush quiz questions if we transition to non-quiz content
+    if (quizQuestions.length > 0) {
+      segments.push({ type: 'quiz', questions: quizQuestions, content: '' });
+      quizQuestions = [];
     }
 
-    pos = sectionEnd;
+    markdownLines.push(lines[i]);
+    i++;
   }
 
-  // Add remaining markdown
-  if (pos < markdown.length) {
-    const after = markdown.slice(pos).trim();
-    if (after) {
-      segments.push({ type: 'markdown', content: after });
-    }
+  // Flush remaining accumulated content
+  flushAccumulated(segments, markdownLines, quizQuestions);
+
+  // If nothing was detected, return as single markdown
+  if (segments.length === 0) {
+    return [{ type: 'markdown', content: markdown }];
   }
 
   return segments;
+}
+
+/**
+ * Flush accumulated markdown lines and quiz questions into segments.
+ */
+function flushAccumulated(segments, markdownLines, quizQuestions) {
+  if (quizQuestions.length > 0) {
+    segments.push({ type: 'quiz', questions: [...quizQuestions], content: '' });
+    quizQuestions.length = 0;
+  }
+  if (markdownLines.length > 0) {
+    const md = markdownLines.join('\n').trim();
+    if (md) segments.push({ type: 'markdown', content: md });
+    markdownLines.length = 0;
+  }
+}
+
+/**
+ * Try to parse a MCQ question block starting at line index.
+ * Returns { question, endLine } or null.
+ *
+ * A MCQ block is:
+ *   [optional number] Question text
+ *   A) Option text
+ *   B) Option text
+ *   C) Option text
+ *   D) Option text
+ *   [optional blank lines]
+ *   [optional <details>...<\/details> explanation]
+ */
+function tryParseMCQAt(lines, startLine) {
+  const line = lines[startLine].trim();
+
+  // Must start with a numbered question (1. / 2.) that is NOT itself an option
+  if (!/^\d+[\.\)]\s+\S/.test(line)) return null;
+  if (/^[A-Da-d]\)\s/.test(line)) return null;
+
+  // Look ahead for A/B/C/D options within 5 lines
+  let optionStart = -1;
+  for (let j = startLine + 1; j < Math.min(startLine + 6, lines.length); j++) {
+    if (/^\s*[A-Da-d]\)\s+/.test(lines[j])) {
+      optionStart = j;
+      break;
+    }
+  }
+  if (optionStart === -1) return null;
+
+  // Collect question text (from startLine to before first option)
+  let questionText = '';
+  for (let j = startLine; j < optionStart; j++) {
+    const l = lines[j].trim();
+    if (questionText) questionText += ' ';
+    questionText += l.replace(/^\d+[\.\)]\s*/, '').trim();
+  }
+
+  // Collect options
+  const options = [];
+  let j = optionStart;
+  while (j < lines.length) {
+    const optMatch = lines[j].trim().match(/^([A-Da-d])\)\s+(.+)/);
+    if (optMatch) {
+      const label = optMatch[1].toUpperCase();
+      let text = optMatch[2].trim();
+      // Check for inline correctness markers
+      const isCorrect = text.includes('✓') || text.includes('✅') || /\(correcta?\)/i.test(text);
+      if (isCorrect) {
+        text = text.replace(/\s*[✓✅]\s*/g, '').replace(/\s*\(correct[a]?\)\s*/gi, '').trim();
+      }
+      options.push({ label, text, isCorrect });
+      j++;
+    } else {
+      break;
+    }
+  }
+
+  if (options.length < 2) return null;
+
+  // Skip blank lines after options
+  while (j < lines.length && lines[j].trim() === '') j++;
+
+  // Try to find <details> explanation block
+  let explanation = '';
+  let correctAnswer = null;
+  let endLine = j;
+
+  if (j < lines.length && (lines[j].includes('<details') || lines[j].includes('<summary'))) {
+    let detailContent = '';
+    let detailEnd = j;
+    for (let k = j; k < lines.length; k++) {
+      detailContent += lines[k] + '\n';
+      if (lines[k].includes('</details>')) {
+        detailEnd = k + 1;
+        break;
+      }
+      // Safety: don't go more than 20 lines into a details block
+      if (k - j > 20) {
+        detailEnd = k + 1;
+        break;
+      }
+    }
+
+    // Extract correct answer from explanation text
+    // Match patterns like: "Respuesta correcta: **B)" or "Respuesta correcta: B)"
+    const answerMatch = detailContent.match(
+      /(?:respuesta\s*(?:correcta)?|answer|correcta|soluci[oó]n)[:\s]*\**\s*([A-Da-d])\)?\**/i
+    );
+    if (answerMatch) {
+      correctAnswer = answerMatch[1].toUpperCase();
+    }
+
+    const explMatch = detailContent.match(/<\/summary>\s*([\s\S]*?)(?:<\/details>|$)/);
+    if (explMatch) {
+      // Clean up markdown bold/formatting from explanation
+      explanation = explMatch[1]
+        .replace(/<\/?details>/g, '')
+        .trim();
+    }
+
+    endLine = detailEnd;
+  }
+
+  // Mark correct option from inline markers or explanation
+  const inlineCorrect = options.find(o => o.isCorrect);
+  if (inlineCorrect && !correctAnswer) {
+    correctAnswer = inlineCorrect.label;
+  }
+  if (correctAnswer) {
+    options.forEach(opt => { opt.isCorrect = opt.label === correctAnswer; });
+  }
+
+  // Skip trailing blank lines
+  while (endLine < lines.length && lines[endLine].trim() === '') endLine++;
+
+  return {
+    question: { question: questionText, options, explanation, correctAnswer },
+    endLine
+  };
+}
+
+/**
+ * Try to parse a code exercise block starting at line index.
+ * Detects ### Ejercicio headings followed by code blocks.
+ */
+function tryParseExerciseBlock(lines, startLine) {
+  const line = lines[startLine].trim();
+
+  // Must be an exercise heading
+  if (!/^#{2,3}\s+Ejercicio/i.test(line)) return null;
+
+  // Find the end of this exercise section (next ## heading or end of content)
+  let endLine = startLine + 1;
+  while (endLine < lines.length) {
+    const l = lines[endLine].trim();
+    // Stop at next heading of same or higher level (but not ### within the exercise)
+    if (/^#{1,2}\s+/.test(l) && !/^#{3}\s+/.test(l)) break;
+    // Stop at another exercise heading
+    if (/^#{2,3}\s+Ejercicio/i.test(l) && endLine !== startLine) break;
+    endLine++;
+  }
+
+  const raw = lines.slice(startLine, endLine).join('\n').trim();
+  const hasCode = /```(?:python|sql)/m.test(raw);
+
+  if (!hasCode) return null;
+
+  return {
+    raw,
+    language: /```sql/m.test(raw) ? 'sql' : 'python',
+    endLine
+  };
 }
 
 /**
@@ -214,7 +378,6 @@ function parseNaturalPatterns(markdown) {
  */
 function parseQuizContent(content) {
   const questions = [];
-  // Split into questions by numbered patterns: 1. / 1) / **Pregunta 1**/
   const questionBlocks = content.split(/(?=^\s*(?:\d+[\.\)]\s+|\*\*Pregunta\s+\d+))/m).filter(Boolean);
 
   for (const block of questionBlocks) {
@@ -228,148 +391,12 @@ function parseQuizContent(content) {
 }
 
 /**
- * Parse quiz questions from natural markdown content (exercise section with MCQ options).
- * Supports multiple numbered questions (1. / 2. / 3.) within a single quiz section.
- */
-function parseQuizFromNaturalContent(content) {
-  const questions = [];
-  const lines = content.split('\n');
-  let currentQuestion = null;
-  let pastHeading = false;
-
-  function finalizeQuestion() {
-    if (!currentQuestion) return;
-    // Resolve correct answer from explanation if not already found
-    if (!currentQuestion.correctAnswer && currentQuestion.explanation) {
-      const expMatch = currentQuestion.explanation.match(/(?:respuesta|answer|correcta|opcion)[:\s]*([A-Da-d])\)?/i);
-      if (expMatch) {
-        currentQuestion.correctAnswer = expMatch[1].toUpperCase();
-      }
-    }
-    // Mark the correct option
-    if (currentQuestion.correctAnswer) {
-      currentQuestion.options = currentQuestion.options.map(opt => ({
-        ...opt,
-        isCorrect: opt.label === currentQuestion.correctAnswer
-      }));
-    }
-    if (currentQuestion.questionText && currentQuestion.options.length >= 2) {
-      questions.push({
-        question: currentQuestion.questionText,
-        options: currentQuestion.options,
-        explanation: currentQuestion.explanation,
-        correctAnswer: currentQuestion.correctAnswer
-      });
-    }
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    // Skip the exercise/quiz heading
-    if (/^#{2,3}\s+(?:Ejercicio|Quiz)/i.test(line)) {
-      pastHeading = true;
-      continue;
-    }
-
-    if (!pastHeading) continue;
-
-    // Detect numbered question start (1. Question text / 2. Question text)
-    const numberedMatch = line.match(/^(\d+)[\.\)]\s+(.+)/);
-    if (numberedMatch && !/^[A-Da-d]\)/.test(line)) {
-      // Check if this looks like a question by looking ahead for A)/B)/C)/D) options
-      let hasOptionsAhead = false;
-      for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
-        if (/^\s*[A-Da-d]\)\s+/.test(lines[j])) {
-          hasOptionsAhead = true;
-          break;
-        }
-      }
-      if (hasOptionsAhead) {
-        finalizeQuestion();
-        currentQuestion = {
-          questionText: numberedMatch[2],
-          options: [],
-          correctAnswer: null,
-          explanation: ''
-        };
-        continue;
-      }
-    }
-
-    // If no current question and we encounter text, start collecting as first question
-    if (!currentQuestion && pastHeading && line && !/^[A-Da-d]\)\s+/.test(line) &&
-        !line.includes('<details') && !line.includes('<summary')) {
-      currentQuestion = {
-        questionText: '',
-        options: [],
-        correctAnswer: null,
-        explanation: ''
-      };
-    }
-
-    if (!currentQuestion) continue;
-
-    // Detect option lines
-    const optionMatch = line.match(/^([A-Da-d])\)\s+(.+)/);
-    if (optionMatch) {
-      const label = optionMatch[1].toUpperCase();
-      let text = optionMatch[2];
-
-      // Check if this option is marked as correct
-      const isCorrect = text.includes('✓') || text.includes('✅') || text.includes('(correcta)') || text.includes('(correct)');
-      if (isCorrect) {
-        text = text.replace(/\s*[✓✅]\s*/g, '').replace(/\s*\(correct[a]?\)\s*/g, '').trim();
-        currentQuestion.correctAnswer = label;
-      }
-
-      currentQuestion.options.push({ label, text, isCorrect });
-      continue;
-    }
-
-    // Detect solution in details block
-    if (line.includes('<details>') || line.includes('<summary>')) {
-      let detailContent = '';
-      for (let j = i; j < lines.length; j++) {
-        if (lines[j].includes('</details>')) {
-          detailContent += lines[j];
-          i = j;
-          break;
-        }
-        detailContent += lines[j] + '\n';
-      }
-      const answerMatch = detailContent.match(/(?:respuesta|answer|correcta|solucion)[:\s]*([A-Da-d])\)?/i);
-      if (answerMatch && !currentQuestion.correctAnswer) {
-        currentQuestion.correctAnswer = answerMatch[1].toUpperCase();
-      }
-      const explMatch = detailContent.match(/<\/summary>\s*([\s\S]*?)(?:<\/details>|$)/);
-      if (explMatch) {
-        currentQuestion.explanation = explMatch[1].trim();
-      }
-      continue;
-    }
-
-    // Build question text (only if no options collected yet for this question)
-    if (currentQuestion.options.length === 0 && line) {
-      if (currentQuestion.questionText) currentQuestion.questionText += ' ';
-      currentQuestion.questionText += line;
-    }
-  }
-
-  // Finalize last question
-  finalizeQuestion();
-
-  return { questions, content };
-}
-
-/**
  * Parse a single question block into a structured question.
  */
 function parseQuestionBlock(block) {
   const lines = block.trim().split('\n');
   if (lines.length < 2) return null;
 
-  // First line is the question
   let questionText = lines[0].replace(/^\s*\d+[\.\)]\s*/, '').replace(/^\*\*Pregunta\s+\d+\**:?\s*/, '').trim();
   const options = [];
   let explanation = '';
@@ -389,12 +416,15 @@ function parseQuestionBlock(block) {
       options.push({ label, text, isCorrect });
     }
 
-    // Look for explanation in details
     if (line.includes('<summary>')) {
       const restLines = lines.slice(i).join('\n');
       const explMatch = restLines.match(/<\/summary>\s*([\s\S]*?)(?:<\/details>|$)/);
       if (explMatch) {
         explanation = explMatch[1].trim();
+      }
+      const answerMatch = restLines.match(/(?:respuesta|correcta)[:\s]*\**([A-Da-d])\)?/i);
+      if (answerMatch && !correctAnswer) {
+        correctAnswer = answerMatch[1].toUpperCase();
       }
       break;
     }
