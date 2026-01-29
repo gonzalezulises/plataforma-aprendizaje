@@ -176,6 +176,47 @@ CourseCreatorPage → POST /api/ai/generate-lesson-content
                        └── Save to lesson_content table as JSON { text: "markdown..." }
 ```
 
+## Video System (as of 2026-01-29)
+
+Lessons of type "video" support three video sources: YouTube/Vimeo embeds, YouTube search, and direct upload.
+
+### How It Works
+
+1. **VideoPlayer** (`frontend/src/components/VideoPlayer.jsx`) detects the URL type via `parseVideoUrl()` and renders:
+   - YouTube: privacy-enhanced iframe (`youtube-nocookie.com/embed/`)
+   - Vimeo: iframe (`player.vimeo.com/video/`)
+   - Direct (MP4/WebM): HTML5 `<video>` with progress tracking (save/restore position)
+2. **CourseCreatorPage** video editor shows URL input with real-time platform detection, live preview, YouTube search button, and upload button
+3. Video content is stored in `lesson_content.content` as JSON: `{ "video_url": "https://...", "video_source": "youtube|vimeo|upload|direct", "title": "...", "text": "optional notes" }`
+4. **LessonPage** maps `video_url` → `src` in the content block transformation
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `VideoPlayer` | `frontend/src/components/VideoPlayer.jsx` | Multi-source video player (YouTube/Vimeo/direct) |
+| `YouTubeSearchModal` | `frontend/src/components/YouTubeSearchModal.jsx` | Search YouTube, select video from results grid |
+| `VideoUploadButton` | `frontend/src/components/VideoUploadButton.jsx` | Upload MP4/WebM to Supabase Storage with progress bar |
+| `video-utils` | `frontend/src/utils/video-utils.js` | URL parsing, platform detection, validation |
+
+### Backend Endpoints
+
+| Endpoint | File | Purpose |
+|----------|------|---------|
+| `POST /api/youtube/search` | `backend/src/routes/youtube-search.js` | YouTube search via `yt-search` (no API key) |
+| `POST /api/video-upload/signed-url` | `backend/src/routes/video-upload.js` | Signed URL for direct upload to Supabase Storage |
+
+### AI Integration
+
+When generating content for `lessonType === 'video'`, the AI route (`/api/ai/generate-lesson-content`) automatically searches YouTube and includes `suggestedVideos` in the response.
+
+### Supabase Storage (Video Upload)
+
+- **Bucket**: `lesson-videos` (must be created manually in Supabase dashboard, set to public)
+- **Max size**: 500MB per file
+- **Allowed MIME**: `video/mp4`, `video/webm`, `video/quicktime`
+- **Flow**: Backend generates signed upload URL → frontend uploads directly to Supabase → public URL returned
+
 ## Key Files
 
 | File | Purpose |
@@ -183,9 +224,16 @@ CourseCreatorPage → POST /api/ai/generate-lesson-content
 | `backend/src/lib/claude.js` | AI client - LLM + RAG integration, 4C prompts, MCQ policy |
 | `backend/src/utils/pedagogical4C.js` | 4C pedagogical model structure generator |
 | `backend/src/routes/ai-course-structure.js` | AI course structure generation |
+| `backend/src/routes/ai.js` | AI content generation + YouTube suggestions for video lessons |
+| `backend/src/routes/youtube-search.js` | YouTube search endpoint (yt-search, no API key) |
+| `backend/src/routes/video-upload.js` | Supabase Storage signed URL for video upload |
 | `backend/src/routes/inline-exercises.js` | Exercise progress tracking API |
 | `backend/src/config/database.js` | SQLite database + schema + migrations |
 | `backend/src/index.js` | Express server entry point |
+| `frontend/src/components/VideoPlayer.jsx` | Multi-source video player (YouTube/Vimeo/direct) |
+| `frontend/src/components/YouTubeSearchModal.jsx` | YouTube search modal with results grid |
+| `frontend/src/components/VideoUploadButton.jsx` | Video upload with progress bar |
+| `frontend/src/utils/video-utils.js` | Video URL parsing and platform detection |
 | `frontend/src/components/LessonContentRenderer.jsx` | Central interactive markdown renderer |
 | `frontend/src/utils/exercise-parser.js` | Exercise/quiz detection in markdown |
 | `frontend/.env.production` | Production API/WS URLs (currently quick tunnel) |
@@ -224,6 +272,18 @@ Migrations run automatically on backend startup in `database.js:runMigrations()`
 | `structure_4c` MCQ update | Replaces open-ended reflection/guiding questions with MCQ-format topics in all lessons |
 
 ## Recent Changes (2026-01-29)
+
+### Video System for Lessons
+- `VideoPlayer` refactored into 3 sub-components: `YouTubeEmbed`, `VimeoEmbed`, `DirectVideo`
+- YouTube/Vimeo URLs auto-detected and rendered as privacy-enhanced iframes
+- `YouTubeSearchModal` with search input, results grid (thumbnail + title + duration + channel)
+- `VideoUploadButton` with Supabase Storage signed URL upload and progress bar
+- `CourseCreatorPage` video content editor with URL input, platform badge, live preview
+- `LessonPage` maps `video_url` to `src` in content block transformation
+- Backend `POST /api/youtube/search` via `yt-search` (no API key required)
+- Backend `POST /api/video-upload/signed-url` for direct-to-Supabase upload
+- AI content generation includes `suggestedVideos` for video-type lessons
+- New dependency: `yt-search` (backend)
 
 ### Interactive Content System (Phases 1-5)
 - `LessonContentRenderer` replaces custom regex parsing with ReactMarkdown + interactive widgets
