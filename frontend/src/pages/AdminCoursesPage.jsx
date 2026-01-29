@@ -4,6 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import DoubleConfirmDeleteModal from '../components/DoubleConfirmDeleteModal';
 import AdminLayout from '../components/AdminLayout';
+import { csrfFetch } from '../utils/csrf';
 
 // Use the base URL - env var already includes /api
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -93,9 +94,8 @@ export default function AdminCoursesPage() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`${API_BASE}/courses/${deleteModal.course.id}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/courses/${deleteModal.course.id}`, {
+        method: 'DELETE'
       });
 
       if (!response.ok) {

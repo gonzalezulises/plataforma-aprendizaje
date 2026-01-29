@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
+import { csrfFetch } from '../utils/csrf';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -207,10 +208,9 @@ function CodeChallengePage() {
     setActiveTab('output');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/challenges/${challengeId}/run`, {
+      const response = await csrfFetch(`${API_BASE_URL}/challenges/${challengeId}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ code, language: challenge.language })
       });
 
@@ -262,10 +262,9 @@ function CodeChallengePage() {
     setActiveTab('tests');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/challenges/${challengeId}/submit`, {
+      const response = await csrfFetch(`${API_BASE_URL}/challenges/${challengeId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ code, language: challenge.language })
       });
 

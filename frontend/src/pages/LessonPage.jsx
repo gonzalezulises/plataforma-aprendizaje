@@ -5,6 +5,7 @@ import VideoPlayer from '../components/VideoPlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import LessonComments from '../components/LessonComments';
 import LessonContentRenderer from '../components/LessonContentRenderer';
+import { csrfFetch } from '../utils/csrf';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -226,9 +227,8 @@ function LessonPage() {
       if (hasStartedLesson) return;
       hasStartedLesson = true;
       try {
-        await fetch(`${API_BASE_URL}/lessons/${currentLessonId}/start`, {
-          method: 'POST',
-          credentials: 'include'
+        await csrfFetch(`${API_BASE_URL}/lessons/${currentLessonId}/start`, {
+          method: 'POST'
         });
       } catch (error) {
         console.error('Error marking lesson as started:', error);
@@ -324,10 +324,9 @@ function LessonPage() {
       if (Array.isArray(results)) {
         // Save each quiz answer
         for (const r of results) {
-          await fetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
+          await csrfFetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
             body: JSON.stringify({
               exerciseIndex: r.questionIndex,
               exerciseType: 'quiz',
@@ -339,10 +338,9 @@ function LessonPage() {
         }
       } else if (results?.exerciseIndex !== undefined) {
         // Save code exercise attempt
-        await fetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
+        await csrfFetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({
             exerciseIndex: results.exerciseIndex,
             exerciseType: 'code',
@@ -379,9 +377,8 @@ function LessonPage() {
 
     setIsMarkingComplete(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/lessons/${currentLessonId}/complete`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE_URL}/lessons/${currentLessonId}/complete`, {
+        method: 'POST'
       });
 
       if (response.ok) {
@@ -428,12 +425,11 @@ function LessonPage() {
     try {
       // Use challenges endpoint for code execution (Feature #126)
       // This provides real backend execution instead of mocked results
-      const response = await fetch(`${API_BASE_URL}/challenges/1/run`, {
+      const response = await csrfFetch(`${API_BASE_URL}/challenges/1/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({ code, language: 'python' }),
       });
 

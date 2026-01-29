@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../store/AuthContext';
+import { csrfFetch } from '../utils/csrf';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
@@ -405,11 +406,10 @@ export default function CareerPathsPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/career-paths/${pathSlug}/start`, {
+      const response = await csrfFetch(`${API_URL}/api/career-paths/${pathSlug}/start`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id.toString()
+          'Content-Type': 'application/json'
         }
       });
 
@@ -434,11 +434,10 @@ export default function CareerPathsPage() {
     if (!user || !currentPath) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/career-paths/${currentPath.slug}/sync-progress`, {
+      const response = await csrfFetch(`${API_URL}/api/career-paths/${currentPath.slug}/sync-progress`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id.toString()
+          'Content-Type': 'application/json'
         }
       });
 

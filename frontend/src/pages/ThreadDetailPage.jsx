@@ -6,6 +6,7 @@ import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import useWebSocket from '../hooks/useWebSocket';
 import { useAuth } from '../store/AuthContext';
 import { MAX_LENGTHS, getCharCountDisplay, getCharCountClasses, exceedsLimit } from '../utils/validationLimits';
+import { csrfFetch } from '../utils/csrf';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -167,10 +168,9 @@ function ThreadDetailPage() {
     setReplyError('');
 
     const performSubmit = async () => {
-      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/reply`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/thread/${threadId}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           content: newReply,
           userId: user?.id || 'dev-user',
@@ -232,10 +232,9 @@ function ThreadDetailPage() {
 
   const handleVote = async (replyId) => {
     try {
-      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}/vote`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/reply/${replyId}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           userId: user?.id || 'dev-user',
           voteType: 'upvote'
@@ -271,10 +270,9 @@ function ThreadDetailPage() {
 
   const handleMarkResolved = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}/resolve`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/thread/${threadId}/resolve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ resolved: !thread.is_resolved })
       });
 
@@ -303,10 +301,9 @@ function ThreadDetailPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/thread/${threadId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ userId: user?.id })
       });
 
@@ -354,10 +351,9 @@ function ThreadDetailPage() {
     setEditThreadError('');
 
     try {
-      const res = await fetch(`${API_URL}/api/forum/thread/${threadId}`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/thread/${threadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           title: editThreadTitle,
           content: editThreadContent,
@@ -411,10 +407,9 @@ function ThreadDetailPage() {
     setEditReplyError('');
 
     try {
-      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/reply/${replyId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           content: editReplyContent,
           userId: user?.id
@@ -450,10 +445,9 @@ function ThreadDetailPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/forum/reply/${replyId}`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/reply/${replyId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ userId: user?.id })
       });
 

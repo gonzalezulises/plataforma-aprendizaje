@@ -200,10 +200,9 @@ export default function CourseCreatorPage() {
     autosaveExistingTimerRef.current = setTimeout(async () => {
       setAutosaveStatus('saving');
       try {
-        const response = await fetch(`${API_BASE}/courses/${course.id}`, {
+        const response = await csrfFetch(`${API_BASE}/courses/${course.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ ...courseForm, version: courseVersion })
         });
 
@@ -349,10 +348,9 @@ export default function CourseCreatorPage() {
         ? { ...courseForm, objectives: generatedObjectives, objectives_sources: objectivesSources, version: overrideVersion || courseVersion }
         : { ...courseForm, objectives: generatedObjectives, objectives_sources: objectivesSources };
 
-      const response = await fetch(url, {
+      const response = await csrfFetch(url, {
         method: course ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(bodyData)
       });
 
@@ -425,10 +423,9 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules`, {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(moduleForm)
       });
 
@@ -455,10 +452,9 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${editingModule.id}`, {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${editingModule.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(moduleForm)
       });
 
@@ -485,9 +481,8 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${moduleId}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${moduleId}`, {
+        method: 'DELETE'
       });
 
       if (!response.ok) {
@@ -510,10 +505,9 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${selectedModuleId}/lessons`, {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${selectedModuleId}/lessons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(lessonForm)
       });
 
@@ -545,10 +539,9 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${selectedModuleId}/lessons/${editingLesson.id}`, {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${selectedModuleId}/lessons/${editingLesson.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(lessonForm)
       });
 
@@ -583,9 +576,8 @@ export default function CourseCreatorPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${moduleId}/lessons/${lessonId}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${moduleId}/lessons/${lessonId}`, {
+        method: 'DELETE'
       });
 
       if (!response.ok) {
@@ -683,10 +675,9 @@ export default function CourseCreatorPage() {
     if (!module) return;
 
     try {
-      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${module.id}/lessons/${selectedLessonId}/content`, {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/modules/${module.id}/lessons/${selectedLessonId}/content`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(contentForm)
       });
 
@@ -931,10 +922,9 @@ export default function CourseCreatorPage() {
     setBatchProgress(null);
 
     try {
-      const response = await fetch(`${API_BASE}/ai/batch-generate-course-content/${course.id}`, {
+      const response = await csrfFetch(`${API_BASE}/ai/batch-generate-course-content/${course.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
@@ -957,9 +947,8 @@ export default function CourseCreatorPage() {
     if (!batchId) return;
 
     try {
-      await fetch(`${API_BASE}/ai/batch-cancel/${batchId}`, {
-        method: 'POST',
-        credentials: 'include'
+      await csrfFetch(`${API_BASE}/ai/batch-cancel/${batchId}`, {
+        method: 'POST'
       });
       toast('Cancelando generacion...', { icon: '\u26A0\uFE0F' });
     } catch (error) {

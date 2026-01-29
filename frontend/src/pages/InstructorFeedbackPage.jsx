@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -101,10 +102,9 @@ function InstructorFeedbackPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`${API_BASE}/feedback/submissions/${submissionId}/feedback`, {
+      const res = await csrfFetch(`${API_BASE}/feedback/submissions/${submissionId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           type: 'rubric',
           scores,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -67,9 +68,8 @@ function WebinarsPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/webinars/${webinarId}/register`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/api/webinars/${webinarId}/register`, {
+        method: 'POST'
       });
 
       if (response.ok) {
@@ -106,9 +106,8 @@ function WebinarsPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/webinars/${webinar.id}/join`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/api/webinars/${webinar.id}/join`, {
+        method: 'POST'
       });
 
       if (response.ok) {

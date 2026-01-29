@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import AdminLayout from '../components/AdminLayout';
+import { csrfFetch } from '../utils/csrf';
 
 // Use env variable for API URL, matching AuthContext pattern
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -173,10 +174,9 @@ function AnalyticsDashboardPage() {
       }
 
       // Preview the import to detect duplicates
-      const response = await fetch(`${API_BASE_URL}/analytics/import/preview`, {
+      const response = await csrfFetch(`${API_BASE_URL}/analytics/import/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ data })
       });
 
@@ -211,10 +211,9 @@ function AnalyticsDashboardPage() {
       const text = await importFile.text();
       const data = JSON.parse(text);
 
-      const response = await fetch(`${API_BASE_URL}/analytics/import`, {
+      const response = await csrfFetch(`${API_BASE_URL}/analytics/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ data, duplicateAction })
       });
 

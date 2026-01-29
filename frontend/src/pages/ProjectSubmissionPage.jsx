@@ -7,6 +7,7 @@ import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import { FileUpload } from '../components/FileUpload';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 import { DueCountdownCard } from '../components/DueCountdown';
+import { csrfFetch } from '../utils/csrf';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -119,12 +120,11 @@ export default function ProjectSubmissionPage() {
     e.preventDefault();
 
     const performSubmit = async () => {
-      const response = await fetch(`${API_URL}/projects/${projectId}/submit`, {
+      const response = await csrfFetch(`${API_URL}/projects/${projectId}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           content,
           github_url: githubUrl || null,

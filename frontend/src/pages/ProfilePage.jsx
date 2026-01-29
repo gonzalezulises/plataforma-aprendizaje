@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 // Feature #230: Export student progress report
 // Feature #64: Profile tabs navigate correctly
@@ -148,12 +149,11 @@ function ProfilePage() {
     setIsSavingProfile(true);
 
     try {
-      const response = await fetch(`${API_URL}/users/me`, {
+      const response = await csrfFetch(`${API_URL}/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({ bio: profileData.bio })
       });
 
@@ -325,9 +325,8 @@ function ProfilePage() {
     setIsDeletionLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/users/me/request-deletion`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/users/me/request-deletion`, {
+        method: 'POST'
       });
 
       const data = await response.json();
@@ -352,9 +351,8 @@ function ProfilePage() {
     setIsDeletionLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/users/me/cancel-deletion`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/users/me/cancel-deletion`, {
+        method: 'DELETE'
       });
 
       const data = await response.json();
@@ -376,9 +374,8 @@ function ProfilePage() {
   // Initialize default preferences
   const initializeDefaults = async () => {
     try {
-      const response = await fetch(`${API_URL}/notifications/init-defaults`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/notifications/init-defaults`, {
+        method: 'POST'
       });
 
       if (!response.ok) {
@@ -411,12 +408,11 @@ function ProfilePage() {
     try {
       setIsSaving(true);
 
-      const response = await fetch(`${API_URL}/notifications/preferences`, {
+      const response = await csrfFetch(`${API_URL}/notifications/preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify(updatedPreferences)
       });
 

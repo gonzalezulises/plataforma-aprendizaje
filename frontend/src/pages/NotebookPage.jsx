@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import InteractiveNotebook from '../components/InteractiveNotebook';
+import { csrfFetch } from '../utils/csrf';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -20,10 +21,9 @@ function NotebookPage() {
     try {
       // Use the notebookId as the lesson ID for marking completion
       const lessonId = notebookId || 'demo';
-      const response = await fetch(`${API_BASE}/lessons/${lessonId}/complete`, {
+      const response = await csrfFetch(`${API_BASE}/lessons/${lessonId}/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {

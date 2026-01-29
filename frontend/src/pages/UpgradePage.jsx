@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
@@ -63,10 +64,9 @@ export default function UpgradePage() {
 
   const verifyTransaction = async (transactionId) => {
     try {
-      const response = await fetch(`${API_URL}/api/upgrade/verify`, {
+      const response = await csrfFetch(`${API_URL}/api/upgrade/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ transactionId })
       });
 
@@ -94,10 +94,9 @@ export default function UpgradePage() {
 
     setProcessing(true);
     try {
-      const response = await fetch(`${API_URL}/api/upgrade/initiate`, {
+      const response = await csrfFetch(`${API_URL}/api/upgrade/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ planId })
       });
 

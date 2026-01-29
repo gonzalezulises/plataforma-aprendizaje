@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 // Feature #28: Account deletion requires email confirmation
 // This page handles the email confirmation link for account deletion
@@ -69,9 +70,8 @@ function ConfirmDeletionPage() {
     setStatus('confirming');
 
     try {
-      const response = await fetch(`${API_URL}/users/confirm-deletion/${token}`, {
-        method: 'POST',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_URL}/users/confirm-deletion/${token}`, {
+        method: 'POST'
       });
 
       const data = await response.json();

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { csrfFetch } from '../utils/csrf';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Timeout duration for quiz submission (30 seconds)
@@ -161,9 +163,8 @@ function QuizPage() {
 
   const handleStartQuiz = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/quizzes/${quizId}/start`, {
+      const response = await csrfFetch(`${API_BASE_URL}/quizzes/${quizId}/start`, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
 
@@ -248,9 +249,8 @@ function QuizPage() {
       });
 
       // Create fetch promise
-      const fetchPromise = fetch(`${API_BASE_URL}/quizzes/${quizId}/submit`, {
+      const fetchPromise = csrfFetch(`${API_BASE_URL}/quizzes/${quizId}/submit`, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           attemptId,

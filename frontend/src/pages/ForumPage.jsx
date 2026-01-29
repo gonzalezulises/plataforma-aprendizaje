@@ -6,6 +6,7 @@ import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { NetworkErrorBanner } from '../components/NetworkErrorBanner';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 import { MAX_LENGTHS, getCharCountDisplay, getCharCountClasses, exceedsLimit } from '../utils/validationLimits';
+import { csrfFetch } from '../utils/csrf';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
@@ -223,10 +224,9 @@ function ForumPage() {
     }
 
     const performSubmit = async () => {
-      const res = await fetch(`${API_URL}/api/forum/course/${course.id}/thread`, {
+      const res = await csrfFetch(`${API_URL}/api/forum/course/${course.id}/thread`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           title: newThread.title,
           content: newThread.content,
