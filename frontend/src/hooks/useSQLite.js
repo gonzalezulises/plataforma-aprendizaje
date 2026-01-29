@@ -1,21 +1,32 @@
 import { useState, useRef, useCallback } from 'react';
 
-const SQL_JS_CDN = 'https://sql.js.org/dist/';
+const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/';
 
 // Singleton: only load sql.js once
 let sqlJsPromise = null;
 let SQL = null;
+
+function loadSqlJsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.initSqlJs) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `${SQL_JS_CDN}sql-wasm.js`;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Failed to load sql.js script'));
+    document.head.appendChild(script);
+  });
+}
 
 async function initSqlJs() {
   if (SQL) return SQL;
   if (sqlJsPromise) return sqlJsPromise;
 
   sqlJsPromise = (async () => {
-    const { default: initSqlJsModule } = await import(
-      /* webpackIgnore: true */
-      'https://sql.js.org/dist/sql-wasm.js'
-    );
-    const sqlJs = await initSqlJsModule({
+    await loadSqlJsScript();
+    const sqlJs = await window.initSqlJs({
       locateFile: (file) => `${SQL_JS_CDN}${file}`
     });
     SQL = sqlJs;
