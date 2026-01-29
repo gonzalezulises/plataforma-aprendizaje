@@ -8,8 +8,8 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
                                                         |
                                                    VITE_API_URL
                                                         |
-                                           [Cloudflare Quick Tunnel]
-                                           cloud-create-providers-average.trycloudflare.com
+                                           [Cloudflare Named Tunnel]
+                                               api.rizo.ma
                                                         |
                                               [DGX Spark - localhost]
                                               ├── :3001 Node.js Backend (PM2)
@@ -29,7 +29,7 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - **Backend**: Node.js + Express, runs on DGX Spark via PM2 (port 3001)
 - **LLM**: Qwen3-14B-NVFP4 via vLLM on DGX Spark (port 8000)
 - **RAG**: Cerebro-RAG with Milvus GPU, 145+ books, 562K chunks (port 8001)
-- **Tunnel**: Cloudflare Tunnel (named + quick) exposes backend to internet
+- **Tunnel**: Cloudflare Named Tunnel → `api.rizo.ma` → `localhost:3001`
 - **Auth**: Supabase
 - **Database**: SQLite (backend/data/learning.db)
 
@@ -46,8 +46,7 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 | Process | Name | Description |
 |---------|------|-------------|
 | Backend API | `plataforma-api` | Node.js backend on :3001 |
-| Named Tunnel | `cloudflare-tunnel` | Permanent tunnel for api.rizo.ma (pending DNS) |
-| Quick Tunnel | `quick-tunnel` | Temporary trycloudflare.com URL |
+| Named Tunnel | `cloudflare-tunnel` | Permanent tunnel for api.rizo.ma |
 
 ### Key DGX Paths
 
@@ -58,28 +57,17 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - Cloudflared: `/usr/local/bin/cloudflared`
 - nvm: `~/.nvm/`
 
+## Completed Migrations
+
+### DNS Migration to Cloudflare (completed 2026-01-29)
+- **Nameservers**: `elliott.ns.cloudflare.com`, `maisie.ns.cloudflare.com`
+- **API URL**: `https://api.rizo.ma` (permanent, via Cloudflare Named Tunnel)
+- **Quick tunnel**: Removed (`pm2 delete quick-tunnel`)
+- **Vercel env vars**: `VITE_API_URL=https://api.rizo.ma/api`, `VITE_WS_URL=wss://api.rizo.ma`
+
 ## Pending Tasks
 
-### 1. rizo.ma DNS Migration (BLOCKING)
-- **Status**: Nameserver change submitted at Marcaria registrar
-- **Target nameservers**: `elliott.ns.cloudflare.com`, `maisie.ns.cloudflare.com`
-- **Current nameservers**: Still `ns1.vercel-dns.com`, `ns2.vercel-dns.com`
-- **Marcaria says**: Up to 48 hours, pending prior change request
-- **When ready**:
-  1. Cloudflare will show rizo.ma as "Active"
-  2. Go to Zero Trust > Tunnels > plataforma-api > Published application routes
-  3. Add hostname: subdomain=`api`, domain=`rizo.ma`, type=`HTTP`, URL=`localhost:3001`
-  4. Update `frontend/.env.production` and `frontend/vercel.json` to use `https://api.rizo.ma`
-  5. Stop quick-tunnel: `pm2 delete quick-tunnel && pm2 save`
-  6. Push to GitHub (Vercel auto-deploys)
-
-### 2. Quick Tunnel URL (TEMPORARY)
-- **Current URL**: `https://cloud-create-providers-average.trycloudflare.com`
-- **Caveat**: URL changes if quick-tunnel PM2 process restarts
-- **If it changes**: Check new URL with `pm2 logs quick-tunnel --lines 20 --nostream | grep trycloudflare`
-- **Then update**: `frontend/.env.production` and `frontend/vercel.json`, commit, push
-
-### 3. PM2 Startup Service
+### 1. PM2 Startup Service
 - **Status**: Configured as `pm2-root` systemd service (runs as root)
 - **Note**: PM2 processes run as `gonzalezulises`, but startup service is root
 - **pm2 save** has been executed — processes will be restored on reboot
@@ -247,7 +235,7 @@ When generating content for `lessonType === 'video'`, the AI route (`/api/ai/gen
 ./deploy/update-dgx.sh
 
 # Check backend status from internet
-curl -s https://cloud-create-providers-average.trycloudflare.com/api/ai/status
+curl -s https://api.rizo.ma/api/ai/status
 
 # Check PM2 on DGX
 ssh dgx-spark 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && pm2 status'
