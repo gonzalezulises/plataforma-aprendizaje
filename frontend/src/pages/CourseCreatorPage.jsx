@@ -257,6 +257,28 @@ export default function CourseCreatorPage() {
       originalFormRef.current = JSON.stringify(formData);
       setHasUnsavedChanges(false);
       setModules(data.course.modules || []);
+
+      // Restore objectives from database
+      if (data.course.objectives) {
+        try {
+          const obj = typeof data.course.objectives === 'string'
+            ? JSON.parse(data.course.objectives)
+            : data.course.objectives;
+          if (Array.isArray(obj) && obj.length > 0) {
+            setGeneratedObjectives(obj);
+          }
+        } catch (e) { /* ignore parse errors */ }
+      }
+      if (data.course.objectives_sources) {
+        try {
+          const src = typeof data.course.objectives_sources === 'string'
+            ? JSON.parse(data.course.objectives_sources)
+            : data.course.objectives_sources;
+          if (Array.isArray(src) && src.length > 0) {
+            setObjectivesSources(src);
+          }
+        } catch (e) { /* ignore parse errors */ }
+      }
     } catch (error) {
       console.error('Error loading course:', error);
       toast.error('Error al cargar el curso');
@@ -314,9 +336,10 @@ export default function CourseCreatorPage() {
         : `${API_BASE}/courses`;
 
       // Include version for optimistic locking when updating
+      // Always include objectives so they persist to DB
       const bodyData = course
-        ? { ...courseForm, version: overrideVersion || courseVersion }
-        : courseForm;
+        ? { ...courseForm, objectives: generatedObjectives, objectives_sources: objectivesSources, version: overrideVersion || courseVersion }
+        : { ...courseForm, objectives: generatedObjectives, objectives_sources: objectivesSources };
 
       const response = await fetch(url, {
         method: course ? 'PUT' : 'POST',

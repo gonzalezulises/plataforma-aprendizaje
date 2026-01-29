@@ -36,6 +36,9 @@ export async function initDatabase() {
   // Create tables
   createTables();
 
+  // Run migrations for existing databases
+  runMigrations();
+
   // Seed sample data
   seedSampleData();
 
@@ -145,6 +148,29 @@ function seedSampleData() {
 }
 
 /**
+ * Run schema migrations for existing databases.
+ * Each migration checks if it's needed before applying.
+ */
+function runMigrations() {
+  // Migration: Add objectives columns to courses table
+  try {
+    const cols = db.exec("PRAGMA table_info(courses)");
+    const columnNames = cols.length > 0 ? cols[0].values.map(row => row[1]) : [];
+    if (!columnNames.includes('objectives')) {
+      db.run("ALTER TABLE courses ADD COLUMN objectives TEXT DEFAULT '[]'");
+      console.log('[Migration] Added objectives column to courses table');
+    }
+    if (!columnNames.includes('objectives_sources')) {
+      db.run("ALTER TABLE courses ADD COLUMN objectives_sources TEXT DEFAULT '[]'");
+      console.log('[Migration] Added objectives_sources column to courses table');
+    }
+  } catch (e) {
+    // Column might already exist, ignore
+    console.log('[Migration] courses columns check:', e.message);
+  }
+}
+
+/**
  * Create database tables
  */
 function createTables() {
@@ -241,6 +267,8 @@ function createTables() {
       instructor_id INTEGER,
       category TEXT,
       tags TEXT DEFAULT '[]',
+      objectives TEXT DEFAULT '[]',
+      objectives_sources TEXT DEFAULT '[]',
       level TEXT NOT NULL DEFAULT 'Principiante',
       is_premium INTEGER NOT NULL DEFAULT 0,
       is_published INTEGER NOT NULL DEFAULT 1,

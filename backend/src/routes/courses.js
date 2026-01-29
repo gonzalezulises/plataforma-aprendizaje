@@ -295,6 +295,8 @@ router.post('/', requireInstructor, (req, res) => {
       description,
       category,
       tags = [],
+      objectives = [],
+      objectives_sources = [],
       level = 'Principiante',
       is_premium = false,
       thumbnail_url = null,
@@ -330,9 +332,9 @@ router.post('/', requireInstructor, (req, res) => {
     const safeDurationHours = duration_hours || 0;
 
     run(
-      `INSERT INTO courses (title, slug, description, instructor_id, category, tags, level, is_premium, is_published, thumbnail_url, duration_hours, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-      [title, slug, safeDescription, instructorId, safeCategory, JSON.stringify(tags), level, is_premium ? 1 : 0, safeThumbnailUrl, safeDurationHours, now, now]
+      `INSERT INTO courses (title, slug, description, instructor_id, category, tags, objectives, objectives_sources, level, is_premium, is_published, thumbnail_url, duration_hours, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+      [title, slug, safeDescription, instructorId, safeCategory, JSON.stringify(tags), JSON.stringify(objectives), JSON.stringify(objectives_sources), level, is_premium ? 1 : 0, safeThumbnailUrl, safeDurationHours, now, now]
     );
 
     // Fetch by slug since lastInsertRowid may not work reliably with sql.js
@@ -442,6 +444,17 @@ router.put('/:id', requireInstructor, (req, res) => {
     if (duration_hours !== undefined) {
       updates.push('duration_hours = ?');
       params.push(duration_hours);
+    }
+
+    // Persist objectives
+    const { objectives, objectives_sources } = req.body;
+    if (objectives !== undefined) {
+      updates.push('objectives = ?');
+      params.push(JSON.stringify(objectives));
+    }
+    if (objectives_sources !== undefined) {
+      updates.push('objectives_sources = ?');
+      params.push(JSON.stringify(objectives_sources));
     }
 
     // Feature #25: Allow setting instructor_id for course ownership
