@@ -103,6 +103,14 @@ export default function CourseCreatorPage() {
   const originalFormRef = useRef(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Draft persistence for new courses (localStorage)
+  const autosaveTimerRef = useRef(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Autosave for existing courses
+  const autosaveExistingTimerRef = useRef(null);
+  const [autosaveStatus, setAutosaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+
   // Unsaved changes warning hook
   const {
     showModal: showUnsavedModal,
@@ -113,6 +121,102 @@ export default function CourseCreatorPage() {
     hasUnsavedChanges,
     'Tienes cambios sin guardar en este curso. Si sales ahora, perderas los cambios.'
   );
+
+  // Restore draft from localStorage for new courses
+  useEffect(() => {
+    if (courseId) return; // Only for new courses
+    try {
+      const raw = localStorage.getItem('course_draft_new');
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (!draft.courseForm?.title && !draft.courseForm?.description) return;
+      setCourseForm(draft.courseForm);
+      if (draft.generatedObjectives?.length > 0) {
+        setGeneratedObjectives(draft.generatedObjectives);
+      }
+      if (draft.activeTab) {
+        setActiveTab(draft.activeTab);
+      }
+      originalFormRef.current = JSON.stringify(draft.courseForm);
+      setDraftRestored(true);
+      toast.success('Borrador restaurado');
+    } catch {
+      // Ignore parse errors
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save draft to localStorage for new courses (debounced 1s)
+  useEffect(() => {
+    if (courseId || course) return; // Only for new courses (not yet saved)
+    if (!courseForm.title && !courseForm.description) return;
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem('course_draft_new', JSON.stringify({
+          courseForm,
+          generatedObjectives,
+          activeTab,
+          savedAt: new Date().toISOString()
+        }));
+      } catch {
+        // Ignore storage errors
+      }
+    }, 1000);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [courseForm, generatedObjectives, activeTab, courseId, course]);
+
+  // Autosave for existing courses (debounced 3s)
+  useEffect(() => {
+    if (!courseId || !course || !hasUnsavedChanges || isSaving) return;
+
+    if (autosaveExistingTimerRef.current) {
+      clearTimeout(autosaveExistingTimerRef.current);
+    }
+    autosaveExistingTimerRef.current = setTimeout(async () => {
+      setAutosaveStatus('saving');
+      try {
+        const response = await fetch(`${API_BASE}/courses/${course.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ...courseForm, version: courseVersion })
+        });
+
+        if (response.status === 409) {
+          setAutosaveStatus('error');
+          return;
+        }
+
+        if (!response.ok) {
+          setAutosaveStatus('error');
+          return;
+        }
+
+        const data = await response.json();
+        setCourseVersion(data.course.updated_at);
+        originalFormRef.current = JSON.stringify(courseForm);
+        setHasUnsavedChanges(false);
+        setAutosaveStatus('saved');
+        setTimeout(() => setAutosaveStatus(null), 3000);
+      } catch {
+        setAutosaveStatus('error');
+      }
+    }, 3000);
+
+    return () => {
+      if (autosaveExistingTimerRef.current) {
+        clearTimeout(autosaveExistingTimerRef.current);
+      }
+    };
+  }, [courseForm, courseId, course, hasUnsavedChanges, isSaving, courseVersion]);
 
   // Load course data if editing
   const loadCourse = useCallback(async () => {
@@ -248,8 +352,10 @@ export default function CourseCreatorPage() {
 
       toast.success(course ? 'Curso actualizado' : 'Curso creado');
 
-      // If new course, update URL without triggering a navigation/reload
+      // If new course, clear draft and update URL
       if (!course && data.course?.id) {
+        localStorage.removeItem('course_draft_new');
+        setDraftRestored(false);
         window.history.replaceState(null, '', `/admin/courses/${data.course.id}/edit`);
       }
 
@@ -913,6 +1019,47 @@ export default function CourseCreatorPage() {
         {/* Tab Content */}
         {activeTab === TABS.DETAILS && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            {/* Draft restored banner */}
+            {draftRestored && !course && (
+              <div className="mb-6 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-blue-700 dark:text-blue-300">
+                    Se restauro un borrador guardado anteriormente.
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('course_draft_new');
+                    setCourseForm({
+                      title: '',
+                      description: '',
+                      category: 'Programacion',
+                      level: 'Principiante',
+                      is_premium: false,
+                      duration_hours: 0
+                    });
+                    setGeneratedObjectives([]);
+                    setDraftRestored(false);
+                    originalFormRef.current = JSON.stringify({
+                      title: '',
+                      description: '',
+                      category: 'Programacion',
+                      level: 'Principiante',
+                      is_premium: false,
+                      duration_hours: 0
+                    });
+                    setHasUnsavedChanges(false);
+                  }}
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                >
+                  Descartar
+                </button>
+              </div>
+            )}
+
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
               Informacion del Curso
             </h2>
@@ -1124,7 +1271,19 @@ export default function CourseCreatorPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {/* Autosave status indicator */}
+                {autosaveStatus && (
+                  <span className={`text-sm ${
+                    autosaveStatus === 'saving' ? 'text-gray-500 dark:text-gray-400' :
+                    autosaveStatus === 'saved' ? 'text-green-600 dark:text-green-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`}>
+                    {autosaveStatus === 'saving' && 'Guardando...'}
+                    {autosaveStatus === 'saved' && 'Guardado automaticamente'}
+                    {autosaveStatus === 'error' && 'Error al guardar'}
+                  </span>
+                )}
                 <button
                   onClick={() => saveCourse()}
                   disabled={isSaving}

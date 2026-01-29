@@ -16,6 +16,21 @@ export default function AdminCoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, course: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState(null);
+
+  // Check for pending draft in localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('course_draft_new');
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.courseForm?.title) {
+        setPendingDraft(draft);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
 
   // Redirect non-instructors - security check for admin access
   useEffect(() => {
@@ -132,6 +147,44 @@ export default function AdminCoursesPage() {
 
         {/* Courses List */}
         <div className="p-6">
+          {/* Pending draft banner */}
+          {pendingDraft && (
+            <div className="mb-6 flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                    Borrador sin guardar: {pendingDraft.courseForm.title}
+                  </p>
+                  {pendingDraft.savedAt && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      Guardado el {new Date(pendingDraft.savedAt).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('course_draft_new');
+                    setPendingDraft(null);
+                  }}
+                  className="text-sm text-yellow-700 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200"
+                >
+                  Descartar
+                </button>
+                <Link
+                  to="/admin/courses/new"
+                  className="text-sm font-medium text-yellow-800 dark:text-yellow-300 bg-yellow-200 dark:bg-yellow-800 px-3 py-1 rounded-lg hover:bg-yellow-300 dark:hover:bg-yellow-700 transition-colors"
+                >
+                  Continuar editando
+                </Link>
+              </div>
+            </div>
+          )}
+
           {courses.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
