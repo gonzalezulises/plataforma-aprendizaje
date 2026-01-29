@@ -29,6 +29,19 @@ const ExecutableCodeBlock = React.lazy(() => import('./ExecutableCodeBlock'));
 const InlineQuiz = React.lazy(() => import('./InlineQuiz'));
 const InlineExercise = React.lazy(() => import('./InlineExercise'));
 
+/**
+ * Recursively extract plain text from React children.
+ * rehype-highlight wraps code tokens in <span> elements,
+ * so String(children) produces "[object Object]".
+ */
+function extractText(children) {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(extractText).join('');
+  if (children?.props?.children != null) return extractText(children.props.children);
+  return '';
+}
+
 function LessonContentRenderer({
   content,
   courseContext = {},
@@ -63,7 +76,7 @@ function LessonContentRenderer({
     code({ node, inline, className: codeClassName, children, ...props }) {
       const match = /language-(\w+)/.exec(codeClassName || '');
       const language = match ? match[1] : '';
-      const codeContent = String(children).replace(/\n$/, '');
+      const codeContent = extractText(children).replace(/\n$/, '');
 
       // Inline code - render normally
       if (inline) {
