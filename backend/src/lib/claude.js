@@ -306,21 +306,30 @@ Directrices:
 
   const enhancedDirectives = enhanced ? `
 
-ESTRUCTURA OBLIGATORIA del contenido (usa estos encabezados de nivel 2 en Markdown):
+ESTRUCTURA OBLIGATORIA — MODELO PEDAGOGICO 4C:
 
-## Introduccion
-Conecta con conocimientos previos del estudiante. Explica por que este tema es importante y como se relaciona con lo que ya saben. Usa una pregunta motivadora o escenario real.
+Tu contenido DEBE seguir el modelo pedagogico de las 4C en este orden exacto.
+Cada seccion corresponde a una fase del aprendizaje. NO uses encabezados genericos.
 
-## Contenido Principal
-Explicacion detallada del tema con ejemplos intercalados. Usa sub-secciones (###) para organizar conceptos. Incluye notas importantes con blockquotes (>) y resalta terminos clave en **negrita**.
+## 🔗 Conexiones
+Activa conocimientos previos del estudiante. Esta fase prepara al cerebro para recibir informacion nueva.
+- Comienza con 1-2 preguntas motivadoras que conecten con la experiencia del estudiante
+- Explica por que este tema es importante en el mundo real (contexto profesional/practico)
+- Conecta explicitamente con temas anteriores del curso si aplica
+- Usa un escenario o problema real como gancho
 
-## Ejemplos Practicos
-Minimo 2 ejemplos resueltos paso a paso. Cada ejemplo debe:
-- Presentar el problema/situacion
-- Mostrar la solucion completa con explicacion de cada paso
-- Incluir el resultado o output esperado
+## 💡 Conceptos
+Presenta los conceptos minimos necesarios. NO sobrecargues: ensenha solo lo que el estudiante necesita para poder practicar.
+- Explicacion clara de cada concepto clave, uno a la vez
+- Usa sub-secciones (###) para organizar conceptos individuales
+- Incluye notas importantes con blockquotes (>) y terminos clave en **negrita**
+- Minimo 2 ejemplos resueltos paso a paso intercalados con la teoria
+- Cada ejemplo debe: presentar el problema, mostrar la solucion con explicacion de cada paso, incluir el output esperado
+- Progresion de simple a complejo
 
-## Ejercicios
+## 🛠️ Practica Concreta
+El estudiante aplica lo aprendido con las manos. Esta es la fase MAS IMPORTANTE — debe ocupar ~40% del contenido.
+
 3 ejercicios con dificultad progresiva:
 1. **Basico**: Ejercicio directo para verificar comprension
 2. **Intermedio**: Requiere combinar conceptos
@@ -344,8 +353,7 @@ Para ejercicios de codigo, incluye un bloque de codigo ejecutable con la plantil
 Explicacion de la solucion.
 </details>
 
-## Quiz de Comprension
-Incluye 2-3 preguntas de opcion multiple para verificar comprension. Formato:
+Incluye tambien 2-3 preguntas de opcion multiple para verificar comprension:
 
 ### Ejercicio: Quiz
 
@@ -360,18 +368,11 @@ Respuesta correcta: X)
 Explicacion de por que esta es la respuesta correcta.
 </details>
 
-## Dinamica de Aprendizaje
-Una actividad interactiva o reflexion. Puede ser:
-- Pregunta de reflexion sobre aplicaciones del tema
-- Mini-proyecto o reto rapido
-- Ejercicio de autoevaluacion con codigo ejecutable
-- Actividad colaborativa sugerida
-
-## Resumen y Puntos Clave
-Lista concisa de los conceptos mas importantes cubiertos. Usa viñetas para cada punto clave.
-
-## Que Sigue
-Breve preview del siguiente tema y como se conecta con lo aprendido. Genera curiosidad.` : '';
+## 🎯 Conclusion
+Cierra el ciclo de aprendizaje. El estudiante reflexiona y consolida.
+- **Resumen visual**: Lista concisa de los 3-5 puntos clave aprendidos (usa vinetas)
+- **Preguntas de reflexion**: 2-3 preguntas que hagan al estudiante pensar en como aplicar lo aprendido
+- **Conexion con lo que sigue**: Breve preview del siguiente tema y como se conecta. Genera curiosidad.` : '';
 
   const typeSpecificPrompts = {
     text: `${basePrompt}${enhancedDirectives}
@@ -457,20 +458,77 @@ function buildUserPrompt({
   }
 
   // Include 4C pedagogical structure data if available
+  // Fields come from pedagogical4C.js: connections, concepts, concrete_practice, conclusion
   if (structure_4c && typeof structure_4c === 'object') {
     const s4c = structure_4c;
-    prompt += `\n\n**Estructura Pedagogica 4C para esta leccion:**`;
-    if (s4c.conexiones) {
-      prompt += `\n- **Conexiones (conocimientos previos):** ${s4c.conexiones}`;
+    prompt += `\n\n**ESTRUCTURA PEDAGOGICA 4C PARA ESTA LECCION — DEBES SEGUIR ESTA GUIA:**`;
+
+    // 1. Connections
+    if (s4c.connections) {
+      prompt += `\n\n🔗 **CONEXIONES (seccion "## 🔗 Conexiones"):**`;
+      if (s4c.connections.prior_knowledge) {
+        prompt += `\n- Conocimientos previos a activar: ${s4c.connections.prior_knowledge}`;
+      }
+      if (s4c.connections.real_world_context) {
+        prompt += `\n- Contexto del mundo real: ${s4c.connections.real_world_context}`;
+      }
+      if (s4c.connections.guiding_questions && Array.isArray(s4c.connections.guiding_questions)) {
+        prompt += `\n- Preguntas guia para abrir la leccion:`;
+        s4c.connections.guiding_questions.forEach(q => {
+          prompt += `\n  - "${q}"`;
+        });
+      }
     }
-    if (s4c.conceptos) {
-      prompt += `\n- **Conceptos clave:** ${s4c.conceptos}`;
+
+    // 2. Concepts
+    if (s4c.concepts) {
+      prompt += `\n\n💡 **CONCEPTOS (seccion "## 💡 Conceptos"):**`;
+      if (s4c.concepts.key_concepts && Array.isArray(s4c.concepts.key_concepts)) {
+        prompt += `\n- Conceptos clave a cubrir: ${s4c.concepts.key_concepts.join(', ')}`;
+      }
+      if (s4c.concepts.learning_outcomes) {
+        prompt += `\n- Resultado de aprendizaje: ${s4c.concepts.learning_outcomes}`;
+      }
+      if (s4c.concepts.difficulty_level) {
+        prompt += `\n- Nivel de dificultad: ${s4c.concepts.difficulty_level}`;
+      }
     }
-    if (s4c.practica) {
-      prompt += `\n- **Practica sugerida:** ${s4c.practica}`;
+
+    // 3. Concrete Practice
+    if (s4c.concrete_practice) {
+      prompt += `\n\n🛠️ **PRACTICA CONCRETA (seccion "## 🛠️ Practica Concreta"):**`;
+      if (s4c.concrete_practice.activity_type) {
+        prompt += `\n- Tipo de actividad: ${s4c.concrete_practice.activity_type}`;
+      }
+      if (s4c.concrete_practice.activity_description) {
+        prompt += `\n- Descripcion: ${s4c.concrete_practice.activity_description}`;
+      }
+      if (s4c.concrete_practice.expected_output) {
+        prompt += `\n- Output esperado: ${s4c.concrete_practice.expected_output}`;
+      }
+      if (s4c.concrete_practice.hints && Array.isArray(s4c.concrete_practice.hints)) {
+        prompt += `\n- Hints para incluir en los ejercicios:`;
+        s4c.concrete_practice.hints.forEach(h => {
+          prompt += `\n  - ${h}`;
+        });
+      }
     }
+
+    // 4. Conclusion
     if (s4c.conclusion) {
-      prompt += `\n- **Conclusion esperada:** ${s4c.conclusion}`;
+      prompt += `\n\n🎯 **CONCLUSION (seccion "## 🎯 Conclusion"):**`;
+      if (s4c.conclusion.reflection_questions && Array.isArray(s4c.conclusion.reflection_questions)) {
+        prompt += `\n- Preguntas de reflexion a incluir:`;
+        s4c.conclusion.reflection_questions.forEach(q => {
+          prompt += `\n  - "${q}"`;
+        });
+      }
+      if (s4c.conclusion.synthesis) {
+        prompt += `\n- Sintesis esperada: ${s4c.conclusion.synthesis}`;
+      }
+      if (s4c.conclusion.next_steps) {
+        prompt += `\n- Siguientes pasos: ${s4c.conclusion.next_steps}`;
+      }
     }
   }
 
@@ -479,7 +537,7 @@ function buildUserPrompt({
   }
 
   if (enhanced) {
-    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion. DEBES incluir TODAS las secciones obligatorias: Introduccion, Contenido Principal, Ejemplos Practicos (minimo 2), Ejercicios (3 niveles con soluciones ocultas), Dinamica de Aprendizaje, Resumen y Puntos Clave, y Que Sigue. El contenido debe ser extenso, minimo 2000 palabras.`;
+    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion siguiendo el MODELO PEDAGOGICO 4C. DEBES incluir las 4 secciones en este orden exacto: "## 🔗 Conexiones" (activar conocimiento previo), "## 💡 Conceptos" (teoria + ejemplos), "## 🛠️ Practica Concreta" (ejercicios de codigo ejecutable + quiz, ~40% del contenido), "## 🎯 Conclusion" (resumen + reflexion + que sigue). Si se proporciona estructura 4C arriba, USA esos datos especificos. El contenido debe ser extenso, minimo 2000 palabras.`;
   } else {
     prompt += `\n\nGenera contenido educativo completo y de alta calidad para esta leccion.`;
   }
