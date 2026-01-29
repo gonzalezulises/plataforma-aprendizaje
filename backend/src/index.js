@@ -429,16 +429,23 @@ if (process.env.NODE_ENV !== 'production') {
       }
       results.instructor2 = { id: instructor2.id, name: instructor2.name, email: instructor2.email };
 
-      // 2.5. Create main admin user (Ulises González)
+      // 2.5. Ensure main admin user exists (Ulises González)
       let mainAdmin = queryOne('SELECT * FROM users WHERE email = ?', ['ulises@rizo.ma']);
       if (!mainAdmin) {
-        const { hash, salt } = hashPassword('14430305');
-        run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-          ['ulises@rizo.ma', 'Ulises González', 'instructor_admin', hash, salt, now]);
-        mainAdmin = queryOne('SELECT * FROM users WHERE email = ?', ['ulises@rizo.ma']);
-        results.actions.push('Created main admin user: ulises@rizo.ma');
+        const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+        if (!adminPassword) {
+          results.actions.push('SKIPPED main admin creation: ADMIN_DEFAULT_PASSWORD env var not set');
+        } else {
+          const { hash, salt } = hashPassword(adminPassword);
+          run('INSERT INTO users (email, name, role, password_hash, password_salt, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            ['ulises@rizo.ma', 'Ulises González', 'instructor_admin', hash, salt, now]);
+          mainAdmin = queryOne('SELECT * FROM users WHERE email = ?', ['ulises@rizo.ma']);
+          results.actions.push('Created main admin user: ulises@rizo.ma');
+        }
       }
-      results.mainAdmin = { id: mainAdmin.id, name: mainAdmin.name, email: mainAdmin.email };
+      if (mainAdmin) {
+        results.mainAdmin = { id: mainAdmin.id, name: mainAdmin.name, email: mainAdmin.email };
+      }
 
       // 3. Create or get student user
       let student = queryOne('SELECT * FROM users WHERE email = ?', ['student@test.com']);

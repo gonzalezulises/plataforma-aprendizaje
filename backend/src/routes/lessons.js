@@ -117,7 +117,7 @@ router.get('/:id', (req, res) => {
 router.get('/:id/progress', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const progress = queryOne(`
       SELECT * FROM lesson_progress
@@ -150,7 +150,10 @@ router.get('/:id/progress', (req, res) => {
 router.post('/:id/complete', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const now = new Date().toISOString();
 
     // Get lesson info to update course progress (optional - may not exist for sample lessons)
@@ -204,7 +207,10 @@ router.post('/:id/complete', (req, res) => {
 router.post('/:id/start', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const now = new Date().toISOString();
 
     // Upsert lesson progress - only update if not already completed
@@ -236,7 +242,10 @@ router.post('/:id/time', (req, res) => {
   try {
     const { id } = req.params;
     const { seconds } = req.body;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const now = new Date().toISOString();
 
     if (typeof seconds !== 'number' || seconds < 0) {

@@ -11,8 +11,7 @@ router.get('/:lessonId/:videoId', (req, res) => {
   try {
     const { lessonId, videoId } = req.params;
 
-    // Get user ID from session or use anonymous ID
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const row = queryOne(`
       SELECT saved_time, duration, completed, updated_at
@@ -59,8 +58,10 @@ router.post('/:lessonId/:videoId', (req, res) => {
     const { lessonId, videoId } = req.params;
     const { currentTime, duration, completed } = req.body;
 
-    // Get user ID from session or use anonymous ID
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
 
     // Validate inputs
     if (typeof currentTime !== 'number' || currentTime < 0) {
@@ -123,8 +124,7 @@ router.get('/:lessonId', (req, res) => {
   try {
     const { lessonId } = req.params;
 
-    // Get user ID from session or use anonymous ID
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const results = queryAll(`
       SELECT video_id, saved_time, duration, completed, updated_at

@@ -98,7 +98,7 @@ router.use((req, res, next) => {
 router.get('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const quiz = queryOne(`SELECT * FROM quizzes WHERE id = ?`, [id]);
 
@@ -165,7 +165,10 @@ router.get('/:id', (req, res) => {
 router.post('/:id/start', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const now = new Date().toISOString();
 
     const quiz = queryOne(`SELECT * FROM quizzes WHERE id = ?`, [id]);
@@ -243,7 +246,10 @@ router.post('/:id/submit', (req, res) => {
   try {
     const { id } = req.params;
     const { attemptId, answers } = req.body;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     const now = new Date().toISOString();
 
     if (!attemptId || !answers) {
@@ -356,7 +362,7 @@ router.post('/:id/submit', (req, res) => {
 router.get('/:id/attempts', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const attempts = queryAll(`
       SELECT id, score, total_points, passed, attempt_number, started_at, completed_at, time_spent_seconds
@@ -379,7 +385,7 @@ router.get('/:id/attempts', (req, res) => {
 router.get('/:id/attempt/:attemptId', (req, res) => {
   try {
     const { id, attemptId } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
 
     const quiz = queryOne(`SELECT * FROM quizzes WHERE id = ?`, [id]);
     if (!quiz) {
@@ -452,7 +458,10 @@ router.get('/:id/attempt/:attemptId', (req, res) => {
 router.delete('/:id/attempts', (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.session?.user?.id || req.headers['x-user-id'] || 'anonymous';
+    const userId = req.session?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
     run(`DELETE FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?`, [userId, id]);
 

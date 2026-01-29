@@ -141,16 +141,10 @@ function seedCareerPaths(db) {
   saveDatabase();
 }
 
-// Helper: Get user from session or header
+// Helper: Get user from session
 function getUser(req) {
-  // Check session first
   if (req.session && req.session.user) {
     return req.session.user;
-  }
-  // Check x-user-id header (for development/testing)
-  const userId = req.headers['x-user-id'];
-  if (userId) {
-    return { id: parseInt(userId) };
   }
   return null;
 }

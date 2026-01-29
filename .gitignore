@@ -6,8 +6,10 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.production
 .env.check
 .env.vercel
+frontend/.env.production
 frontend/.env.check
 frontend/.env.vercel
 
