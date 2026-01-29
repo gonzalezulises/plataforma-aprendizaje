@@ -65,20 +65,13 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - **Quick tunnel**: Removed (`pm2 delete quick-tunnel`)
 - **Vercel env vars**: `VITE_API_URL=https://api.rizo.ma/api`, `VITE_WS_URL=wss://api.rizo.ma`
 
-## Pending Tasks
+## Operational Notes
 
-### 1. PM2 Startup Service
+### PM2 Startup Service
 - **Status**: Configured as `pm2-root` systemd service (runs as root)
 - **Note**: PM2 processes run as `gonzalezulises`, but startup service is root
-- **pm2 save** has been executed — processes will be restored on reboot
-- **Verify after reboot**: `pm2 status` should show all 3 processes
-
-### 4. rizo.ma Website Impact
-- rizo.ma was previously on Vercel (ns1.vercel-dns.com)
-- After nameserver migration to Cloudflare, DNS records were imported
-- Existing A records, MX records (Google), and TXT records preserved
-- The main website should continue working once Cloudflare is active
-- The `api` subdomain will be new (routed to DGX via tunnel)
+- **pm2 save** has been executed — 2 processes will be restored on reboot
+- **Verify after reboot**: `pm2 status` should show `plataforma-api` + `cloudflare-tunnel`
 
 ## Cloudflare Account Details
 
@@ -224,8 +217,7 @@ When generating content for `lessonType === 'video'`, the AI route (`/api/ai/gen
 | `frontend/src/utils/video-utils.js` | Video URL parsing and platform detection |
 | `frontend/src/components/LessonContentRenderer.jsx` | Central interactive markdown renderer |
 | `frontend/src/utils/exercise-parser.js` | Exercise/quiz detection in markdown |
-| `frontend/.env.production` | Production API/WS URLs (currently quick tunnel) |
-| `frontend/vercel.json` | Vercel config with rewrites to backend |
+| `frontend/vercel.json` | Vercel config with rewrites to api.rizo.ma |
 | `deploy/update-dgx.sh` | Script to SSH into DGX and update backend |
 
 ## Common Operations
@@ -260,6 +252,18 @@ Migrations run automatically on backend startup in `database.js:runMigrations()`
 | `structure_4c` MCQ update | Replaces open-ended reflection/guiding questions with MCQ-format topics in all lessons |
 
 ## Recent Changes (2026-01-29)
+
+### DNS Migration to api.rizo.ma
+- Cloudflare nameservers active (`elliott.ns.cloudflare.com`, `maisie.ns.cloudflare.com`)
+- `api.rizo.ma` permanent URL via Cloudflare Named Tunnel
+- Quick tunnel (`trycloudflare.com`) removed
+- Vercel env vars updated, `vercel.json` proxy points to `api.rizo.ma`
+
+### Security Audit (18 issues fixed)
+- **Critical (3)**: Removed hardcoded admin password, eliminated x-user-id header spoofing, moved env vars to Vercel dashboard
+- **High (5)**: Strong session secret validation, tightened CSRF exclusions, restricted CORS, secured test endpoints, added course ownership enforcement on all 13 state-changing endpoints
+- **Medium (5)**: Input length validation (bio/name/avatar_url), safe error response parsing, removed 95 debug console.logs from frontend, standardized API port across 11 files, replaced deprecated references
+- **Low (5)**: Deleted 6,087 lines of dead code (10 .bak files + 4 test pages), configured HSTS/CSP/referrer-policy headers via helmet, set ADMIN_DEFAULT_PASSWORD on DGX
 
 ### Video System for Lessons
 - `VideoPlayer` refactored into 3 sub-components: `YouTubeEmbed`, `VimeoEmbed`, `DirectVideo`
@@ -305,4 +309,5 @@ Migrations run automatically on backend startup in `database.js:runMigrations()`
 - Backend was on Railway (`plataforma-aprendizaje-api-production.up.railway.app`)
 - LLM accessed via Tailscale IP (`100.116.242.33:8000`)
 - Tailscale Funnel used for API access
-- **All replaced** by running backend directly on DGX + Cloudflare Tunnel
+- Quick tunnel (`cloud-create-providers-average.trycloudflare.com`) used temporarily before DNS migration
+- **All replaced** by DGX Spark + Cloudflare Named Tunnel (`api.rizo.ma`)

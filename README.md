@@ -14,15 +14,15 @@ Plataforma de aprendizaje activo para crear cursos enriquecidos con:
 
 ```
 ┌─────────────────┐     ┌──────────────────────────────────────────────────┐
-│  Frontend       │     │              DGX Spark (GPU Server)              │
-│  (Vercel)       │     │                                                  │
-│                 │ CF  │  ┌─────────────┐  ┌─────────────┐               │
-│  React + Vite   │────▶│  │ Backend API │  │ vLLM        │               │
-│                 │Tunnel│  │ (PM2:3001)  │  │ Qwen3-14B   │               │
-└─────────────────┘     │  └──────┬──────┘  │ (GPU:8000)  │               │
-                        │         │         └─────────────┘               │
-                        │         ▼                                        │
-                        │  ┌─────────────┐  ┌─────────────────────────┐   │
+│  www.rizo.ma    │     │              DGX Spark (GPU Server)              │
+│  /academia      │     │                                                  │
+│  (Vercel)       │     │  ┌─────────────┐  ┌─────────────┐               │
+│                 │────▶│  │ Backend API │  │ vLLM        │               │
+│  React + Vite   │ CF  │  │ (PM2:3001)  │  │ Qwen3-14B   │               │
+│                 │Named│  └──────┬──────┘  │ (GPU:8000)  │               │
+└─────────────────┘Tunnel│        │         └─────────────┘               │
+                   via   │        ▼                                        │
+              api.rizo.ma│ ┌─────────────┐  ┌─────────────────────────┐   │
                         │  │ RAG Server  │  │ Milvus (Vector DB)      │   │
                         │  │ (8001)      │◀▶│ 562,834 chunks          │   │
                         │  └─────────────┘  │ 145+ books              │   │
@@ -30,20 +30,37 @@ Plataforma de aprendizaje activo para crear cursos enriquecidos con:
                         └──────────────────────────────────────────────────┘
 ```
 
+### Request Flow
+
+```
+User browser → www.rizo.ma/academia → Vercel (frontend SPA)
+                                        │
+                                        ├── Static assets → Vercel CDN
+                                        └── /api/* → api.rizo.ma (Cloudflare Named Tunnel)
+                                                        │
+                                                        └── localhost:3001 (DGX Spark)
+                                                              ├── Express API
+                                                              ├── SQLite DB
+                                                              ├── vLLM :8000 (Qwen3-14B)
+                                                              └── Cerebro-RAG :8001 (Milvus)
+```
+
 ## Tech Stack
 
 ### Frontend
-- **React** - UI framework
+- **React 18** - UI framework
 - **Tailwind CSS** - Styling
-- **Plyr** - Video player
-- **Monaco Editor** - Code editor (VS Code engine)
 - **Vite** - Build tool
+- **Pyodide** - Python WASM runtime (in-browser code execution)
+- **sql.js** - SQLite WASM runtime (in-browser SQL execution)
+- **ReactMarkdown** - Content rendering with custom widgets
 
 ### Backend
-- **Node.js** - Runtime
+- **Node.js 22** - Runtime
 - **Express.js** - Web framework
-- **SQLite** - Database
-- **WebSockets** - Real-time communication
+- **SQLite** - Database (sql.js)
+- **WebSockets** - Real-time notifications
+- **helmet** - Security headers (HSTS, CSP, referrer-policy)
 
 ### AI/RAG System
 - **Qwen3-14B-NVFP4** - Local LLM (84GB VRAM on DGX Spark)
@@ -54,9 +71,20 @@ Plataforma de aprendizaje activo para crear cursos enriquecidos con:
 
 ### Infrastructure
 - **DGX Spark** - NVIDIA GPU server (128GB unified memory)
-- **Cloudflare Tunnel** - Permanent tunnel exposing backend to internet
-- **Vercel** - Frontend hosting (auto-deploys from master)
+- **Cloudflare** - DNS + Named Tunnel (`api.rizo.ma` → `localhost:3001`)
+- **Vercel** - Frontend hosting (auto-deploys from `master`)
 - **PM2** - Process management (backend + tunnel)
+- **Supabase** - Auth (OAuth) + Storage (video uploads)
+
+### Security
+- **CSRF protection** - Token-based, enforced on all state-changing endpoints
+- **Session security** - Cryptographic session secrets, httpOnly cookies
+- **CORS** - Strict origin whitelist (rizo.ma domains only in production)
+- **Course ownership** - Authorization checks on all content modification endpoints
+- **Rate limiting** - Login attempt throttling (5 failures → 60s block)
+- **Input validation** - Length limits on user-modifiable fields
+- **HSTS** - 1 year, includeSubDomains, preload-ready
+- **CSP** - Restrictive policy (API serves JSON only)
 
 ## Quick Start
 
@@ -92,13 +120,13 @@ cd frontend && npm run dev
 ```
 
 ### Access Points
+
 | Service | URL |
 |---------|-----|
 | Frontend (local) | http://localhost:5173 |
 | Backend API (local) | http://localhost:3001 |
-| Frontend (prod) | https://plataforma-aprendizaje-neon.vercel.app |
-| API (prod) | https://cloud-create-providers-average.trycloudflare.com/api |
-| API (permanent, pending) | https://api.rizo.ma/api |
+| Frontend (prod) | https://www.rizo.ma/academia |
+| API (prod) | https://api.rizo.ma/api |
 
 ## Environment Variables
 
@@ -108,7 +136,7 @@ cd frontend && npm run dev
 NODE_ENV=production
 PORT=3001
 DATABASE_PATH=./data/learning.db
-SESSION_SECRET=your-secret
+SESSION_SECRET=<min 32 chars, cryptographic random>
 
 # AI - Local LLM (DGX Spark)
 LOCAL_LLM_URL=http://localhost:8000/v1
@@ -118,18 +146,31 @@ CEREBRO_RAG_URL=http://localhost:8001
 # AI - Anthropic (fallback)
 # ANTHROPIC_API_KEY=sk-ant-xxx
 
-# Supabase (auth)
+# Supabase (auth + storage)
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJ...
 
-# CORS
-CORS_ORIGIN=https://academia.rizo.ma,http://localhost:5173
+# Security
+ADMIN_DEFAULT_PASSWORD=<strong random password>
+# ENABLE_TEST_ENDPOINTS=true  # Only in development
+# TEST_USER_PASSWORD=<password>  # Only with ENABLE_TEST_ENDPOINTS
+
+# CORS (optional, for additional allowed origins)
+# CORS_EXTRA_ORIGINS=https://extra-domain.com
 ```
 
-### Frontend (.env)
+### Frontend (Vercel Dashboard - not committed to git)
+```bash
+VITE_API_URL=https://api.rizo.ma/api
+VITE_WS_URL=wss://api.rizo.ma
+VITE_SUPABASE_URL=https://xxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+### Frontend (.env for local development)
 ```bash
 VITE_API_URL=http://localhost:3001/api
-VITE_WS_URL=ws://localhost:3001/ws
+VITE_WS_URL=ws://localhost:3001
 VITE_SUPABASE_URL=https://xxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
@@ -141,10 +182,10 @@ The platform uses Cerebro-RAG to generate pedagogically-sound content:
 
 ```bash
 # Check AI status
-curl https://cloud-create-providers-average.trycloudflare.com/api/ai/status
+curl https://api.rizo.ma/api/ai/status
 
 # Search knowledge base
-curl -X POST https://cloud-create-providers-average.trycloudflare.com/api/ai/rag/search \
+curl -X POST https://api.rizo.ma/api/ai/rag/search \
   -H "Content-Type: application/json" \
   -d '{"query": "machine learning neural networks", "topK": 5}'
 ```
@@ -166,19 +207,20 @@ plataforma-aprendizaje/
 │   ├── src/
 │   │   ├── routes/        # API endpoints
 │   │   ├── lib/           # Core libraries (claude.js, supabase.js)
-│   │   ├── middleware/    # Express middleware
+│   │   ├── middleware/    # Express middleware (auth, csrf, rateLimiter)
 │   │   ├── config/        # Database config
-│   │   └── utils/         # Utilities
+│   │   └── utils/         # Utilities (pedagogical4C.js)
 │   ├── data/              # SQLite database
-│   └── .env               # Environment config
+│   └── .env               # Environment config (not committed)
 ├── frontend/
 │   ├── src/
 │   │   ├── components/    # React components
 │   │   ├── pages/         # Page components
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── services/      # API clients
-│   │   └── utils/         # Utilities
-│   └── .env.production    # Production config
+│   │   ├── hooks/         # Custom hooks (usePyodide, useSQLite)
+│   │   ├── store/         # Context providers (Auth, Theme)
+│   │   ├── lib/           # Supabase client
+│   │   └── utils/         # Utilities (api, csrf, video-utils)
+│   └── vercel.json        # Vercel config with rewrites
 ├── deploy/
 │   └── update-dgx.sh     # Update backend on DGX via SSH
 ├── CLAUDE.md              # Claude Code project context
@@ -198,8 +240,7 @@ pm2 restart plataforma-api  # Restart backend
 | PM2 Process | Description |
 |-------------|-------------|
 | `plataforma-api` | Node.js backend on :3001 |
-| `cloudflare-tunnel` | Named tunnel (for api.rizo.ma) |
-| `quick-tunnel` | Temporary trycloudflare.com URL |
+| `cloudflare-tunnel` | Named tunnel → api.rizo.ma |
 
 ### Update Backend
 ```bash
@@ -208,20 +249,13 @@ pm2 restart plataforma-api  # Restart backend
 ssh dgx-spark "cd ~/plataforma-aprendizaje && git pull && cd backend && npm install && pm2 restart plataforma-api"
 ```
 
-### RAG Server (separate process)
-```bash
-cd ~/cerebro-ds
-source ~/.vllm/bin/activate
-python -m uvicorn src.rag_api.server:app --host 0.0.0.0 --port 8001
-```
-
 ### Service Ports
 | Service | Port | Description |
 |---------|------|-------------|
-| vLLM | 8000 | Qwen3-14B LLM |
-| RAG Server | 8001 | Search endpoint |
-| RAG Proxy | 8002 | Chat completions |
 | Backend API | 3001 | Express server |
+| vLLM | 8000 | Qwen3-14B LLM |
+| RAG Server | 8001 | Cerebro-RAG search endpoint |
+| RAG Proxy | 8002 | Chat completions proxy |
 
 ## User Roles
 
@@ -235,20 +269,19 @@ python -m uvicorn src.rag_api.server:app --host 0.0.0.0 --port 8001
 
 ### For Students
 - Browse and enroll in courses
-- Interactive video lessons
-- Execute code (Python, SQL, R)
-- Jupyter-style notebooks
-- Quizzes with instant feedback
+- Interactive video lessons (YouTube/Vimeo/upload)
+- Execute code in-browser (Python via Pyodide, SQL via sql.js)
+- Quizzes with instant feedback (MCQ)
 - Coding challenges
 - Progress tracking & badges
 - Forum discussions
 - Certificates
 
 ### For Instructors
-- AI-assisted course creation (RAG-enhanced)
-- Pedagogical structure (Bloom's taxonomy, 4C model)
+- AI-assisted course creation (RAG-enhanced, 4C pedagogical model)
+- YouTube search + video upload for lessons
 - Automatic and manual evaluation
-- Video feedback recording
+- Course ownership and access control
 - Analytics dashboard
 - Webinar scheduling
 
@@ -261,16 +294,27 @@ python -m uvicorn src.rag_api.server:app --host 0.0.0.0 --port 8001
 
 ### Courses
 - `GET /api/courses` - List courses
-- `POST /api/courses` - Create course
+- `POST /api/courses` - Create course (instructor only)
 - `GET /api/courses/:id` - Get course details
+- `PUT /api/courses/:id` - Update course (owner only)
+- `DELETE /api/courses/:id` - Delete course (owner only)
 
-See `app_spec.txt` for complete API documentation.
+### Video
+- `POST /api/youtube/search` - Search YouTube videos
+- `POST /api/video-upload/signed-url` - Get Supabase upload URL
+
+### Auth
+- `POST /api/direct-auth/login` - Email/password login
+- `POST /api/direct-auth/register` - Register new account
+- `GET /api/auth/csrf-token` - Get CSRF token
+
+See `CLAUDE.md` for complete project context and operational documentation.
 
 ## Contributing
 
 1. Create a feature branch
 2. Make your changes
-3. Run tests and linting
+3. Verify the frontend builds: `cd frontend && npx vite build`
 4. Submit a pull request
 
 ## License
