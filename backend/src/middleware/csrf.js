@@ -70,7 +70,8 @@ export function csrfProtection(req, res, next) {
     '/api/users/admin/set-role', // Admin role management
     '/api/test/', // All test endpoints excluded
     '/api/courses', // Course management (already requires instructor auth)
-    '/api/ai' // AI generation endpoints (requires instructor auth)
+    '/api/ai', // AI generation endpoints (requires instructor auth)
+    '/api/enrollments' // Enrollment endpoints (already requires auth)
   ];
 
   const isExcluded = excludedPaths.some(path => req.path.startsWith(path));
