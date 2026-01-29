@@ -73,181 +73,13 @@ function LessonPage() {
   const [exerciseProgress, setExerciseProgress] = useState({});
   const [exerciseSummary, setExerciseSummary] = useState(null);
 
-  // Sample lesson data with multiple lessons for navigation testing
-  const lessonsData = {
-    1: {
-      id: 1,
-      title: 'Introduccion a Python: Variables y Tipos de Datos',
-      module: 'Modulo 1: Fundamentos',
-      course: 'Python: Fundamentos',
-      bloomLevel: 'Comprender',
-      duration: 15,
-      description: 'En esta leccion aprenderemos los conceptos basicos de variables y tipos de datos en Python.',
-      content: [
-        {
-          type: 'video',
-          id: 'intro-video',
-          title: 'Video: Introduccion a Variables en Python',
-          src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          poster: null,
-          alternativeContent: 'Esta leccion cubre los fundamentos de variables en Python: como declarar variables, los tipos de datos basicos (strings, integers, floats, booleans), y las reglas para nombrar variables. Puedes revisar el contenido de texto y los ejemplos de codigo a continuacion para aprender los mismos conceptos.'
-        },
-        {
-          type: 'text',
-          content: `## Variables en Python
-
-Las variables en Python son contenedores para almacenar valores de datos. A diferencia de otros lenguajes de programacion, Python no requiere declarar el tipo de variable explicitamente.
-
-### Reglas para nombrar variables:
-- Deben comenzar con una letra o guion bajo
-- Solo pueden contener caracteres alfanumericos y guiones bajos
-- Son sensibles a mayusculas y minusculas`
-        },
-        {
-          type: 'code',
-          language: 'python',
-          title: 'ejemplo_variables.py',
-          code: `# Asignacion de variables
-nombre = "Maria"
-edad = 25
-altura = 1.65
-es_estudiante = True
-
-# Imprimiendo variables
-print(f"Nombre: {nombre}")
-print(f"Edad: {edad}")
-print(f"Altura: {altura}m")
-print(f"Es estudiante: {es_estudiante}")
-
-# Tipo de cada variable
-print(type(nombre))    # <class 'str'>
-print(type(edad))      # <class 'int'>
-print(type(altura))    # <class 'float'>
-print(type(es_estudiante))  # <class 'bool'>`
-        }
-      ]
-    },
-    2: {
-      id: 2,
-      title: 'Estructuras de Control: Condicionales',
-      module: 'Modulo 1: Fundamentos',
-      course: 'Python: Fundamentos',
-      bloomLevel: 'Aplicar',
-      duration: 20,
-      description: 'Aprende a controlar el flujo de tu programa con if, elif y else.',
-      content: [
-        {
-          type: 'video',
-          id: 'conditionals-video',
-          title: 'Video: Condicionales en Python',
-          src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-          poster: null,
-          alternativeContent: 'Esta leccion explica las estructuras condicionales en Python: if, elif, y else. Aprende como controlar el flujo de tu programa basandose en condiciones. Revisa el contenido de texto a continuacion para una explicacion detallada.'
-        },
-        {
-          type: 'text',
-          content: `## Condicionales en Python
-
-Las estructuras condicionales permiten ejecutar codigo basandose en condiciones.
-
-### Sintaxis basica:
-- if: evalua una condicion
-- elif: evalua condiciones adicionales
-- else: se ejecuta si ninguna condicion es verdadera`
-        }
-      ]
-    },
-    3: {
-      id: 3,
-      title: 'Bucles: for y while',
-      module: 'Modulo 1: Fundamentos',
-      course: 'Python: Fundamentos',
-      bloomLevel: 'Aplicar',
-      duration: 25,
-      description: 'Domina los bucles para repetir acciones en tu codigo.',
-      content: [
-        {
-          type: 'video',
-          id: 'loops-video',
-          title: 'Video: Bucles en Python',
-          src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-          poster: null,
-          alternativeContent: 'Esta leccion cubre los bucles en Python: for y while. Domina como repetir acciones en tu codigo de forma eficiente. El contenido de texto a continuacion explica los conceptos principales.'
-        },
-        {
-          type: 'text',
-          content: `## Bucles en Python
-
-Los bucles permiten repetir bloques de codigo.
-
-### Tipos de bucles:
-- for: itera sobre una secuencia
-- while: repite mientras una condicion sea verdadera`
-        }
-      ]
-    },
-    // Test lesson with broken video URL for testing error handling
-    4: {
-      id: 4,
-      title: 'Funciones: Definicion y uso',
-      module: 'Modulo 2: Funciones',
-      course: 'Python: Fundamentos',
-      bloomLevel: 'Aplicar',
-      duration: 30,
-      description: 'Aprende a crear y usar funciones en Python.',
-      content: [
-        {
-          type: 'video',
-          id: 'functions-video',
-          title: 'Video: Funciones en Python',
-          src: 'https://invalid-video-url-for-testing.com/nonexistent-video.mp4',
-          poster: null,
-          alternativeContent: 'Esta leccion explica como definir y usar funciones en Python. Las funciones te permiten encapsular codigo reutilizable. Incluye parametros, valores de retorno, y buenas practicas. Puedes revisar el contenido de texto y los ejemplos de codigo a continuacion para aprender los mismos conceptos.'
-        },
-        {
-          type: 'text',
-          content: `## Funciones en Python
-
-Las funciones son bloques de codigo reutilizables que realizan una tarea especifica.
-
-### Sintaxis basica:
-- def: palabra clave para definir una funcion
-- return: devuelve un valor de la funcion
-- Parametros: valores que se pasan a la funcion`
-        },
-        {
-          type: 'code',
-          language: 'python',
-          title: 'ejemplo_funciones.py',
-          code: `# Definicion de una funcion simple
-def saludar(nombre):
-    return f"Hola, {nombre}!"
-
-# Llamar a la funcion
-mensaje = saludar("Maria")
-print(mensaje)  # Hola, Maria!
-
-# Funcion con valor por defecto
-def potencia(base, exponente=2):
-    return base ** exponente
-
-print(potencia(3))      # 9 (3^2)
-print(potencia(3, 3))   # 27 (3^3)`
-        }
-      ]
-    }
-  };
-
   const currentLessonId = parseInt(lessonId) || 1;
 
-  // Use API-fetched lesson or fall back to sample data
-  const sampleLesson = lessonsData[currentLessonId];
-  const lesson = apiLesson || sampleLesson;
+  const lesson = apiLesson;
 
   // Fetch lesson from API on mount
   useEffect(() => {
     let isMounted = true;
-    const hasSampleData = currentLessonId in lessonsData;
 
     const fetchLesson = async () => {
       setIsLoading(true);
@@ -267,11 +99,7 @@ print(potencia(3, 3))   # 27 (3^3)`
         if (!isMounted) return;
 
         if (response.status === 404) {
-          // Lesson not found in database - check if it's a sample lesson
-          if (!hasSampleData) {
-            setNotFound(true);
-          }
-          // If we have sample data, we'll use that (loading state ends, no API lesson)
+          setNotFound(true);
         } else if (response.status === 401 || response.status === 403) {
           // User not authenticated or not enrolled - check response for enrollment requirement
           const data = await response.json();
@@ -293,15 +121,13 @@ print(potencia(3, 3))   # 27 (3^3)`
               courseTitle: data.courseTitle || 'este curso',
               requiresAuth: response.status === 401
             });
-          } else if (!hasSampleData) {
-            // No sample data and access denied
+          } else {
             setEnrollmentRequired({
               courseSlug: slug,
               courseTitle: 'este curso',
               requiresAuth: response.status === 401
             });
           }
-          // If we have sample data, we'll use that for sample lessons
         } else if (!response.ok) {
           throw new Error('Failed to load lesson');
         } else {
@@ -355,8 +181,7 @@ print(potencia(3, 3))   # 27 (3^3)`
         }
       } catch (error) {
         console.error('Error fetching lesson:', error);
-        // If API fails but we have sample data, use that
-        if (!hasSampleData && isMounted) {
+        if (isMounted) {
           setLoadError(error.message);
         }
       } finally {
@@ -414,15 +239,6 @@ print(potencia(3, 3))   # 27 (3^3)`
     fetchProgress();
     markLessonStarted();
 
-    // Set up navigation from sample data only if API didn't provide it
-    if (!navigation.previous && !navigation.next && !apiLesson) {
-      const lessonIds = Object.keys(lessonsData).map(Number);
-      const currentIndex = lessonIds.indexOf(currentLessonId);
-      setNavigation({
-        previous: currentIndex > 0 ? { id: lessonIds[currentIndex - 1], title: lessonsData[lessonIds[currentIndex - 1]]?.title } : null,
-        next: currentIndex < lessonIds.length - 1 ? { id: lessonIds[currentIndex + 1], title: lessonsData[lessonIds[currentIndex + 1]]?.title } : null
-      });
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLessonId, isLoading, notFound, loadError]);
 

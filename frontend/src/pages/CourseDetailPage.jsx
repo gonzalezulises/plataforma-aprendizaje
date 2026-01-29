@@ -4,154 +4,6 @@ import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import { csrfFetch } from '../utils/csrf';
 
-// Sample course data - in production this would come from API
-const SAMPLE_COURSES = {
-  'python-fundamentos': {
-    id: 1,
-    slug: 'python-fundamentos',
-    title: 'Python: Fundamentos',
-    description: 'Aprende Python desde cero con ejercicios practicos y proyectos reales. Este curso te llevara desde los conceptos basicos hasta la creacion de programas funcionales.',
-    category: 'Programacion',
-    level: 'Principiante',
-    duration: '20 horas',
-    isPremium: false,
-    instructor: {
-      name: 'Carlos Rodriguez',
-      bio: 'Desarrollador senior con 10+ anos de experiencia en Python',
-      avatar: null
-    },
-    studentsCount: 1250,
-    rating: 4.8,
-    reviewsCount: 324,
-    modules: [
-      {
-        id: 1,
-        title: 'Introduccion a Python',
-        description: 'Conoce el lenguaje y configura tu entorno',
-        lessons: [
-          { id: 1, title: 'Bienvenida al curso', duration: '5 min', type: 'video' },
-          { id: 2, title: 'Instalacion de Python', duration: '10 min', type: 'video' },
-          { id: 3, title: 'Tu primer programa', duration: '15 min', type: 'code' }
-        ]
-      },
-      {
-        id: 2,
-        title: 'Variables y Tipos de Datos',
-        description: 'Aprende a trabajar con datos en Python',
-        lessons: [
-          { id: 4, title: 'Variables y asignacion', duration: '12 min', type: 'video' },
-          { id: 5, title: 'Numeros y operaciones', duration: '15 min', type: 'code' },
-          { id: 6, title: 'Strings y formateo', duration: '18 min', type: 'code' }
-        ]
-      },
-      {
-        id: 3,
-        title: 'Estructuras de Control',
-        description: 'Controla el flujo de tu programa',
-        lessons: [
-          { id: 7, title: 'Condicionales if/else', duration: '20 min', type: 'video' },
-          { id: 8, title: 'Bucles for y while', duration: '25 min', type: 'code' },
-          { id: 9, title: 'Proyecto: Calculadora', duration: '30 min', type: 'project' }
-        ]
-      }
-    ],
-    learningObjectives: [
-      'Entender los fundamentos de la programacion',
-      'Escribir programas en Python desde cero',
-      'Trabajar con variables, funciones y estructuras de datos',
-      'Resolver problemas usando pensamiento algoritmico',
-      'Crear proyectos practicos aplicando lo aprendido'
-    ],
-    requirements: [
-      'Computadora con Windows, Mac o Linux',
-      'Conexion a internet',
-      'Ganas de aprender - no se requiere experiencia previa'
-    ]
-  },
-  'data-science-python': {
-    id: 2,
-    slug: 'data-science-python',
-    title: 'Data Science con Python',
-    description: 'Domina pandas, numpy y matplotlib para analisis de datos. Aprende a limpiar, explorar y visualizar datos como un profesional.',
-    category: 'Data Science',
-    level: 'Intermedio',
-    duration: '35 horas',
-    isPremium: true,
-    instructor: {
-      name: 'Maria Garcia',
-      bio: 'Data Scientist en empresas Fortune 500',
-      avatar: null
-    },
-    studentsCount: 890,
-    rating: 4.9,
-    reviewsCount: 256,
-    modules: [
-      {
-        id: 1,
-        title: 'Introduccion a Data Science',
-        lessons: [
-          { id: 1, title: 'Que es Data Science', duration: '10 min', type: 'video' },
-          { id: 2, title: 'Configuracion del entorno', duration: '15 min', type: 'video' }
-        ]
-      },
-      {
-        id: 2,
-        title: 'NumPy Fundamentals',
-        lessons: [
-          { id: 3, title: 'Arrays y operaciones', duration: '20 min', type: 'code' },
-          { id: 4, title: 'Algebra lineal basica', duration: '25 min', type: 'code' }
-        ]
-      }
-    ],
-    learningObjectives: [
-      'Dominar pandas para manipulacion de datos',
-      'Crear visualizaciones profesionales con matplotlib',
-      'Analizar datasets reales',
-      'Aplicar estadistica descriptiva'
-    ],
-    requirements: [
-      'Conocimientos basicos de Python',
-      'Matematicas basicas'
-    ]
-  },
-  'sql-desde-cero': {
-    id: 3,
-    slug: 'sql-desde-cero',
-    title: 'SQL desde Cero',
-    description: 'Aprende a consultar y manipular bases de datos con SQL. Desde las consultas mas basicas hasta joins complejos y subconsultas.',
-    category: 'Bases de Datos',
-    level: 'Principiante',
-    duration: '15 horas',
-    isPremium: false,
-    instructor: {
-      name: 'Ana Martinez',
-      bio: 'DBA con experiencia en sistemas empresariales',
-      avatar: null
-    },
-    studentsCount: 2100,
-    rating: 4.7,
-    reviewsCount: 489,
-    modules: [
-      {
-        id: 1,
-        title: 'Fundamentos de SQL',
-        lessons: [
-          { id: 1, title: 'Introduccion a bases de datos', duration: '8 min', type: 'video' },
-          { id: 2, title: 'Tu primera consulta SELECT', duration: '12 min', type: 'code' }
-        ]
-      }
-    ],
-    learningObjectives: [
-      'Escribir consultas SQL efectivas',
-      'Entender el modelo relacional',
-      'Realizar joins entre tablas',
-      'Optimizar consultas'
-    ],
-    requirements: [
-      'No se requiere experiencia previa'
-    ]
-  }
-};
 
 function CourseDetailPage() {
   const { slug } = useParams();
@@ -180,69 +32,49 @@ function CourseDetailPage() {
           const data = await response.json();
           const apiCourse = data.course;
 
-          // Merge API data with sample data for additional fields (modules, etc.)
-          const sampleCourse = SAMPLE_COURSES[slug];
-
-          // Use API modules if available
-          // IMPORTANT: Only use sample modules for DISPLAY purposes, never for navigation
-          // because sample lesson IDs don't match real database IDs
           const hasApiModules = apiCourse.modules && apiCourse.modules.length > 0;
-          const modulesToUse = hasApiModules
-            ? apiCourse.modules
-            : sampleCourse?.modules || [];
 
-          // Feature #244: Use instructor data from API if available
-          const instructor = apiCourse.instructor || sampleCourse?.instructor || {
+          const instructor = apiCourse.instructor || {
             name: 'Instructor',
             bio: 'Instructor del curso',
             avatar: null
           };
 
-          const mergedCourse = {
-            ...sampleCourse,
-            id: apiCourse.id, // Use actual database ID!
+          const courseData = {
+            id: apiCourse.id,
+            slug: apiCourse.slug || slug,
             title: apiCourse.title,
             description: apiCourse.description,
             category: apiCourse.category,
             level: apiCourse.level,
             isPremium: !!apiCourse.is_premium,
             duration: `${apiCourse.duration_hours || 0} horas`,
-            modules: modulesToUse, // For display purposes
-            _hasRealLessons: hasApiModules, // Flag to indicate if navigation is safe
+            modules: hasApiModules ? apiCourse.modules : [],
+            _hasRealLessons: hasApiModules,
             instructor: {
               id: instructor.id,
               name: instructor.name,
               bio: instructor.bio,
               avatar: instructor.avatar_url || instructor.avatar || null
             },
+            learningObjectives: apiCourse.objectives ? (typeof apiCourse.objectives === 'string' ? JSON.parse(apiCourse.objectives) : apiCourse.objectives) : [],
+            requirements: apiCourse.requirements ? (typeof apiCourse.requirements === 'string' ? JSON.parse(apiCourse.requirements) : apiCourse.requirements) : [],
+            studentsCount: apiCourse.students_count || 0,
+            rating: apiCourse.rating || null,
+            reviewsCount: apiCourse.reviews_count || 0,
           };
 
-          setCourse(mergedCourse);
+          setCourse(courseData);
 
-          // Check enrollment status with the correct database ID
           if (isAuthenticated) {
             checkEnrollmentStatus(apiCourse.id);
           }
         } else {
-          // Fallback to sample data if API fails
-          const courseData = SAMPLE_COURSES[slug];
-          if (courseData) {
-            setCourse(courseData);
-            if (isAuthenticated) {
-              checkEnrollmentStatus(courseData.id);
-            }
-          }
+          setCourse(null);
         }
       } catch (error) {
         console.error('Error fetching course:', error);
-        // Fallback to sample data
-        const courseData = SAMPLE_COURSES[slug];
-        if (courseData) {
-          setCourse(courseData);
-          if (isAuthenticated) {
-            checkEnrollmentStatus(courseData.id);
-          }
-        }
+        setCourse(null);
       } finally {
         setLoading(false);
       }
