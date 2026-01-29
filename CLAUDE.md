@@ -1,6 +1,6 @@
 # Project Context - Academia Rizoma
 
-## Architecture (as of 2026-01-28)
+## Architecture (as of 2026-01-29)
 
 ```
 www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/academia
@@ -101,13 +101,93 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - **Account ID**: `ef859f719256817f3bdecc915153f27d`
 - **Tunnel Token**: stored in PM2 process args (cloudflare-tunnel)
 
+## Interactive Content System (as of 2026-01-29)
+
+AI-generated lesson content is rendered interactively in the browser. Students can execute code, answer quizzes, and receive immediate feedback — all client-side (no backend needed for execution).
+
+### Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `LessonContentRenderer` | `frontend/src/components/LessonContentRenderer.jsx` | Central markdown renderer with ReactMarkdown + custom widgets |
+| `ExecutableCodeBlock` | `frontend/src/components/ExecutableCodeBlock.jsx` | Editable code blocks with Run/Reset (Python via Pyodide, SQL via sql.js) |
+| `InlineQuiz` | `frontend/src/components/InlineQuiz.jsx` | MCQ widget with A/B/C/D options, instant feedback, score |
+| `InlineExercise` | `frontend/src/components/InlineExercise.jsx` | Exercise card with code editor + solution toggle |
+| `usePyodide` | `frontend/src/hooks/usePyodide.js` | Singleton Pyodide v0.24.1 runtime (Python WASM) |
+| `useSQLite` | `frontend/src/hooks/useSQLite.js` | Singleton sql.js runtime with pre-loaded sample tables |
+| `exercise-parser` | `frontend/src/utils/exercise-parser.js` | Detects exercise/quiz patterns in markdown content |
+
+### How It Works
+
+1. AI generates markdown content with ````python`/`\`\`\`sql` code blocks, `### Ejercicio` sections, MCQ options (A/B/C/D)
+2. `exercise-parser.js` splits markdown into segments: `markdown | quiz | exercise`
+3. `LessonContentRenderer` renders each segment with the appropriate interactive widget
+4. Code blocks use lazy-loaded WASM runtimes (Pyodide for Python, sql.js for SQL)
+5. Exercises and quizzes track progress via `/api/inline-exercises` endpoints
+
+### Exercise Parser Detection
+
+- **Structured markers**: `<!-- quiz-start -->` / `<!-- quiz-end -->`, `<!-- exercise-start type="code" lang="python" -->`
+- **Natural patterns**: `### Ejercicio`, `### Quiz de consolidacion`, `A)/B)/C)/D)` option lists, `<details><summary>Ver solucion</summary>`
+- Multi-question quiz blocks with numbered questions (1. / 2. / 3.) are supported
+
+## 4C Pedagogical Model
+
+Every lesson follows the 4C instructional design model:
+
+1. **Conexiones** (Connections) — Activate prior knowledge with MCQ questions
+2. **Conceptos** (Concepts) — Theory + worked examples
+3. **Practica Concreta** (Concrete Practice) — Exercises + quiz (~40% of content)
+4. **Conclusion** — Summary + consolidation quiz + preview of next topic
+
+### Implementation
+
+- `backend/src/utils/pedagogical4C.js` — Generates 4C structure per lesson (stored in `lessons.structure_4c`)
+- `backend/src/lib/claude.js` — `buildSystemPrompt()` enforces 4C section headers; `buildUserPrompt()` injects 4C data into AI prompt
+
+### MCQ-Only Policy (Async Instructional Design)
+
+Since the course is asynchronous (no live instructor), ALL student-facing questions must be multiple-choice:
+- Single correct answer or multiple correct answers
+- With answer verification and explanation in `<details>` blocks
+- NO open-ended questions anywhere (Conexiones, Practica, Conclusion)
+- Policy enforced in: `buildSystemPrompt()`, `buildUserPrompt()`, `pedagogical4C.js`
+- Database migration auto-updates `structure_4c` in existing lessons
+
+## Content Generation Pipeline
+
+```
+CourseCreatorPage → POST /api/ai/generate-lesson-content
+                       |
+                       ├── queryCerebroRAG(topic) → RAG context from 145+ books
+                       |
+                       ├── buildSystemPrompt(type, enhanced=true)
+                       |   ├── Base directives (Spanish, MCQ-only policy)
+                       |   └── 4C model structure with section templates
+                       |
+                       ├── buildUserPrompt(lesson, structure_4c)
+                       |   ├── Course/module/lesson metadata
+                       |   ├── 4C pedagogical data (connections, concepts, practice, conclusion)
+                       |   └── RAG context
+                       |
+                       ├── callLocalLLM() → Qwen3-14B on DGX (:8000)
+                       |   └── stripThinkingTokens() — removes <think>...</think> from Qwen3
+                       |
+                       └── Save to lesson_content table as JSON { text: "markdown..." }
+```
+
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `backend/src/lib/claude.js` | AI client - LLM + RAG integration, defaults to localhost |
+| `backend/src/lib/claude.js` | AI client - LLM + RAG integration, 4C prompts, MCQ policy |
+| `backend/src/utils/pedagogical4C.js` | 4C pedagogical model structure generator |
 | `backend/src/routes/ai-course-structure.js` | AI course structure generation |
+| `backend/src/routes/inline-exercises.js` | Exercise progress tracking API |
+| `backend/src/config/database.js` | SQLite database + schema + migrations |
 | `backend/src/index.js` | Express server entry point |
+| `frontend/src/components/LessonContentRenderer.jsx` | Central interactive markdown renderer |
+| `frontend/src/utils/exercise-parser.js` | Exercise/quiz detection in markdown |
 | `frontend/.env.production` | Production API/WS URLs (currently quick tunnel) |
 | `frontend/vercel.json` | Vercel config with rewrites to backend |
 | `deploy/update-dgx.sh` | Script to SSH into DGX and update backend |
@@ -133,6 +213,44 @@ dig NS rizo.ma +short
 # Restart backend
 ssh dgx-spark 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && pm2 restart plataforma-api'
 ```
+
+## Database Migrations
+
+Migrations run automatically on backend startup in `database.js:runMigrations()`:
+
+| Migration | Description |
+|-----------|-------------|
+| `objectives` column | Added `objectives` and `objectives_sources` TEXT columns to `courses` table |
+| `structure_4c` MCQ update | Replaces open-ended reflection/guiding questions with MCQ-format topics in all lessons |
+
+## Recent Changes (2026-01-29)
+
+### Interactive Content System (Phases 1-5)
+- `LessonContentRenderer` replaces custom regex parsing with ReactMarkdown + interactive widgets
+- `ExecutableCodeBlock` with Pyodide (Python WASM) and sql.js (SQLite WASM) in-browser
+- `InlineQuiz` MCQ widget with instant feedback
+- `InlineExercise` with code editor and solution toggle
+- Exercise progress tracking via backend API
+
+### 4C Pedagogical Model Alignment
+- Fixed critical field name mismatch in `buildUserPrompt()` — 4C data was generated but never used
+- Restructured `buildSystemPrompt()` to follow 4C section headers
+
+### Course Objectives Persistence
+- Added `objectives` and `objectives_sources` columns to courses table
+- Backend POST/PUT now accept and store objectives
+- Frontend `saveCourse()` includes objectives in request body
+
+### Qwen3 Thinking Token Cleanup
+- `stripThinkingTokens()` removes `<think>...</think>` blocks from LLM output
+- Applied in both backend (`callLocalLLM`) and frontend (`LessonContentRenderer`)
+
+### MCQ-Only Instructional Design Policy
+- All student-facing questions mandated as multiple choice
+- System prompt updated with explicit MCQ policy
+- 4C sections (Conexiones, Conclusion) now generate MCQ quiz format
+- Database migration updates existing `structure_4c` data
+- Exercise parser supports `### Quiz de consolidacion` headers and multi-question blocks
 
 ## Previous Architecture (deprecated)
 
