@@ -324,14 +324,24 @@ print(potencia(3, 3))   # 27 (3^3)`
                   type: c.type,
                   ...c.content
                 };
-                // Map 'text' property to 'content' for text blocks (API uses 'text', component expects 'content')
-                if (c.type === 'text' && c.content?.text && !transformed.content) {
-                  transformed.content = c.content.text;
-                }
                 // Map 'video_url' to 'src' for video blocks
                 if (c.type === 'video' && c.content?.video_url) {
                   transformed.src = c.content.video_url;
                   transformed.title = c.content.title || transformed.title || 'Video';
+                }
+                // If a 'code' block only has text (AI-generated markdown), treat as text
+                if (c.type === 'code' && c.content?.text && !c.content?.code) {
+                  transformed.type = 'text';
+                  transformed.content = c.content.text;
+                }
+                // If a 'video' block only has text (AI-generated script), treat as text
+                if (c.type === 'video' && c.content?.text && !c.content?.video_url && !transformed.src) {
+                  transformed.type = 'text';
+                  transformed.content = c.content.text;
+                }
+                // Map 'text' property to 'content' for text blocks (API uses 'text', component expects 'content')
+                if (transformed.type === 'text' && c.content?.text && !transformed.content) {
+                  transformed.content = c.content.text;
                 }
                 return transformed;
               }) || []
