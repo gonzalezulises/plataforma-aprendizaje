@@ -155,6 +155,22 @@ export function isClaudeConfigured() {
 }
 
 /**
+ * Strip thinking/reasoning tokens from LLM output.
+ * Qwen3 and similar models emit <think>...</think> blocks
+ * containing internal chain-of-thought that should not be shown to users.
+ */
+function stripThinkingTokens(text) {
+  if (!text) return text;
+  // Remove <think>...</think> blocks (including multiline)
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // Also handle unclosed <think> at the start (model started thinking but output got cut)
+  cleaned = cleaned.replace(/^<think>[\s\S]*$/gi, '');
+  // Clean up leading whitespace/newlines left behind
+  cleaned = cleaned.replace(/^\s*\n+/, '');
+  return cleaned.trim();
+}
+
+/**
  * Call local LLM with OpenAI-compatible API
  */
 async function callLocalLLM(systemPrompt, userPrompt) {
@@ -181,7 +197,8 @@ async function callLocalLLM(systemPrompt, userPrompt) {
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || '';
+  const raw = data.choices[0]?.message?.content || '';
+  return stripThinkingTokens(raw);
 }
 
 /**

@@ -37,16 +37,25 @@ function LessonContentRenderer({
   exerciseProgress = {},
   className = ''
 }) {
+  // Strip thinking tokens from LLM output (Qwen3 <think>...</think>)
+  const cleanContent = useMemo(() => {
+    if (!content) return '';
+    return content
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/^\s*\n+/, '')
+      .trim();
+  }, [content]);
+
   // Parse exercise sections from markdown content
   const segments = useMemo(() => {
-    if (!content) return [];
+    if (!cleanContent) return [];
     if (!interactive) {
       // Non-interactive mode: render everything as plain markdown
-      return [{ type: 'markdown', content }];
+      return [{ type: 'markdown', content: cleanContent }];
     }
-    const { segments } = parseExercises(content);
+    const { segments } = parseExercises(cleanContent);
     return segments;
-  }, [content, interactive]);
+  }, [cleanContent, interactive]);
 
   // Custom components for ReactMarkdown
   const components = useMemo(() => ({
@@ -204,7 +213,7 @@ function LessonContentRenderer({
     ),
   }), [interactive, courseContext]);
 
-  if (!content) {
+  if (!cleanContent) {
     return null;
   }
 
