@@ -1,14 +1,61 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { parseVideoUrl } from '../utils/video-utils';
 
 // API_BASE_URL already includes /api suffix from env
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
- * VideoPlayer component with progress tracking and error handling
- * Saves playback position and resumes from saved position
- * Shows fallback UI when video fails to load
+ * YouTube embed sub-component
  */
-function VideoPlayer({
+function YouTubeEmbed({ embedUrl, title, className = '' }) {
+  return (
+    <div className={`relative bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+      <iframe
+        src={embedUrl}
+        title={title || 'Video de YouTube'}
+        className="w-full aspect-video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+      {title && (
+        <div className="p-4 bg-gray-800">
+          <h3 className="text-white font-medium">{title}</h3>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Vimeo embed sub-component
+ */
+function VimeoEmbed({ embedUrl, title, className = '' }) {
+  return (
+    <div className={`relative bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+      <iframe
+        src={embedUrl}
+        title={title || 'Video de Vimeo'}
+        className="w-full aspect-video"
+        frameBorder="0"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+      {title && (
+        <div className="p-4 bg-gray-800">
+          <h3 className="text-white font-medium">{title}</h3>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Direct video sub-component with progress tracking and error handling
+ * (preserves all original VideoPlayer functionality)
+ */
+function DirectVideo({
   src,
   title,
   lessonId,
@@ -64,7 +111,6 @@ function VideoPlayer({
 
     const restorePosition = () => {
       if (savedTime > 0 && savedTime < video.duration - 5) {
-        // Use requestAnimationFrame to ensure we set position after browser's restore
         requestAnimationFrame(() => {
           video.currentTime = savedTime;
           setHasRestored(true);
@@ -72,12 +118,9 @@ function VideoPlayer({
       }
     };
 
-    // If video has enough data loaded
     if (video.readyState >= 2) {
-      // Video has enough data - restore position
       restorePosition();
     } else if (video.readyState >= 1) {
-      // Metadata loaded but not enough data - wait for canplay
       const handleCanPlay = () => {
         restorePosition();
         video.removeEventListener('canplay', handleCanPlay);
@@ -85,7 +128,6 @@ function VideoPlayer({
       video.addEventListener('canplay', handleCanPlay);
       return () => video.removeEventListener('canplay', handleCanPlay);
     } else {
-      // No metadata yet - wait for loadedmetadata then canplay
       const handleLoadedMetadata = () => {
         const handleCanPlay = () => {
           restorePosition();
@@ -168,7 +210,6 @@ function VideoPlayer({
 
   // Handle video error - show fallback UI
   const handleVideoError = useCallback((event) => {
-    // Clear any pending timeout
     if (window._videoLoadTimeout) {
       clearTimeout(window._videoLoadTimeout);
       window._videoLoadTimeout = null;
@@ -179,16 +220,16 @@ function VideoPlayer({
 
     if (video && video.error) {
       switch (video.error.code) {
-        case 1: // MEDIA_ERR_ABORTED
+        case 1:
           message = 'La reproduccion del video fue cancelada.';
           break;
-        case 2: // MEDIA_ERR_NETWORK
+        case 2:
           message = 'Error de red. Verifica tu conexion a internet.';
           break;
-        case 3: // MEDIA_ERR_DECODE
+        case 3:
           message = 'El video no pudo ser decodificado.';
           break;
-        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+        case 4:
           message = 'El formato de video no es compatible.';
           break;
         default:
@@ -215,15 +256,12 @@ function VideoPlayer({
     setRetryCount(prev => prev + 1);
     setShowAlternative(false);
 
-    // Set a timeout to show error if video doesn't load within 15 seconds
     const timeout = setTimeout(() => {
       setIsLoading(false);
       setHasError(true);
       setErrorMessage('El video no pudo cargarse. Tiempo de espera agotado.');
     }, 15000);
 
-    // The video element will be recreated due to the key change
-    // Store the timeout so we can clear it if video loads or errors
     if (window._videoLoadTimeout) {
       clearTimeout(window._videoLoadTimeout);
     }
@@ -240,7 +278,6 @@ function VideoPlayer({
     const handleBeforeUnload = () => {
       const video = videoRef.current;
       if (video && video.currentTime > 0) {
-        // Use sendBeacon for reliable saving during navigation
         const data = JSON.stringify({
           currentTime: video.currentTime,
           duration: video.duration,
@@ -257,7 +294,6 @@ function VideoPlayer({
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      // Save progress on component unmount
       const video = videoRef.current;
       if (video && video.currentTime > 0) {
         saveProgress(video.currentTime, video.duration);
@@ -288,14 +324,12 @@ function VideoPlayer({
     return (
       <div className={`relative bg-gray-900 rounded-lg overflow-hidden ${className}`}>
         <div className="aspect-video flex flex-col items-center justify-center p-8">
-          {/* Error icon */}
           <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
             <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
 
-          {/* Error message */}
           <h3 className="text-white font-medium text-lg mb-2">
             Error al cargar el video
           </h3>
@@ -303,7 +337,6 @@ function VideoPlayer({
             {errorMessage}
           </p>
 
-          {/* Action buttons */}
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={handleRetry}
@@ -328,7 +361,6 @@ function VideoPlayer({
             )}
           </div>
 
-          {/* Retry hint */}
           {retryCount >= 2 && (
             <p className="text-gray-500 text-sm mt-4 text-center">
               Si el problema persiste, verifica tu conexion a internet o intenta mas tarde.
@@ -336,14 +368,12 @@ function VideoPlayer({
           )}
         </div>
 
-        {/* Video title in error state */}
         {title && (
           <div className="p-4 bg-gray-800 border-t border-gray-700">
             <h3 className="text-white font-medium">{title}</h3>
           </div>
         )}
 
-        {/* Alternative content panel */}
         {showAlternative && alternativeContent && (
           <div className="p-6 bg-gray-800 border-t border-gray-700">
             <div className="flex items-center justify-between mb-4">
@@ -416,7 +446,6 @@ function VideoPlayer({
         onPause={handlePause}
         onError={handleVideoError}
         onLoadedData={() => {
-          // Clear any pending timeout since video loaded successfully
           if (window._videoLoadTimeout) {
             clearTimeout(window._videoLoadTimeout);
             window._videoLoadTimeout = null;
@@ -427,13 +456,56 @@ function VideoPlayer({
         Tu navegador no soporta la reproduccion de video.
       </video>
 
-      {/* Video title */}
       {title && (
         <div className="p-4 bg-gray-800">
           <h3 className="text-white font-medium">{title}</h3>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * VideoPlayer component with progress tracking and error handling
+ * Supports YouTube, Vimeo embeds and direct video playback
+ * Saves playback position and resumes from saved position (direct video only)
+ * Shows fallback UI when video fails to load
+ */
+function VideoPlayer({
+  src,
+  title,
+  lessonId,
+  videoId = 'main',
+  poster,
+  onProgress,
+  onComplete,
+  onError,
+  alternativeContent,
+  className = ''
+}) {
+  const videoInfo = parseVideoUrl(src);
+
+  if (videoInfo.type === 'youtube') {
+    return <YouTubeEmbed embedUrl={videoInfo.embedUrl} title={title} className={className} />;
+  }
+
+  if (videoInfo.type === 'vimeo') {
+    return <VimeoEmbed embedUrl={videoInfo.embedUrl} title={title} className={className} />;
+  }
+
+  return (
+    <DirectVideo
+      src={src}
+      title={title}
+      lessonId={lessonId}
+      videoId={videoId}
+      poster={poster}
+      onProgress={onProgress}
+      onComplete={onComplete}
+      onError={onError}
+      alternativeContent={alternativeContent}
+      className={className}
+    />
   );
 }
 

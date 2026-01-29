@@ -9,6 +9,10 @@ import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import { useWebSocket } from '../hooks/useWebSocket';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 import { csrfFetch } from '../utils/csrf';
+import { parseVideoUrl, validateVideoUrl, getVideoThumbnail } from '../utils/video-utils';
+import VideoPlayer from '../components/VideoPlayer';
+import YouTubeSearchModal from '../components/YouTubeSearchModal';
+import VideoUploadButton from '../components/VideoUploadButton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -69,6 +73,10 @@ export default function CourseCreatorPage() {
   // Content viewer state
   const [contentViewMode, setContentViewMode] = useState(true); // true = viewing, false = editing
   const [loadingContent, setLoadingContent] = useState(false);
+
+  // YouTube search modal state
+  const [showYouTubeSearch, setShowYouTubeSearch] = useState(false);
+  const [youtubeSearchQuery, setYoutubeSearchQuery] = useState('');
 
   // Field-level errors for unique validation (Feature #191)
   const [fieldErrors, setFieldErrors] = useState({ title: '' });
@@ -661,7 +669,12 @@ export default function CourseCreatorPage() {
 
   // Add content to lesson
   const handleAddContent = async () => {
-    if (!contentForm.content.text?.trim() && contentForm.type === 'text') {
+    if (contentForm.type === 'video') {
+      if (!contentForm.content.video_url?.trim()) {
+        toast.error('La URL del video es requerida');
+        return;
+      }
+    } else if (!contentForm.content.text?.trim()) {
       toast.error('El contenido no puede estar vacio');
       return;
     }
@@ -690,6 +703,7 @@ export default function CourseCreatorPage() {
       })));
       setContentForm({ type: 'text', content: { text: '' } });
       setShowContentModal(false);
+      setShowYouTubeSearch(false);
       toast.success('Contenido agregado');
     } catch (error) {
       console.error('Error adding content:', error);
@@ -720,14 +734,27 @@ export default function CourseCreatorPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.content && data.content.length > 0) {
-          // Combine all content blocks into a single text for viewing
-          const combinedText = data.content
-            .map(c => c.content?.text || JSON.stringify(c.content))
-            .join('\n\n');
-          setContentForm({
-            type: data.content[0].type || 'text',
-            content: { text: combinedText }
-          });
+          const firstBlock = data.content[0];
+          if (firstBlock.type === 'video' && firstBlock.content?.video_url) {
+            setContentForm({
+              type: 'video',
+              content: {
+                video_url: firstBlock.content.video_url,
+                video_source: firstBlock.content.video_source || '',
+                title: firstBlock.content.title || '',
+                text: firstBlock.content.text || ''
+              }
+            });
+          } else {
+            // Combine all content blocks into a single text for viewing
+            const combinedText = data.content
+              .map(c => c.content?.text || JSON.stringify(c.content))
+              .join('\n\n');
+            setContentForm({
+              type: firstBlock.type || 'text',
+              content: { text: combinedText }
+            });
+          }
           setContentViewMode(true);
         } else {
           // No content - go straight to edit mode
@@ -2107,9 +2134,17 @@ export default function CourseCreatorPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {contentViewMode && contentForm.content.text ? 'Contenido de la Leccion' : 'Agregar Contenido'}
+                {contentViewMode && (contentForm.content.text || contentForm.content.video_url) ? 'Contenido de la Leccion' : 'Agregar Contenido'}
               </h3>
-              {contentViewMode && contentForm.content.text && (
+              {contentViewMode && contentForm.content.video_url && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Video configurado
+                </span>
+              )}
+              {contentViewMode && contentForm.content.text && !contentForm.content.video_url && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -2125,14 +2160,29 @@ export default function CourseCreatorPage() {
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               </div>
-            ) : contentViewMode && contentForm.content.text ? (
+            ) : contentViewMode && (contentForm.content.text || contentForm.content.video_url) ? (
               /* Viewer mode */
               <div className="flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
-                  <LessonContentRenderer
-                    content={contentForm.content.text}
-                    interactive={false}
-                  />
+                  {contentForm.type === 'video' && contentForm.content.video_url ? (
+                    <div className="space-y-4">
+                      <VideoPlayer
+                        src={contentForm.content.video_url}
+                        title={contentForm.content.title || 'Video'}
+                      />
+                      {contentForm.content.text && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notas</h4>
+                          <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{contentForm.content.text}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <LessonContentRenderer
+                      content={contentForm.content.text}
+                      interactive={false}
+                    />
+                  )}
                 </div>
                 <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
@@ -2163,35 +2213,177 @@ export default function CourseCreatorPage() {
                     <select
                       id="content-type"
                       value={contentForm.type}
-                      onChange={(e) => setContentForm({ ...contentForm, type: e.target.value, content: { text: '' } })}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        if (newType === 'video') {
+                          setContentForm({ type: 'video', content: { video_url: '', video_source: '', title: '', text: '' } });
+                        } else {
+                          setContentForm({ type: newType, content: { text: '' } });
+                        }
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
                     >
                       <option value="text">Texto</option>
-                      <option value="video">Video URL</option>
+                      <option value="video">Video</option>
                       <option value="code">Codigo</option>
                     </select>
                   </div>
-                  <div className="flex-1 flex flex-col">
-                    <label htmlFor="content-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Contenido
-                    </label>
-                    <textarea
-                      id="content-text"
-                      value={contentForm.content.text || ''}
-                      onChange={(e) => setContentForm({ ...contentForm, content: { text: e.target.value } })}
-                      rows={12}
-                      className="w-full flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 font-mono"
-                      placeholder={
-                        contentForm.type === 'video' ? 'URL del video...' :
-                        contentForm.type === 'code' ? '# Tu codigo aqui...' :
-                        'Escribe el contenido...'
-                      }
-                    />
-                  </div>
+
+                  {contentForm.type === 'video' ? (
+                    /* Video-specific editor */
+                    <div className="flex-1 flex flex-col space-y-4 overflow-y-auto">
+                      {/* URL Input with platform detection */}
+                      <div>
+                        <label htmlFor="video-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          URL del Video
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            id="video-url"
+                            type="url"
+                            value={contentForm.content.video_url || ''}
+                            onChange={(e) => {
+                              const url = e.target.value;
+                              const validation = validateVideoUrl(url);
+                              setContentForm(prev => ({
+                                ...prev,
+                                content: {
+                                  ...prev.content,
+                                  video_url: url,
+                                  video_source: validation.type || ''
+                                }
+                              }));
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                            placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
+                          />
+                        </div>
+                        {/* Platform badge */}
+                        {contentForm.content.video_url && (() => {
+                          const v = validateVideoUrl(contentForm.content.video_url);
+                          return (
+                            <div className="mt-2 flex items-center gap-2">
+                              {v.valid ? (
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${
+                                  v.type === 'youtube' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                                  v.type === 'vimeo' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+                                  'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                                }`}>
+                                  {v.type === 'youtube' && (
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                  )}
+                                  {v.message}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 rounded">
+                                  {v.message}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Action buttons: Search YouTube + Upload */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const lesson = modules.flatMap(m => m.lessons || []).find(l => l.id === selectedLessonId);
+                            setYoutubeSearchQuery(lesson?.title || '');
+                            setShowYouTubeSearch(true);
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                          Buscar en YouTube
+                        </button>
+                        <VideoUploadButton
+                          onUploadComplete={(url) => {
+                            setContentForm(prev => ({
+                              ...prev,
+                              content: { ...prev.content, video_url: url, video_source: 'upload' }
+                            }));
+                            toast.success('Video subido correctamente');
+                          }}
+                          onError={(err) => toast.error(err)}
+                          className="flex-1"
+                        />
+                      </div>
+
+                      {/* Video preview */}
+                      {contentForm.content.video_url && validateVideoUrl(contentForm.content.video_url).valid && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Vista previa
+                          </label>
+                          <VideoPlayer
+                            src={contentForm.content.video_url}
+                            title={contentForm.content.title || 'Preview'}
+                            className="max-h-64"
+                          />
+                        </div>
+                      )}
+
+                      {/* Optional title */}
+                      <div>
+                        <label htmlFor="video-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Titulo del video (opcional)
+                        </label>
+                        <input
+                          id="video-title"
+                          type="text"
+                          value={contentForm.content.title || ''}
+                          onChange={(e) => setContentForm(prev => ({
+                            ...prev,
+                            content: { ...prev.content, title: e.target.value }
+                          }))}
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                          placeholder="Titulo descriptivo del video..."
+                        />
+                      </div>
+
+                      {/* Optional notes/script textarea */}
+                      <div>
+                        <label htmlFor="video-notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Notas / Guion (opcional)
+                        </label>
+                        <textarea
+                          id="video-notes"
+                          value={contentForm.content.text || ''}
+                          onChange={(e) => setContentForm(prev => ({
+                            ...prev,
+                            content: { ...prev.content, text: e.target.value }
+                          }))}
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                          placeholder="Notas o guion para acompanar el video..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    /* Text/Code editor (original) */
+                    <div className="flex-1 flex flex-col">
+                      <label htmlFor="content-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Contenido
+                      </label>
+                      <textarea
+                        id="content-text"
+                        value={contentForm.content.text || ''}
+                        onChange={(e) => setContentForm({ ...contentForm, content: { text: e.target.value } })}
+                        rows={12}
+                        className="w-full flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 font-mono"
+                        placeholder={
+                          contentForm.type === 'code' ? '# Tu codigo aqui...' :
+                          'Escribe el contenido...'
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={() => setShowContentModal(false)}
+                    onClick={() => { setShowContentModal(false); setShowYouTubeSearch(false); }}
                     className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     Cancelar
@@ -2209,7 +2401,28 @@ export default function CourseCreatorPage() {
         </div>
       )}
 
-      
+      {/* YouTube Search Modal */}
+      {showYouTubeSearch && (
+        <YouTubeSearchModal
+          isOpen={showYouTubeSearch}
+          onClose={() => setShowYouTubeSearch(false)}
+          initialQuery={youtubeSearchQuery}
+          onSelect={(video) => {
+            setContentForm(prev => ({
+              ...prev,
+              content: {
+                ...prev.content,
+                video_url: video.url,
+                video_source: 'youtube',
+                title: prev.content.title || video.title
+              }
+            }));
+            setShowYouTubeSearch(false);
+            toast.success('Video de YouTube seleccionado');
+          }}
+        />
+      )}
+
       {/* Conflict Resolution Modal */}
       {showConflictModal && conflictData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

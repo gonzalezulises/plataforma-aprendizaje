@@ -43,6 +43,8 @@ import usersRoutes from './routes/users.js';
 import instructorsRoutes from './routes/instructors.js';
 import lessonCommentsRoutes, { initLessonCommentsTables } from './routes/lesson-comments.js';
 import inlineExercisesRoutes, { initInlineExerciseTables } from './routes/inline-exercises.js';
+import youtubeSearchRoutes from './routes/youtube-search.js';
+import videoUploadRoutes from './routes/video-upload.js';
 
 // Import database
 import { initDatabase } from './config/database.js';
@@ -676,6 +678,8 @@ app.use('/api/users', usersRoutes);
 app.use('/api/instructors', instructorsRoutes);
 app.use('/api/lesson-comments', lessonCommentsRoutes);
 app.use('/api/inline-exercises', inlineExercisesRoutes);
+app.use('/api/youtube', youtubeSearchRoutes);
+app.use('/api/video-upload', videoUploadRoutes);
 
 // API info endpoint
 app.get('/api', (req, res) => {

@@ -328,6 +328,11 @@ print(potencia(3, 3))   # 27 (3^3)`
                 if (c.type === 'text' && c.content?.text && !transformed.content) {
                   transformed.content = c.content.text;
                 }
+                // Map 'video_url' to 'src' for video blocks
+                if (c.type === 'video' && c.content?.video_url) {
+                  transformed.src = c.content.video_url;
+                  transformed.title = c.content.title || transformed.title || 'Video';
+                }
                 return transformed;
               }) || []
             };

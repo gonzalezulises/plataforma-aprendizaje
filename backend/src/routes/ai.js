@@ -2,6 +2,7 @@ import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
 import { generateLessonContent, isClaudeConfigured, getAIProvider, queryCerebroRAG, isCerebroRAGAvailable, isLocalLLMAvailable } from '../lib/claude.js';
 import { emitGlobalBroadcast } from '../utils/websocket-events.js';
+import yts from 'yt-search';
 
 const router = express.Router();
 
@@ -148,10 +149,31 @@ router.post('/generate-lesson-content', async (req, res) => {
       console.log('[AI] Content saved to lesson_content for lesson:', lessonId);
     }
 
+    // Search YouTube for suggested videos when lesson type is video
+    let suggestedVideos = [];
+    if (lessonType === 'video') {
+      try {
+        const searchQuery = `${lessonTitle} tutorial`;
+        const ytResults = await yts(searchQuery);
+        suggestedVideos = ytResults.videos.slice(0, 5).map(v => ({
+          id: v.videoId,
+          title: v.title,
+          url: v.url,
+          thumbnail: v.thumbnail || `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`,
+          duration: v.timestamp,
+          author: v.author?.name || ''
+        }));
+        console.log(`[AI] Found ${suggestedVideos.length} YouTube suggestions for: ${lessonTitle}`);
+      } catch (ytError) {
+        console.warn('[AI] YouTube suggestion search failed:', ytError.message);
+      }
+    }
+
     res.json({
       success: true,
       content,
       sources: sources || [], // Books used as reference
+      suggestedVideos,
       metadata: {
         generatedAt: new Date().toISOString(),
         lessonTitle,
