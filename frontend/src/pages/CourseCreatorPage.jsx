@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
+import LessonContentRenderer from '../components/LessonContentRenderer';
 
 // Use the base URL without /api since the env var already includes it
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -2105,14 +2106,10 @@ export default function CourseCreatorPage() {
               /* Viewer mode */
               <div className="flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-900">
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-gray-900 dark:prose-headings:text-white prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 dark:prose-pre:bg-gray-950 prose-pre:text-gray-100">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                    >
-                      {contentForm.content.text}
-                    </ReactMarkdown>
-                  </div>
+                  <LessonContentRenderer
+                    content={contentForm.content.text}
+                    interactive={false}
+                  />
                 </div>
                 <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button

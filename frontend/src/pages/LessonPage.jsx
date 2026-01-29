@@ -4,6 +4,7 @@ import CodeBlock from '../components/CodeBlock';
 import VideoPlayer from '../components/VideoPlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import LessonComments from '../components/LessonComments';
+import LessonContentRenderer from '../components/LessonContentRenderer';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -68,6 +69,9 @@ function LessonPage() {
   const [premiumUpgradeRequired, setPremiumUpgradeRequired] = useState(null); // { courseSlug, courseTitle, upgradeUrl }
   // Feature #136: Track edited code for each code block (keyed by index)
   const [editedCode, setEditedCode] = useState({});
+  // Inline exercise progress tracking (Phase 4)
+  const [exerciseProgress, setExerciseProgress] = useState({});
+  const [exerciseSummary, setExerciseSummary] = useState(null);
 
   // Sample lesson data with multiple lessons for navigation testing
   const lessonsData = {
@@ -439,6 +443,81 @@ print(potencia(3, 3))   # 27 (3^3)`
     });
     // Clear from localStorage
     clearCodeDraft(currentLessonId, index);
+  }, [currentLessonId]);
+
+  // Fetch inline exercise progress
+  useEffect(() => {
+    if (!lesson || isLoading) return;
+    const fetchExerciseProgress = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`,
+          { credentials: 'include' }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setExerciseProgress(data.progress || {});
+          setExerciseSummary(data.summary || null);
+        }
+      } catch (error) {
+        // Silently fail - progress is optional
+        console.debug('Could not fetch exercise progress:', error);
+      }
+    };
+    fetchExerciseProgress();
+  }, [currentLessonId, lesson, isLoading]);
+
+  // Save inline exercise progress
+  const handleExerciseComplete = useCallback(async (results) => {
+    // Update local state immediately
+    if (Array.isArray(results)) {
+      // Quiz results
+      const updates = {};
+      results.forEach(r => {
+        updates[r.questionIndex] = {
+          status: 'completed',
+          isCorrect: r.correct,
+          attempts: 1
+        };
+      });
+      setExerciseProgress(prev => ({ ...prev, ...updates }));
+    }
+
+    // Save to backend
+    try {
+      if (Array.isArray(results)) {
+        // Save each quiz answer
+        for (const r of results) {
+          await fetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              exerciseIndex: r.questionIndex,
+              exerciseType: 'quiz',
+              status: 'completed',
+              answer: r.selected,
+              isCorrect: r.correct
+            })
+          });
+        }
+      } else if (results?.exerciseIndex !== undefined) {
+        // Save code exercise attempt
+        await fetch(`${API_BASE_URL}/inline-exercises/${currentLessonId}/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            exerciseIndex: results.exerciseIndex,
+            exerciseType: 'code',
+            status: results.attempted ? 'attempted' : 'completed',
+            isCorrect: false
+          })
+        });
+      }
+    } catch (error) {
+      console.debug('Could not save exercise progress:', error);
+    }
   }, [currentLessonId]);
 
   // Handle video progress update
@@ -1175,44 +1254,14 @@ print(potencia(3, 3))   # 27 (3^3)`
           {lesson.content.map((block, index) => {
             if (block.type === 'text') {
               return (
-                <div key={index} className="mb-8 text-gray-700 dark:text-gray-300">
-                  {block.content.split('\n').map((line, lineIndex) => {
-                    if (line.startsWith('## ')) {
-                      return (
-                        <h2 key={lineIndex} className="text-xl font-bold text-gray-900 dark:text-white mt-6 mb-3">
-                          {line.replace('## ', '')}
-                        </h2>
-                      );
-                    }
-                    if (line.startsWith('### ')) {
-                      return (
-                        <h3 key={lineIndex} className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-4 mb-2">
-                          {line.replace('### ', '')}
-                        </h3>
-                      );
-                    }
-                    if (line.startsWith('- ')) {
-                      return (
-                        <li key={lineIndex} className="ml-4 text-gray-600 dark:text-gray-400">
-                          {line.replace('- ', '')}
-                        </li>
-                      );
-                    }
-                    if (line.startsWith('| ')) {
-                      if (line.includes('---')) return null;
-                      const cells = line.split('|').filter(c => c.trim());
-                      return (
-                        <div key={lineIndex} className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 grid grid-cols-3 gap-2 border-b border-gray-200 dark:border-gray-700">
-                          {cells.map((cell, cellIndex) => (
-                            <span key={cellIndex} className="truncate">{cell.trim()}</span>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return line ? (
-                      <p key={lineIndex} className="mb-2">{line}</p>
-                    ) : null;
-                  })}
+                <div key={index} className="mb-8">
+                  <LessonContentRenderer
+                    content={block.content}
+                    courseContext={{ language: lesson.courseSlug?.includes('sql') ? 'sql' : 'python' }}
+                    interactive={true}
+                    onExerciseComplete={handleExerciseComplete}
+                    exerciseProgress={exerciseProgress}
+                  />
                 </div>
               );
             }
@@ -1364,6 +1413,36 @@ print(potencia(3, 3))   # 27 (3^3)`
               </button>
             </div>
             <pre className="font-mono text-sm text-green-400 whitespace-pre-wrap">{codeOutput}</pre>
+          </div>
+        )}
+
+        {/* Exercise progress indicator */}
+        {exerciseSummary && exerciseSummary.total > 0 && (
+          <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg">
+                  <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-medium text-indigo-900 dark:text-indigo-100">
+                    Ejercicios completados
+                  </h3>
+                  <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                    {exerciseSummary.completed} de {exerciseSummary.total} ejercicios ({exerciseSummary.completionRate}%)
+                  </p>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="w-32 h-2 bg-indigo-200 dark:bg-indigo-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-600 dark:bg-indigo-400 rounded-full transition-all duration-500"
+                  style={{ width: `${exerciseSummary.completionRate}%` }}
+                />
+              </div>
+            </div>
           </div>
         )}
 

@@ -326,16 +326,45 @@ Minimo 2 ejemplos resueltos paso a paso. Cada ejemplo debe:
 2. **Intermedio**: Requiere combinar conceptos
 3. **Avanzado**: Requiere analisis o aplicacion creativa
 
-Para cada ejercicio incluye el enunciado y la solucion entre tags:
+Para ejercicios de codigo, incluye un bloque de codigo ejecutable con la plantilla/starter y la solucion:
+
+### Ejercicio 1: (titulo)
+(Enunciado del ejercicio)
+
+\`\`\`python
+# Escribe tu codigo aqui
+\`\`\`
+
 <details><summary>Ver solucion</summary>
-(solucion aqui)
+
+\`\`\`python
+# Solucion completa
+\`\`\`
+
+Explicacion de la solucion.
+</details>
+
+## Quiz de Comprension
+Incluye 2-3 preguntas de opcion multiple para verificar comprension. Formato:
+
+### Ejercicio: Quiz
+
+1. (Pregunta)
+A) Opcion 1
+B) Opcion 2
+C) Opcion 3
+D) Opcion 4
+
+<details><summary>Ver solucion</summary>
+Respuesta correcta: X)
+Explicacion de por que esta es la respuesta correcta.
 </details>
 
 ## Dinamica de Aprendizaje
 Una actividad interactiva o reflexion. Puede ser:
 - Pregunta de reflexion sobre aplicaciones del tema
 - Mini-proyecto o reto rapido
-- Ejercicio de autoevaluacion
+- Ejercicio de autoevaluacion con codigo ejecutable
 - Actividad colaborativa sugerida
 
 ## Resumen y Puntos Clave
@@ -351,7 +380,11 @@ Para lecciones de tipo TEXTO:
 - Usa formato Markdown
 - Incluye encabezados, listas y enfasis donde sea apropiado
 - Agrega notas importantes con blockquotes (>)
-- Si es relevante, incluye bloques de codigo con sintaxis highlighting`,
+- Si es relevante, incluye bloques de codigo ejecutable con \`\`\`python o \`\`\`sql
+- Los bloques de codigo con \`\`\`python o \`\`\`sql seran EJECUTABLES en el navegador del estudiante
+- Para ejercicios de codigo usa secciones ### Ejercicio con bloques de codigo editables
+- Para preguntas de opcion multiple usa formato A) B) C) D) con solucion en <details>
+- El contenido sera renderizado interactivamente: el estudiante puede ejecutar codigo y responder quizzes`,
 
     code: `${basePrompt}${enhancedDirectives}
 
@@ -360,7 +393,11 @@ Para lecciones de tipo CODIGO:
 - Incluye comentarios explicativos en el codigo
 - Muestra el output esperado
 - Presenta el codigo de forma progresiva (simple a complejo)
-- Usa formato Markdown con bloques de codigo`,
+- Usa formato Markdown con bloques de codigo (\`\`\`python o \`\`\`sql)
+- IMPORTANTE: Los bloques de codigo seran EJECUTABLES en el navegador (via Pyodide/sql.js)
+- El estudiante puede editar y ejecutar cada bloque de codigo directamente
+- Para ejercicios, usa ### Ejercicio con codigo starter incompleto para que el estudiante complete
+- Incluye la solucion en <details><summary>Ver solucion</summary>...</details>`,
 
     notebook: `${basePrompt}${enhancedDirectives}
 
