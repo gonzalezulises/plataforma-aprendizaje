@@ -13,7 +13,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://cloud-create-providers-average.trycloudflare.com/api/:path*"
+      "destination": "https://api.rizo.ma/api/:path*"
     },
     {
       "source": "/academia/assets/:path*",

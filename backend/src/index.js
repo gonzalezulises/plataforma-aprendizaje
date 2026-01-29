@@ -112,9 +112,7 @@ app.use(cors({
       'https://www.rizo.ma',
       'https://rizo.ma',
       'https://api.rizo.ma',
-      'https://frontend-one-sigma-58.vercel.app',
-      // Current quick tunnel (update if tunnel URL changes)
-      'https://cloud-create-providers-average.trycloudflare.com'
+      'https://frontend-one-sigma-58.vercel.app'
     ];
 
     // In development, also allow localhost (any port in 3000-5999 range)

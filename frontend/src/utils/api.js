@@ -81,7 +81,7 @@ export function setupCsrfInterceptor() {
     const method = ((init && init.method) || 'GET').toUpperCase();
 
     // Only intercept API calls
-    const isApiCall = url.includes('/api/') || url.includes('localhost:3001') || url.includes('trycloudflare.com') || url.includes('api.rizo.ma');
+    const isApiCall = url.includes('/api/') || url.includes('localhost:3001') || url.includes('api.rizo.ma');
     const needsCsrf = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
 
     // Skip CSRF for auth endpoints (they establish the session)
