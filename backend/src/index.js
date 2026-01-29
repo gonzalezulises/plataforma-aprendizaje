@@ -132,10 +132,12 @@ app.use(cors({
       'https://academia.rizo.ma',
       'https://academia-rizoma.vercel.app',
       'https://frontend-one-sigma-58.vercel.app',
-      'https://plataforma-aprendizaje-api-production.up.railway.app'
+      'https://plataforma-aprendizaje-api-production.up.railway.app',
+      'https://api.rizo.ma'
     ];
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Also allow any trycloudflare.com origin (quick tunnels)
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.trycloudflare.com')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
