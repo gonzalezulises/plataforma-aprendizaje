@@ -127,8 +127,8 @@ function parseNaturalPatterns(markdown) {
   const segments = [];
 
   // Split by exercise headers
-  // Match ### Ejercicio, ### Ejercicios, ### Ejercicio 1, etc.
-  const exerciseHeaderRegex = /^(#{2,3}\s+Ejercicio[s]?\s*\d*[.:]*\s*.*?)$/gm;
+  // Match ### Ejercicio, ### Ejercicios, ### Ejercicio 1, ### Quiz, ### Quiz de consolidacion, etc.
+  const exerciseHeaderRegex = /^(#{2,3}\s+(?:Ejercicio[s]?\s*\d*[.:]*|Quiz(?:\s+de\s+consolidacion)?[.:]*)\s*.*?)$/gmi;
 
   const headers = [];
   let match;
@@ -173,8 +173,9 @@ function parseNaturalPatterns(markdown) {
     // Detect if this is a quiz (MCQ) or code exercise
     const hasOptions = /^\s*[A-Da-d]\)\s+/m.test(sectionContent);
     const hasCodeBlock = /```(?:python|sql)/m.test(sectionContent);
+    const isQuizHeader = /^#{2,3}\s+Quiz/i.test(sectionContent);
 
-    if (hasOptions) {
+    if (hasOptions || isQuizHeader) {
       const quiz = parseQuizFromNaturalContent(sectionContent);
       segments.push({ type: 'quiz', ...quiz });
     } else if (hasCodeBlock) {
@@ -228,26 +229,86 @@ function parseQuizContent(content) {
 
 /**
  * Parse quiz questions from natural markdown content (exercise section with MCQ options).
+ * Supports multiple numbered questions (1. / 2. / 3.) within a single quiz section.
  */
 function parseQuizFromNaturalContent(content) {
   const questions = [];
-
-  // Extract text between the heading and the options
   const lines = content.split('\n');
-  let questionText = '';
-  let options = [];
-  let correctAnswer = null;
-  let explanation = '';
-  let inQuestion = false;
+  let currentQuestion = null;
+  let pastHeading = false;
+
+  function finalizeQuestion() {
+    if (!currentQuestion) return;
+    // Resolve correct answer from explanation if not already found
+    if (!currentQuestion.correctAnswer && currentQuestion.explanation) {
+      const expMatch = currentQuestion.explanation.match(/(?:respuesta|answer|correcta|opcion)[:\s]*([A-Da-d])\)?/i);
+      if (expMatch) {
+        currentQuestion.correctAnswer = expMatch[1].toUpperCase();
+      }
+    }
+    // Mark the correct option
+    if (currentQuestion.correctAnswer) {
+      currentQuestion.options = currentQuestion.options.map(opt => ({
+        ...opt,
+        isCorrect: opt.label === currentQuestion.correctAnswer
+      }));
+    }
+    if (currentQuestion.questionText && currentQuestion.options.length >= 2) {
+      questions.push({
+        question: currentQuestion.questionText,
+        options: currentQuestion.options,
+        explanation: currentQuestion.explanation,
+        correctAnswer: currentQuestion.correctAnswer
+      });
+    }
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Skip the exercise heading
-    if (/^#{2,3}\s+Ejercicio/.test(line)) {
-      inQuestion = true;
+    // Skip the exercise/quiz heading
+    if (/^#{2,3}\s+(?:Ejercicio|Quiz)/i.test(line)) {
+      pastHeading = true;
       continue;
     }
+
+    if (!pastHeading) continue;
+
+    // Detect numbered question start (1. Question text / 2. Question text)
+    const numberedMatch = line.match(/^(\d+)[\.\)]\s+(.+)/);
+    if (numberedMatch && !/^[A-Da-d]\)/.test(line)) {
+      // Check if this looks like a question by looking ahead for A)/B)/C)/D) options
+      let hasOptionsAhead = false;
+      for (let j = i + 1; j < Math.min(i + 10, lines.length); j++) {
+        if (/^\s*[A-Da-d]\)\s+/.test(lines[j])) {
+          hasOptionsAhead = true;
+          break;
+        }
+      }
+      if (hasOptionsAhead) {
+        finalizeQuestion();
+        currentQuestion = {
+          questionText: numberedMatch[2],
+          options: [],
+          correctAnswer: null,
+          explanation: ''
+        };
+        continue;
+      }
+    }
+
+    // If no current question and we encounter text, start collecting as first question
+    if (!currentQuestion && pastHeading && line && !/^[A-Da-d]\)\s+/.test(line) &&
+        !line.includes('<details') && !line.includes('<summary')) {
+      currentQuestion = {
+        questionText: '',
+        options: [],
+        correctAnswer: null,
+        explanation: ''
+      };
+    }
+
+    if (!currentQuestion) continue;
 
     // Detect option lines
     const optionMatch = line.match(/^([A-Da-d])\)\s+(.+)/);
@@ -259,16 +320,15 @@ function parseQuizFromNaturalContent(content) {
       const isCorrect = text.includes('✓') || text.includes('✅') || text.includes('(correcta)') || text.includes('(correct)');
       if (isCorrect) {
         text = text.replace(/\s*[✓✅]\s*/g, '').replace(/\s*\(correct[a]?\)\s*/g, '').trim();
-        correctAnswer = label;
+        currentQuestion.correctAnswer = label;
       }
 
-      options.push({ label, text, isCorrect });
+      currentQuestion.options.push({ label, text, isCorrect });
       continue;
     }
 
     // Detect solution in details block
     if (line.includes('<details>') || line.includes('<summary>')) {
-      // Collect everything until </details>
       let detailContent = '';
       for (let j = i; j < lines.length; j++) {
         if (lines[j].includes('</details>')) {
@@ -278,50 +338,26 @@ function parseQuizFromNaturalContent(content) {
         }
         detailContent += lines[j] + '\n';
       }
-      // Extract the answer from details content
       const answerMatch = detailContent.match(/(?:respuesta|answer|correcta|solucion)[:\s]*([A-Da-d])\)?/i);
-      if (answerMatch && !correctAnswer) {
-        correctAnswer = answerMatch[1].toUpperCase();
+      if (answerMatch && !currentQuestion.correctAnswer) {
+        currentQuestion.correctAnswer = answerMatch[1].toUpperCase();
       }
-      // Extract explanation
       const explMatch = detailContent.match(/<\/summary>\s*([\s\S]*?)(?:<\/details>|$)/);
       if (explMatch) {
-        explanation = explMatch[1].trim();
+        currentQuestion.explanation = explMatch[1].trim();
       }
       continue;
     }
 
-    // Build question text
-    if (inQuestion && options.length === 0 && line) {
-      if (questionText) questionText += ' ';
-      questionText += line;
+    // Build question text (only if no options collected yet for this question)
+    if (currentQuestion.options.length === 0 && line) {
+      if (currentQuestion.questionText) currentQuestion.questionText += ' ';
+      currentQuestion.questionText += line;
     }
   }
 
-  // If no correct answer found in markup, try to find it in the explanation
-  if (!correctAnswer && explanation) {
-    const expMatch = explanation.match(/(?:respuesta|answer|correcta|opcion)[:\s]*([A-Da-d])\)?/i);
-    if (expMatch) {
-      correctAnswer = expMatch[1].toUpperCase();
-    }
-  }
-
-  // Mark the correct option
-  if (correctAnswer) {
-    options = options.map(opt => ({
-      ...opt,
-      isCorrect: opt.label === correctAnswer
-    }));
-  }
-
-  if (questionText && options.length >= 2) {
-    questions.push({
-      question: questionText,
-      options,
-      explanation,
-      correctAnswer
-    });
-  }
+  // Finalize last question
+  finalizeQuestion();
 
   return { questions, content };
 }

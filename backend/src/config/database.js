@@ -168,6 +168,79 @@ function runMigrations() {
     // Column might already exist, ignore
     console.log('[Migration] courses columns check:', e.message);
   }
+
+  // Migration: Update structure_4c to replace open-ended questions with MCQ-format topics
+  try {
+    const stmt = db.prepare('SELECT id, structure_4c FROM lessons WHERE structure_4c IS NOT NULL AND structure_4c != \'{}\'');
+    const updates = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject();
+      const s4c = JSON.parse(row.structure_4c || '{}');
+      let changed = false;
+
+      // Fix open-ended reflection questions in conclusion
+      if (s4c.conclusion && s4c.conclusion.reflection_questions) {
+        const rq = s4c.conclusion.reflection_questions;
+        const hasOpenEnded = rq.some(q =>
+          q.includes('Que fue lo mas desafiante') ||
+          q.includes('Como podrias aplicar') ||
+          q.includes('Que conexiones ves') ||
+          q.includes('Que opinas') ||
+          q.startsWith('Como ') ||
+          q.startsWith('Que ')
+        );
+        if (hasOpenEnded) {
+          // Extract keyTerm from synthesis or use generic
+          const keyTermMatch = s4c.conclusion.synthesis?.match(/sobre (.+?) con/);
+          const keyTerm = keyTermMatch ? keyTermMatch[1] : 'este tema';
+          s4c.conclusion.reflection_questions = [
+            `Identificar el concepto central de ${keyTerm} entre varias opciones`,
+            `Distinguir una aplicacion correcta vs incorrecta de ${keyTerm} en un escenario practico`,
+            `Relacionar ${keyTerm} con conceptos previos del curso eligiendo la conexion correcta`
+          ];
+          changed = true;
+        }
+      }
+
+      // Fix open-ended guiding questions in connections
+      if (s4c.connections && s4c.connections.guiding_questions) {
+        const gq = s4c.connections.guiding_questions;
+        const hasOpenEnded = gq.some(q =>
+          q.startsWith('Que sabes sobre') ||
+          q.startsWith('Donde has visto') ||
+          q.startsWith('Has usado') ||
+          q.startsWith('Alguna vez') ||
+          q.startsWith('Que tareas') ||
+          q.startsWith('Como procesarias') ||
+          q.startsWith('Como podrias') ||
+          q.startsWith('Por que crees')
+        );
+        if (hasOpenEnded) {
+          const keyTermMatch = s4c.connections.prior_knowledge?.match(/sobre (.+?)\./);
+          const keyTerm = keyTermMatch ? keyTermMatch[1] : 'este tema';
+          s4c.connections.guiding_questions = [
+            `Seleccionar la definicion correcta de ${keyTerm} entre varias opciones`,
+            `Identificar un caso de uso real de ${keyTerm} entre varias opciones`
+          ];
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        updates.push({ id: row.id, structure_4c: JSON.stringify(s4c) });
+      }
+    }
+    stmt.free();
+
+    for (const update of updates) {
+      db.run('UPDATE lessons SET structure_4c = ? WHERE id = ?', [update.structure_4c, update.id]);
+    }
+    if (updates.length > 0) {
+      console.log(`[Migration] Updated structure_4c MCQ format for ${updates.length} lessons`);
+    }
+  } catch (e) {
+    console.log('[Migration] structure_4c MCQ update:', e.message);
+  }
 }
 
 /**

@@ -36,9 +36,9 @@ export function generate4CStructure(lessonTitle, contentType, topic) {
     },
     conclusion: {
       reflection_questions: [
-        'Que fue lo mas desafiante de esta leccion?',
-        'Como podrias aplicar esto en un proyecto real?',
-        'Que conexiones ves con otros conceptos que conoces?'
+        `Identificar el concepto central de ${keyTerm} entre varias opciones`,
+        `Distinguir una aplicacion correcta vs incorrecta de ${keyTerm} en un escenario practico`,
+        `Relacionar ${keyTerm} con conceptos previos del curso eligiendo la conexion correcta`
       ],
       synthesis: `Conecta lo aprendido sobre ${keyTerm} con conceptos anteriores.`,
       next_steps: 'En la siguiente leccion, aplicaras estos conocimientos para profundizar en temas mas avanzados.'
@@ -89,17 +89,17 @@ function getContextForTopic(title) {
 function generateGuidingQuestions(title, keyTerm) {
   const questions = [];
   if (title.includes('variable')) {
-    questions.push('Has usado alguna calculadora o aplicacion que guarde datos?');
-    questions.push('Por que crees que necesitamos guardar informacion en un programa?');
+    questions.push('Identificar cual de varias opciones describe correctamente como una aplicacion guarda datos temporalmente');
+    questions.push('Seleccionar la razon principal por la que un programa necesita almacenar informacion en variables');
   } else if (title.includes('funcion')) {
-    questions.push('Alguna vez has repetido el mismo codigo varias veces?');
-    questions.push('Como podrias organizar mejor tu codigo?');
+    questions.push('Identificar el problema principal de repetir el mismo bloque de codigo en varias partes de un programa');
+    questions.push('Seleccionar cual de las opciones describe mejor el proposito de una funcion');
   } else if (title.includes('bucle') || title.includes('for') || title.includes('while')) {
-    questions.push('Que tareas repetitivas podrias automatizar?');
-    questions.push('Como procesarias una lista de 1000 elementos?');
+    questions.push('Seleccionar la mejor estrategia para procesar una lista de 1000 elementos');
+    questions.push('Identificar cual tarea se beneficia mas de la automatizacion con bucles');
   } else {
-    questions.push(`Que sabes sobre ${keyTerm}?`);
-    questions.push('Donde has visto este concepto en uso?');
+    questions.push(`Seleccionar la definicion correcta de ${keyTerm} entre varias opciones`);
+    questions.push(`Identificar un caso de uso real de ${keyTerm} entre varias opciones`);
   }
   return questions;
 }

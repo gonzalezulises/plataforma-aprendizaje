@@ -311,7 +311,7 @@ export async function generateLessonContent({
  * @param {boolean} enhanced - Whether to use enhanced pedagogical prompts
  */
 function buildSystemPrompt(lessonType, enhanced = false) {
-  const basePrompt = `Eres un experto creador de contenido educativo para una plataforma de aprendizaje en linea.
+  const basePrompt = `Eres un experto creador de contenido educativo para una plataforma de aprendizaje en linea ASINCRONA.
 Tu objetivo es crear contenido claro, practico y atractivo que ayude a los estudiantes a aprender efectivamente.
 
 Directrices:
@@ -319,7 +319,14 @@ Directrices:
 - Usa un tono amigable pero profesional
 - Incluye ejemplos practicos
 - Estructura el contenido de forma clara
-- Adapta el nivel de complejidad al publico objetivo`;
+- Adapta el nivel de complejidad al publico objetivo
+
+POLITICA DE DISENO INSTRUCCIONAL — PREGUNTAS AL ESTUDIANTE:
+Como el curso es ASINCRONO (sin instructor en tiempo real), TODA pregunta dirigida al estudiante
+DEBE ser de opcion multiple (una o varias respuestas correctas) para que pueda autocorregirse.
+NUNCA uses preguntas abiertas como "¿Que opinas?", "¿Que fue lo mas dificil?", "¿Como aplicarias esto?".
+En su lugar, convierte CADA pregunta en formato de seleccion con opciones claras y respuesta correcta marcada.
+Esto aplica a TODAS las secciones: conexiones, practica y conclusion.`;
 
   const enhancedDirectives = enhanced ? `
 
@@ -330,10 +337,23 @@ Cada seccion corresponde a una fase del aprendizaje. NO uses encabezados generic
 
 ## 🔗 Conexiones
 Activa conocimientos previos del estudiante. Esta fase prepara al cerebro para recibir informacion nueva.
-- Comienza con 1-2 preguntas motivadoras que conecten con la experiencia del estudiante
+- Comienza con 1-2 preguntas de opcion multiple que activen conocimientos previos del estudiante
+  FORMATO OBLIGATORIO para las preguntas de conexion:
+  1. (Pregunta que conecte con experiencia previa)
+  A) Opcion 1
+  B) Opcion 2
+  C) Opcion 3
+  D) Opcion 4
+
+  <details><summary>Ver respuesta</summary>
+  Respuesta correcta: X)
+  Explicacion breve.
+  </details>
+
 - Explica por que este tema es importante en el mundo real (contexto profesional/practico)
 - Conecta explicitamente con temas anteriores del curso si aplica
 - Usa un escenario o problema real como gancho
+- NUNCA uses preguntas abiertas en esta seccion. Toda pregunta debe tener opciones seleccionables.
 
 ## 💡 Conceptos
 Presenta los conceptos minimos necesarios. NO sobrecargues: ensenha solo lo que el estudiante necesita para poder practicar.
@@ -388,7 +408,23 @@ Explicacion de por que esta es la respuesta correcta.
 ## 🎯 Conclusion
 Cierra el ciclo de aprendizaje. El estudiante reflexiona y consolida.
 - **Resumen visual**: Lista concisa de los 3-5 puntos clave aprendidos (usa vinetas)
-- **Preguntas de reflexion**: 2-3 preguntas que hagan al estudiante pensar en como aplicar lo aprendido
+- **Quiz de consolidacion**: 2-3 preguntas de opcion multiple que verifiquen la comprension global de la leccion.
+  FORMATO OBLIGATORIO:
+  ### Quiz de consolidacion
+
+  1. (Pregunta que evalua comprension del concepto central)
+  A) Opcion 1
+  B) Opcion 2
+  C) Opcion 3
+  D) Opcion 4
+
+  <details><summary>Ver respuesta</summary>
+  Respuesta correcta: X)
+  Explicacion.
+  </details>
+
+  NOTA: NO uses preguntas abiertas tipo "¿Que fue lo mas dificil?" o "¿Como aplicarias esto?".
+  TODA pregunta debe tener opciones con respuesta verificable.
 - **Conexion con lo que sigue**: Breve preview del siguiente tema y como se conecta. Genera curiosidad.` : '';
 
   const typeSpecificPrompts = {
@@ -490,10 +526,11 @@ function buildUserPrompt({
         prompt += `\n- Contexto del mundo real: ${s4c.connections.real_world_context}`;
       }
       if (s4c.connections.guiding_questions && Array.isArray(s4c.connections.guiding_questions)) {
-        prompt += `\n- Preguntas guia para abrir la leccion:`;
+        prompt += `\n- Temas para preguntas de activacion (convertir CADA uno en pregunta de OPCION MULTIPLE con A/B/C/D y respuesta correcta):`;
         s4c.connections.guiding_questions.forEach(q => {
           prompt += `\n  - "${q}"`;
         });
+        prompt += `\n  IMPORTANTE: NO uses estas preguntas de forma abierta. Conviertelas en MCQ con opciones seleccionables.`;
       }
     }
 
@@ -535,10 +572,11 @@ function buildUserPrompt({
     if (s4c.conclusion) {
       prompt += `\n\n🎯 **CONCLUSION (seccion "## 🎯 Conclusion"):**`;
       if (s4c.conclusion.reflection_questions && Array.isArray(s4c.conclusion.reflection_questions)) {
-        prompt += `\n- Preguntas de reflexion a incluir:`;
+        prompt += `\n- Temas para el quiz de consolidacion (convertir CADA uno en pregunta de OPCION MULTIPLE con A/B/C/D y respuesta correcta):`;
         s4c.conclusion.reflection_questions.forEach(q => {
           prompt += `\n  - "${q}"`;
         });
+        prompt += `\n  IMPORTANTE: NO uses estas preguntas de forma abierta. Conviertelas en MCQ con opciones seleccionables.`;
       }
       if (s4c.conclusion.synthesis) {
         prompt += `\n- Sintesis esperada: ${s4c.conclusion.synthesis}`;
@@ -554,7 +592,7 @@ function buildUserPrompt({
   }
 
   if (enhanced) {
-    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion siguiendo el MODELO PEDAGOGICO 4C. DEBES incluir las 4 secciones en este orden exacto: "## 🔗 Conexiones" (activar conocimiento previo), "## 💡 Conceptos" (teoria + ejemplos), "## 🛠️ Practica Concreta" (ejercicios de codigo ejecutable + quiz, ~40% del contenido), "## 🎯 Conclusion" (resumen + reflexion + que sigue). Si se proporciona estructura 4C arriba, USA esos datos especificos. El contenido debe ser extenso, minimo 2000 palabras.`;
+    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion siguiendo el MODELO PEDAGOGICO 4C. DEBES incluir las 4 secciones en este orden exacto: "## 🔗 Conexiones" (activar conocimiento previo con MCQ), "## 💡 Conceptos" (teoria + ejemplos), "## 🛠️ Practica Concreta" (ejercicios de codigo ejecutable + quiz MCQ, ~40% del contenido), "## 🎯 Conclusion" (resumen + quiz de consolidacion MCQ + que sigue). Si se proporciona estructura 4C arriba, USA esos datos especificos. El contenido debe ser extenso, minimo 2000 palabras. RECORDATORIO CRITICO: TODA pregunta al estudiante debe ser de opcion multiple (A/B/C/D) con respuesta correcta verificable. CERO preguntas abiertas.`;
   } else {
     prompt += `\n\nGenera contenido educativo completo y de alta calidad para esta leccion.`;
   }
