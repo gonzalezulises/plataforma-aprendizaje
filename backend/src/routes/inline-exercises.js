@@ -42,7 +42,7 @@ export function initInlineExerciseTables(db) {
 router.get('/:lessonId/progress', async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const userId = req.session?.userId || req.user?.id;
+    const userId = req.session?.user?.id || req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'No autenticado' });
@@ -98,7 +98,7 @@ router.get('/:lessonId/progress', async (req, res) => {
 router.post('/:lessonId/progress', async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const userId = req.session?.userId || req.user?.id;
+    const userId = req.session?.user?.id || req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'No autenticado' });
@@ -157,7 +157,7 @@ router.post('/:lessonId/progress', async (req, res) => {
 router.get('/:lessonId/summary', async (req, res) => {
   try {
     const { lessonId } = req.params;
-    const userId = req.session?.userId || req.user?.id;
+    const userId = req.session?.user?.id || req.user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'No autenticado' });

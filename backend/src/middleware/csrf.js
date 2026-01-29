@@ -71,7 +71,9 @@ export function csrfProtection(req, res, next) {
     '/api/test/', // All test endpoints excluded
     '/api/courses', // Course management (already requires instructor auth)
     '/api/ai', // AI generation endpoints (requires instructor auth)
-    '/api/enrollments' // Enrollment endpoints (already requires auth)
+    '/api/enrollments', // Enrollment endpoints (already requires auth)
+    '/api/lessons', // Lesson progress tracking (start, complete, time)
+    '/api/inline-exercises' // Exercise progress tracking
   ];
 
   const isExcluded = excludedPaths.some(path => req.path.startsWith(path));

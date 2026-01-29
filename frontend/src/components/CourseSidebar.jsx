@@ -55,7 +55,7 @@ function CourseSidebar({ courseSlug, currentLessonId, onClose, isOpen = true }) 
                   modulesData.modules.map(async (mod) => {
                     try {
                       const lessonsResponse = await fetch(
-                        `${API_BASE_URL}/modules/${mod.id}/lessons`,
+                        `${API_BASE_URL}/courses/${courseId}/modules/${mod.id}/lessons`,
                         { credentials: 'include' }
                       );
                       if (lessonsResponse.ok) {
@@ -94,26 +94,8 @@ function CourseSidebar({ courseSlug, currentLessonId, onClose, isOpen = true }) 
           setModules(getSampleModules());
         }
 
-        // Fetch lesson progress
-        try {
-          const progressResponse = await fetch(
-            `${API_BASE_URL}/enrollments/progress`,
-            { credentials: 'include' }
-          );
-          if (progressResponse.ok && isMounted) {
-            const progressData = await progressResponse.json();
-            // Map progress by lesson ID
-            const progressMap = {};
-            if (progressData.lessons) {
-              progressData.lessons.forEach(lp => {
-                progressMap[lp.lesson_id] = lp.status;
-              });
-            }
-            setLessonProgress(progressMap);
-          }
-        } catch (e) {
-          console.warn('Failed to fetch progress:', e);
-        }
+        // Fetch lesson progress for each lesson we know about
+        // (progress is tracked per-lesson via /api/lessons/:id/progress)
 
       } catch (err) {
         console.error('Error fetching course data:', err);

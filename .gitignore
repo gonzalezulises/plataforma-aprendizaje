@@ -71,3 +71,4 @@ progress-*.txt
 .claude_settings.json
 .autocoder/
 .vercel
+.env*.local
