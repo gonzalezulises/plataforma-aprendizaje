@@ -260,12 +260,22 @@ router.get('/:identifier', (req, res) => {
       [course.id]
     );
 
-    // Get lessons for each module
+    // Get lessons for each module, including content status
     for (const module of modules) {
       module.lessons = queryAll(
         'SELECT * FROM lessons WHERE module_id = ? ORDER BY order_index',
         [module.id]
       );
+
+      // Add has_content and content_length for each lesson
+      for (const lesson of module.lessons) {
+        const contentInfo = queryOne(
+          'SELECT COUNT(*) as count, COALESCE(SUM(LENGTH(content)), 0) as total_length FROM lesson_content WHERE lesson_id = ?',
+          [lesson.id]
+        );
+        lesson.has_content = (contentInfo?.count || 0) > 0;
+        lesson.content_length = contentInfo?.total_length || 0;
+      }
     }
 
     res.json({ course: { ...course, modules, instructor } });

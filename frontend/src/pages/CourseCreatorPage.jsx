@@ -61,6 +61,10 @@ export default function CourseCreatorPage() {
   const [lessonForm, setLessonForm] = useState({ title: '', description: '', content_type: 'text', duration_minutes: 15 });
   const [contentForm, setContentForm] = useState({ type: 'text', content: { text: '' } });
 
+  // Content viewer state
+  const [contentViewMode, setContentViewMode] = useState(true); // true = viewing, false = editing
+  const [loadingContent, setLoadingContent] = useState(false);
+
   // Field-level errors for unique validation (Feature #191)
   const [fieldErrors, setFieldErrors] = useState({ title: '' });
 
@@ -597,14 +601,14 @@ export default function CourseCreatorPage() {
       const data = await response.json();
       toast.success('Contenido generado exitosamente!', { id: 'ai-content' });
 
-      // Update lesson in local state with new content
+      // Update lesson in local state with new content and has_content flag
       setModules(modules.map(m => {
         if (m.id === module.id) {
           return {
             ...m,
             lessons: m.lessons.map(l => {
               if (l.id === lesson.id) {
-                return { ...l, content: data.content };
+                return { ...l, content: data.content, has_content: true, content_length: (data.content || '').length };
               }
               return l;
             })
@@ -613,9 +617,11 @@ export default function CourseCreatorPage() {
         return m;
       }));
 
-      // Open content modal to show/edit the generated content
+      // Open content modal in viewer mode to show generated content
       setSelectedLessonId(lesson.id);
       setContentForm({ type: lesson.content_type || 'text', content: { text: data.content } });
+      setContentViewMode(true);
+      setLoadingContent(false);
       setShowContentModal(true);
     } catch (error) {
       console.error('Error generating content:', error);
@@ -647,12 +653,66 @@ export default function CourseCreatorPage() {
         throw new Error('Failed to add content');
       }
 
+      // Update has_content flag on the lesson
+      setModules(prev => prev.map(m => ({
+        ...m,
+        lessons: m.lessons?.map(l =>
+          l.id === selectedLessonId ? { ...l, has_content: true } : l
+        )
+      })));
       setContentForm({ type: 'text', content: { text: '' } });
       setShowContentModal(false);
       toast.success('Contenido agregado');
     } catch (error) {
       console.error('Error adding content:', error);
       toast.error('Error al agregar contenido');
+    }
+  };
+
+  // Open content modal: load existing content if any
+  const handleOpenContentModal = async (lessonId) => {
+    setSelectedLessonId(lessonId);
+    setLoadingContent(true);
+    setContentViewMode(true);
+    setContentForm({ type: 'text', content: { text: '' } });
+    setShowContentModal(true);
+
+    const module = modules.find(m => m.lessons?.some(l => l.id === lessonId));
+    if (!module) {
+      setLoadingContent(false);
+      setContentViewMode(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/courses/${course.id}/modules/${module.id}/lessons/${lessonId}/content`, {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.content && data.content.length > 0) {
+          // Combine all content blocks into a single text for viewing
+          const combinedText = data.content
+            .map(c => c.content?.text || JSON.stringify(c.content))
+            .join('\n\n');
+          setContentForm({
+            type: data.content[0].type || 'text',
+            content: { text: combinedText }
+          });
+          setContentViewMode(true);
+        } else {
+          // No content - go straight to edit mode
+          setContentViewMode(false);
+        }
+      } else {
+        setContentViewMode(false);
+      }
+    } catch (error) {
+      console.error('Error loading lesson content:', error);
+      setContentViewMode(false);
+    } finally {
+      setLoadingContent(false);
     }
   };
 
@@ -1566,20 +1626,27 @@ export default function CourseCreatorPage() {
                                     >
                                       {lesson.title}
                                     </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      {lesson.content_type} &bull; {lesson.duration_minutes} min
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {lesson.content_type} &bull; {lesson.duration_minutes} min
+                                      </p>
+                                      {lesson.has_content && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                          </svg>
+                                          Contenido
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <button
-                                    onClick={() => {
-                                      setSelectedLessonId(lesson.id);
-                                      setShowContentModal(true);
-                                    }}
+                                    onClick={() => handleOpenContentModal(lesson.id)}
                                     className="p-1.5 text-gray-400 hover:text-green-600 transition-colors"
-                                    title="Agregar contenido"
-                                    aria-label={`Agregar contenido a ${lesson.title}`}
+                                    title={lesson.has_content ? "Ver contenido" : "Agregar contenido"}
+                                    aria-label={lesson.has_content ? `Ver contenido de ${lesson.title}` : `Agregar contenido a ${lesson.title}`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -1704,6 +1771,29 @@ export default function CourseCreatorPage() {
 
         {activeTab === TABS.PREVIEW && course && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+            {/* Quick navigation back to edit tabs */}
+            <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-sm text-gray-500 dark:text-gray-400">Editar:</span>
+              <button
+                onClick={() => setActiveTab(TABS.DETAILS)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar Detalles
+              </button>
+              <button
+                onClick={() => setActiveTab(TABS.MODULES)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Editar Modulos
+              </button>
+            </div>
+
             {/* Course Preview Header */}
             <div className="h-48 bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
               <span className="text-8xl opacity-50">
@@ -1983,61 +2073,109 @@ export default function CourseCreatorPage() {
         </div>
       )}
 
-      {/* Content Modal */}
+      {/* Content Modal (viewer + editor) */}
       {showContentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Agregar Contenido
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="content-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tipo
-                </label>
-                <select
-                  id="content-type"
-                  value={contentForm.type}
-                  onChange={(e) => setContentForm({ ...contentForm, type: e.target.value, content: { text: '' } })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="text">Texto</option>
-                  <option value="video">Video URL</option>
-                  <option value="code">Codigo</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="content-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Contenido
-                </label>
-                <textarea
-                  id="content-text"
-                  value={contentForm.content.text || ''}
-                  onChange={(e) => setContentForm({ ...contentForm, content: { text: e.target.value } })}
-                  rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 font-mono"
-                  placeholder={
-                    contentForm.type === 'video' ? 'URL del video...' :
-                    contentForm.type === 'code' ? '# Tu codigo aqui...' :
-                    'Escribe el contenido...'
-                  }
-                />
-              </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {contentViewMode && contentForm.content.text ? 'Contenido de la Leccion' : 'Agregar Contenido'}
+              </h3>
+              {contentViewMode && contentForm.content.text && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {contentForm.content.text.length > 1000
+                    ? `${(contentForm.content.text.length / 1000).toFixed(1)}K caracteres`
+                    : `${contentForm.content.text.length} caracteres`}
+                </span>
+              )}
             </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setShowContentModal(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddContent}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                Agregar Contenido
-              </button>
-            </div>
+
+            {loadingContent ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+              </div>
+            ) : contentViewMode && contentForm.content.text ? (
+              /* Viewer mode */
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="flex-1 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 font-mono leading-relaxed">
+                    {contentForm.content.text}
+                  </pre>
+                </div>
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowContentModal(false)}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    onClick={() => setContentViewMode(false)}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Editar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Editor mode */
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="space-y-4 flex-1 flex flex-col">
+                  <div>
+                    <label htmlFor="content-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Tipo
+                    </label>
+                    <select
+                      id="content-type"
+                      value={contentForm.type}
+                      onChange={(e) => setContentForm({ ...contentForm, type: e.target.value, content: { text: '' } })}
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="text">Texto</option>
+                      <option value="video">Video URL</option>
+                      <option value="code">Codigo</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <label htmlFor="content-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Contenido
+                    </label>
+                    <textarea
+                      id="content-text"
+                      value={contentForm.content.text || ''}
+                      onChange={(e) => setContentForm({ ...contentForm, content: { text: e.target.value } })}
+                      rows={12}
+                      className="w-full flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 font-mono"
+                      placeholder={
+                        contentForm.type === 'video' ? 'URL del video...' :
+                        contentForm.type === 'code' ? '# Tu codigo aqui...' :
+                        'Escribe el contenido...'
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowContentModal(false)}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddContent}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Agregar Contenido
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

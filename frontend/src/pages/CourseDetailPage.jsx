@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
+import { csrfFetch } from '../utils/csrf';
 
 // Sample course data - in production this would come from API
 const SAMPLE_COURSES = {
@@ -320,12 +321,11 @@ function CourseDetailPage() {
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/enrollments`, {
+      const response = await csrfFetch(`${API_BASE}/enrollments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({ courseId: course.id })
       });
 
@@ -378,9 +378,8 @@ function CourseDetailPage() {
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_BASE}/enrollments/${course.id}`, {
-        method: 'DELETE',
-        credentials: 'include'
+      const response = await csrfFetch(`${API_BASE}/enrollments/${course.id}`, {
+        method: 'DELETE'
       });
 
       if (response.ok) {
