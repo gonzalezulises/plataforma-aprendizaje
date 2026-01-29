@@ -28,13 +28,11 @@ export function useWebSocket() {
     }
 
     const wsUrl = getWsUrl();
-    console.log('[WebSocket] Connecting to:', wsUrl);
 
     try {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('[WebSocket] Connected');
         setIsConnected(true);
         reconnectAttempts.current = 0;
 
@@ -50,7 +48,6 @@ export function useWebSocket() {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('[WebSocket] Message received:', data);
           setLastMessage(data);
 
           // Call registered message handlers
@@ -80,19 +77,16 @@ export function useWebSocket() {
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('[WebSocket] Disconnected:', event.code, event.reason);
         setIsConnected(false);
 
         // Attempt to reconnect with exponential backoff
         if (reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          console.log(`[WebSocket] Reconnecting in ${delay}ms...`);
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttempts.current++;
             connect();
           }, delay);
         } else {
-          console.log('[WebSocket] Max reconnect attempts reached');
         }
       };
 
@@ -124,7 +118,6 @@ export function useWebSocket() {
         type: 'subscribe',
         threadId
       }));
-      console.log(`[WebSocket] Subscribed to thread ${threadId}`);
     }
   }, []);
 
@@ -136,7 +129,6 @@ export function useWebSocket() {
         type: 'unsubscribe',
         threadId
       }));
-      console.log(`[WebSocket] Unsubscribed from thread ${threadId}`);
     }
   }, []);
 

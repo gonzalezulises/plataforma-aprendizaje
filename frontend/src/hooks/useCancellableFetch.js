@@ -45,7 +45,6 @@ export function useCancellableFetch(endpoint, deps = [], options = {}) {
     const currentRequestId = ++requestIdRef.current;
     setRequestId(currentRequestId);
 
-    console.log(`[useCancellableFetch] Starting request #${currentRequestId} for ${endpoint}`);
 
     try {
       setLoading(true);
@@ -71,7 +70,6 @@ export function useCancellableFetch(endpoint, deps = [], options = {}) {
 
       // Check if this request is still the current one
       if (currentRequestId !== requestIdRef.current) {
-        console.log(`[useCancellableFetch] Request #${currentRequestId} superseded by #${requestIdRef.current}, ignoring response`);
         return; // Response is stale, don't update state
       }
 
@@ -84,24 +82,20 @@ export function useCancellableFetch(endpoint, deps = [], options = {}) {
 
       // Double-check again after parsing JSON
       if (currentRequestId !== requestIdRef.current) {
-        console.log(`[useCancellableFetch] Request #${currentRequestId} superseded during JSON parse, ignoring`);
         return;
       }
 
       const transformed = transformResponse(responseData);
       setData(transformed);
-      console.log(`[useCancellableFetch] Request #${currentRequestId} completed successfully`);
 
     } catch (err) {
       // Don't update state if the request was aborted
       if (err.name === 'AbortError') {
-        console.log(`[useCancellableFetch] Request #${currentRequestId} was aborted (navigation)`);
         return;
       }
 
       // Check if this is still the current request before setting error
       if (currentRequestId !== requestIdRef.current) {
-        console.log(`[useCancellableFetch] Request #${currentRequestId} superseded during error handling`);
         return;
       }
 
@@ -134,7 +128,6 @@ export function useCancellableFetch(endpoint, deps = [], options = {}) {
 
     // Cancel any existing request
     if (abortControllerRef.current) {
-      console.log('[useCancellableFetch] Aborting previous request due to dependency change');
       abortControllerRef.current.abort();
     }
 
@@ -145,7 +138,6 @@ export function useCancellableFetch(endpoint, deps = [], options = {}) {
     // Cleanup function - abort on unmount or dependency change
     return () => {
       if (abortControllerRef.current) {
-        console.log('[useCancellableFetch] Aborting request due to cleanup (unmount or deps change)');
         abortControllerRef.current.abort();
       }
     };

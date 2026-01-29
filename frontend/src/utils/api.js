@@ -11,25 +11,20 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
  * Get Authorization header with Supabase token if available
  */
 async function getAuthHeaders() {
-  console.log('[API] getAuthHeaders called, Supabase configured:', isSupabaseConfigured());
 
   if (!isSupabaseConfigured()) {
-    console.log('[API] Supabase not configured, skipping auth header');
     return {};
   }
 
   try {
     const session = await getSupabaseSession();
-    console.log('[API] Supabase session:', session ? 'exists' : 'null', session?.user?.email);
     if (session?.access_token) {
-      console.log('[API] Adding Authorization header with token');
       return { 'Authorization': `Bearer ${session.access_token}` };
     }
   } catch (error) {
     console.warn('[API] Could not get Supabase token:', error);
   }
 
-  console.log('[API] No token available');
   return {};
 }
 
@@ -86,7 +81,7 @@ export function setupCsrfInterceptor() {
     const method = ((init && init.method) || 'GET').toUpperCase();
 
     // Only intercept API calls
-    const isApiCall = url.includes('/api/') || url.includes('localhost:3001') || url.includes('railway.app');
+    const isApiCall = url.includes('/api/') || url.includes('localhost:3001') || url.includes('trycloudflare.com') || url.includes('api.rizo.ma');
     const needsCsrf = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
 
     // Skip CSRF for auth endpoints (they establish the session)
@@ -102,7 +97,6 @@ export function setupCsrfInterceptor() {
     ].some(path => url.includes(path));
 
     if (isApiCall) {
-      console.log('[API Interceptor] Intercepting API call:', url);
       const headers = new Headers(init.headers || {});
 
       // Add Supabase Authorization header for cross-domain auth
@@ -110,16 +104,12 @@ export function setupCsrfInterceptor() {
       if (!headers.has('Authorization')) {
         try {
           const authHeaders = await getAuthHeaders();
-          console.log('[API Interceptor] Auth headers to add:', Object.keys(authHeaders));
           Object.entries(authHeaders).forEach(([key, value]) => {
             headers.set(key, value);
-            console.log('[API Interceptor] Added header:', key);
           });
         } catch (error) {
           console.warn('[API Interceptor] Could not add auth header:', error);
         }
-      } else {
-        console.log('[API Interceptor] Skipping auth - request already has Authorization header');
       }
 
       // Add CSRF token for state-changing methods
@@ -143,7 +133,6 @@ export function setupCsrfInterceptor() {
     return originalFetch.call(window, input, init);
   };
 
-  console.log('[API] Fetch interceptor installed (CSRF + Auth)');
 }
 
 export default {
@@ -151,4 +140,3 @@ export default {
   setupCsrfInterceptor,
   API_BASE_URL,
 };
-// Build: 1769557465

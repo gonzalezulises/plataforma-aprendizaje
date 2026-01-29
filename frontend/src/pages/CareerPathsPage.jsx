@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../store/AuthContext';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
 // Icon components
 const icons = {

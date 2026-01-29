@@ -80,26 +80,22 @@ export function AuthProvider({ children }) {
     const initAuth = async () => {
       // Skip auth init if there's a hash fragment with tokens - let HashFragmentHandler handle it
       if (window.location.hash && window.location.hash.includes('access_token')) {
-        console.log('[AuthContext] Skipping init - hash fragment detected, will be handled by HashFragmentHandler');
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
-      console.log('[AuthContext] Initializing auth...');
 
       // If Supabase is configured, check Supabase session FIRST
       // This ensures the token is available for API calls
       if (isSupabaseConfigured()) {
         const supabase = getSupabaseClient();
         if (supabase) {
-          console.log('[AuthContext] Checking Supabase session...');
           const { data: { session } } = await supabase.auth.getSession();
 
           if (session) {
             setSupabaseSession(session);
             setCachedSession(session); // Cache immediately
-            console.log('[AuthContext] Supabase session found:', session.user?.email);
 
             // Verify with backend to create server session (for cross-domain auth)
             // Pass the session directly to avoid calling getSession() again
@@ -108,7 +104,6 @@ export function AuthProvider({ children }) {
               setUser(verifyResult.user);
               setIsAuthenticated(true);
               fetchCsrfToken();
-              console.log('[AuthContext] Backend session created for:', verifyResult.user.email);
               setIsLoading(false);
               return;
             } else {
@@ -116,23 +111,18 @@ export function AuthProvider({ children }) {
               // This allows the app to work while the fetch interceptor adds auth headers
               setUser(session.user);
               setIsAuthenticated(true);
-              console.log('[AuthContext] Using Supabase session (backend verify failed)');
               setIsLoading(false);
               return;
             }
           } else {
-            console.log('[AuthContext] No Supabase session found');
           }
         }
       }
 
       // No Supabase session - try backend session (for cookie-based auth on same domain)
-      console.log('[AuthContext] Checking backend session...');
       const backendUser = await fetchCurrentUser();
       if (backendUser) {
-        console.log('[AuthContext] Backend session found');
       } else {
-        console.log('[AuthContext] No session found - user not authenticated');
       }
 
       setIsLoading(false);
@@ -148,14 +138,12 @@ export function AuthProvider({ children }) {
     }
 
     const subscription = onAuthStateChange(async (event, session) => {
-      console.log('[Auth] Supabase auth event:', event);
       setSupabaseSession(session);
 
       // Cache the session immediately to avoid deadlocks in getSession()
       setCachedSession(session);
 
       if (event === 'SIGNED_IN' && session) {
-        console.log('[Auth] User signed in:', session.user?.email);
 
         // Verify with backend to create server session (for cross-domain auth)
         // Pass the session directly to avoid calling getSession() again
@@ -164,12 +152,10 @@ export function AuthProvider({ children }) {
           setUser(verifyResult.user);
           setIsAuthenticated(true);
           fetchCsrfToken();
-          console.log('[Auth] Backend session created for:', verifyResult.user.email);
         } else {
           // Fallback to Supabase user if backend verification fails
           setUser(session.user);
           setIsAuthenticated(true);
-          console.log('[Auth] Using Supabase session (backend verify failed):', verifyResult.error);
         }
       } else if (event === 'SIGNED_OUT') {
         clearCachedSession();

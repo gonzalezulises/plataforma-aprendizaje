@@ -106,7 +106,6 @@ function LessonPage() {
 
           // Feature #15: Check if premium upgrade is required
           if (data.requiresUpgrade || data.isPremiumContent) {
-            console.log('[LessonPage] Premium content blocked - upgrade required');
             setPremiumUpgradeRequired({
               courseSlug: data.courseSlug || slug,
               courseId: data.courseId,

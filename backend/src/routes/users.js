@@ -99,6 +99,17 @@ router.put('/me', (req, res) => {
     const { bio, name, avatar_url } = req.body;
     const userId = currentUser.id;
 
+    // Input length validation
+    if (bio !== undefined && typeof bio === 'string' && bio.length > 5000) {
+      return res.status(400).json({ success: false, error: 'Bio exceeds maximum length (5000 characters)' });
+    }
+    if (name !== undefined && typeof name === 'string' && name.length > 200) {
+      return res.status(400).json({ success: false, error: 'Name exceeds maximum length (200 characters)' });
+    }
+    if (avatar_url !== undefined && typeof avatar_url === 'string' && avatar_url.length > 2000) {
+      return res.status(400).json({ success: false, error: 'Avatar URL exceeds maximum length (2000 characters)' });
+    }
+
     // Build dynamic update query
     const updates = [];
     const params = [];

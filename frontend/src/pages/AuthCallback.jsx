@@ -33,7 +33,6 @@ function AuthCallback() {
 
         if (code && isSupabaseConfigured()) {
           // Handle Supabase PKCE callback
-          console.log('[AuthCallback] Processing Supabase code exchange');
           const { session, error: supabaseError } = await handleSupabaseCallback();
 
           if (supabaseError) {

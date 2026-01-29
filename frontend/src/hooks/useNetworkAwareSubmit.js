@@ -72,7 +72,6 @@ export function useNetworkAwareSubmit() {
     // CRITICAL: Check ref synchronously to prevent rapid double-clicks
     // This happens BEFORE any async operations
     if (isSubmittingRef.current) {
-      console.log('[useNetworkAwareSubmit] Blocked duplicate submission - already submitting');
       return { success: false, error: new Error('Already submitting'), isDuplicate: true };
     }
 

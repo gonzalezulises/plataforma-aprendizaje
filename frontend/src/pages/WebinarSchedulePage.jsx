@@ -70,7 +70,6 @@ function WebinarSchedulePage() {
         }));
         if (parsed.title || parsed.description) {
           setFormRestored(true);
-          console.log('Webinar form data restored from previous session');
         }
       } catch (e) {
         console.error('Error restoring webinar form data:', e);

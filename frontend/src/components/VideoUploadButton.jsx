@@ -64,8 +64,12 @@ export default function VideoUploadButton({ onUploadComplete, onError, className
       });
 
       if (!signedUrlResponse.ok) {
-        const err = await signedUrlResponse.json();
-        throw new Error(err.error || 'Error al obtener URL de subida');
+        let errorMessage = 'Error al obtener URL de subida';
+        try {
+          const err = await signedUrlResponse.json();
+          errorMessage = err.error || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
       }
 
       const { signedUrl, publicUrl } = await signedUrlResponse.json();

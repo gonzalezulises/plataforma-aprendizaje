@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Default rubric criteria
 const DEFAULT_CRITERIA = [
@@ -81,7 +81,6 @@ function InstructorFeedbackPage() {
           }
         }
       } catch (e) {
-        console.log('No existing feedback');
       }
     } catch (error) {
       console.error('Error fetching submission:', error);

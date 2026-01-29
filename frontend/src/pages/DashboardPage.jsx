@@ -43,7 +43,6 @@ function DashboardPage() {
         setError(null);
         const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-        console.log(`[Dashboard] Request #${currentRequestId} fetching enrollments`);
 
         const response = await fetch(`${API_BASE}/enrollments`, {
           credentials: 'include',
@@ -52,7 +51,6 @@ function DashboardPage() {
 
         // Feature #228: Check if this request is still the current one
         if (currentRequestId !== requestIdRef.current) {
-          console.log(`[Dashboard] Request #${currentRequestId} superseded by #${requestIdRef.current}, ignoring`);
           return;
         }
 
@@ -84,12 +82,10 @@ function DashboardPage() {
 
         // Feature #228: Double-check after JSON parsing
         if (currentRequestId !== requestIdRef.current) {
-          console.log(`[Dashboard] Request #${currentRequestId} superseded during JSON parse, ignoring`);
           return;
         }
 
         setEnrollments(data.enrollments || []);
-        console.log(`[Dashboard] Request #${currentRequestId} completed successfully`);
 
         // Also fetch pending projects (with same abort controller)
         try {
@@ -100,7 +96,6 @@ function DashboardPage() {
 
           // Feature #228: Check again before updating state
           if (currentRequestId !== requestIdRef.current) {
-            console.log(`[Dashboard] Projects request #${currentRequestId} superseded, ignoring`);
             return;
           }
 
@@ -118,13 +113,11 @@ function DashboardPage() {
       } catch (err) {
         // Feature #228: Don't update state if request was aborted
         if (err.name === 'AbortError') {
-          console.log(`[Dashboard] Request #${currentRequestId} was aborted (navigation)`);
           return;
         }
 
         // Feature #228: Only update error state if this is still the current request
         if (currentRequestId !== requestIdRef.current) {
-          console.log(`[Dashboard] Request #${currentRequestId} superseded during error handling`);
           return;
         }
 
@@ -142,7 +135,6 @@ function DashboardPage() {
 
     // Feature #228: Cleanup - abort request on unmount or dependency change
     return () => {
-      console.log(`[Dashboard] Aborting request #${currentRequestId} due to cleanup`);
       abortController.abort();
     };
   }, [isAuthenticated, navigate]);

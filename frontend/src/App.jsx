@@ -65,7 +65,6 @@ function HashFragmentHandler({ children }) {
           const supabase = getSupabaseClient();
 
           try {
-            console.log('[Auth] Processing hash fragment, type:', type);
 
             // Set the session from the tokens
             const { data, error } = await supabase.auth.setSession({
@@ -79,11 +78,9 @@ function HashFragmentHandler({ children }) {
               return;
             }
 
-            console.log('[Auth] Session set successfully:', data?.session?.user?.email);
 
             // Clear the hash from the URL and reload to ensure clean auth state
             const destination = type === 'recovery' ? '/reset-password' : '/dashboard';
-            console.log('[Auth] Redirecting to:', destination);
 
             // Use window.location to ensure full page reload with clean state
             window.location.href = window.location.origin + '/academia' + destination;
@@ -249,7 +246,6 @@ function CourseCatalog() {
         const response = await fetch(`${CATALOG_API_URL}/courses/categories`);
         if (response.ok) {
           const data = await response.json();
-          console.log('[CourseCatalog] Available categories from database:', data.categories);
           setAvailableCategories(data.categories || []);
         }
       } catch (err) {
@@ -268,7 +264,6 @@ function CourseCatalog() {
         const response = await fetch(`${CATALOG_API_URL}/courses/levels`);
         if (response.ok) {
           const data = await response.json();
-          console.log('[CourseCatalog] Available levels from database:', data.levels);
           setAvailableLevels(data.levels || []);
         }
       } catch (err) {
@@ -297,7 +292,6 @@ function CourseCatalog() {
         const queryString = params.toString();
         const url = `${CATALOG_API_URL}/courses${queryString ? `?${queryString}` : ''}`;
 
-        console.log('[Search] Fetching courses from:', url);
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -307,7 +301,6 @@ function CourseCatalog() {
 
         // Store raw API response for verification (Feature #119)
         setApiResponseData(data);
-        console.log('[Search] API Response:', data);
 
         // Map API response to component format WITHOUT client-side filtering
         // The API already handles search/filtering - we just display results

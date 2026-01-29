@@ -8,7 +8,7 @@ import { FileUpload } from '../components/FileUpload';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 import { DueCountdownCard } from '../components/DueCountdown';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export default function ProjectSubmissionPage() {
   const { projectId } = useParams();
@@ -44,7 +44,6 @@ export default function ProjectSubmissionPage() {
         if (parsed.githubUrl) setGithubUrl(parsed.githubUrl);
         setFormRestored(true);
         // Show a brief notification that data was restored
-        console.log('Form data restored from previous session');
       } catch (e) {
         console.error('Error restoring form data:', e);
       }

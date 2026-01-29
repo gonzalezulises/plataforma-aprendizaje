@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
 export default function UpgradeSuccessPage() {
   const navigate = useNavigate();

@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
 
 function Navbar() {
   const location = useLocation();
@@ -206,7 +206,6 @@ function Navbar() {
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          console.log('[Navbar WebSocket] Connected for notifications');
           reconnectAttempts = 0;
         };
 
@@ -215,7 +214,6 @@ function Navbar() {
             const data = JSON.parse(event.data);
             // Handle new notification event
             if (data.type === 'notification:new' && data.userId === user.id) {
-              console.log('[Navbar WebSocket] New notification received:', data.notification);
               // Increment unread count immediately
               setUnreadCount(prev => prev + 1);
               // Add to notifications list if dropdown is open
@@ -231,7 +229,6 @@ function Navbar() {
         ws.onclose = () => {
           // Only log if not intentionally closed (e.g., navigation cleanup)
           if (!isIntentionalClose) {
-            console.log('[Navbar WebSocket] Disconnected');
             // Attempt to reconnect with exponential backoff
             if (reconnectAttempts < maxReconnectAttempts) {
               const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);

@@ -49,14 +49,12 @@ export function isSupabaseConfigured() {
 export async function getSession() {
   // Return cached session if available (avoids deadlock during auth events)
   if (cachedSession) {
-    console.log('[Supabase] Using cached session');
     return cachedSession;
   }
 
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  console.log('[Supabase] Fetching session from Supabase...');
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error) {
     console.error('[Supabase] Error getting session:', error);
@@ -72,7 +70,6 @@ export async function getSession() {
  * Update cached session (called from onAuthStateChange)
  */
 export function setCachedSession(session) {
-  console.log('[Supabase] Caching session:', session ? session.user?.email : 'null');
   cachedSession = session;
 }
 
@@ -80,7 +77,6 @@ export function setCachedSession(session) {
  * Clear cached session (called on sign out)
  */
 export function clearCachedSession() {
-  console.log('[Supabase] Clearing cached session');
   cachedSession = null;
 }
 
@@ -275,18 +271,14 @@ export function onAuthStateChange(callback) {
  * @param {object} existingSession - Optional session object to use instead of fetching
  */
 export async function verifyWithBackend(existingSession = null) {
-  console.log('[Supabase] verifyWithBackend called, existingSession:', existingSession ? 'provided' : 'not provided');
 
   // Use provided session or fetch it
   let session = existingSession;
   if (!session) {
-    console.log('[Supabase] Fetching session...');
     session = await getSession();
   }
-  console.log('[Supabase] Session for verify:', session ? 'exists' : 'null');
 
   if (!session?.access_token) {
-    console.log('[Supabase] No access token, returning failure');
     return { success: false, error: 'No session' };
   }
 
@@ -294,7 +286,6 @@ export async function verifyWithBackend(existingSession = null) {
     // Use VITE_API_URL to ensure correct backend URL
     const apiUrl = import.meta.env.VITE_API_URL || '/api';
     const verifyUrl = `${apiUrl}/auth/verify`;
-    console.log('[Supabase] Verifying with backend at:', verifyUrl);
 
     const response = await fetch(verifyUrl, {
       method: 'POST',
@@ -305,9 +296,7 @@ export async function verifyWithBackend(existingSession = null) {
       credentials: 'include',
     });
 
-    console.log('[Supabase] Verify response status:', response.status);
     const data = await response.json();
-    console.log('[Supabase] Verify response data:', data);
 
     if (!response.ok) {
       return { success: false, error: data.error || 'Verification failed' };

@@ -67,8 +67,12 @@ function LessonComments({ lessonId }) {
         setComments(prev => [data.comment, ...prev]);
         setNewComment('');
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit comment');
+        let errorMessage = 'Failed to submit comment';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error('Error submitting comment:', err);

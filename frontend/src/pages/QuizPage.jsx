@@ -54,7 +54,6 @@ function QuizPage() {
         const questionIndex = parseInt(qParam, 10) - 1; // URL uses 1-based index
         if (!isNaN(questionIndex) && questionIndex >= 0 && questionIndex < questions.length) {
           setCurrentQuestion(questionIndex);
-          console.log(`[QuizPage] Deep link: navigating to question ${questionIndex + 1} from URL`);
         }
       }
       initialQuestionFromUrl.current = true;
@@ -184,7 +183,6 @@ function QuizPage() {
         const questionIndex = parseInt(qParam, 10) - 1; // URL uses 1-based index
         if (!isNaN(questionIndex) && questionIndex >= 0 && questionIndex < questions.length) {
           setCurrentQuestion(questionIndex);
-          console.log(`[QuizPage] Starting quiz at question ${questionIndex + 1} from URL`);
         } else {
           setCurrentQuestion(0);
           setSearchParams({ q: '1' }, { replace: true });

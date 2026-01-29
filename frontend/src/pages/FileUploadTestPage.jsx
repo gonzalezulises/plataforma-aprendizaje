@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileUpload } from '../components/FileUpload';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export default function FileUploadTestPage() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -81,10 +81,8 @@ export default function FileUploadTestPage() {
             maxSize={10 * 1024 * 1024}
             multiple={false}
             onUploadSuccess={(response) => {
-              console.log('Should not succeed');
             }}
             onUploadError={(error, errorInfo) => {
-              console.log('Expected network error:', error);
               setLastError(errorInfo);
             }}
           />

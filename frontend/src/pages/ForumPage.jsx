@@ -78,7 +78,6 @@ function ForumPage() {
           });
           setShowNewThread(true);
           setFormRestored(true);
-          console.log('Forum thread form data restored from previous session');
         }
       } catch (e) {
         console.error('Error restoring forum form data:', e);

@@ -42,7 +42,6 @@ export default function SubmissionFeedbackPage() {
             }
           }
         } catch (e) {
-          console.log('No feedback available yet');
         }
       } else {
         setError('Submission not found');

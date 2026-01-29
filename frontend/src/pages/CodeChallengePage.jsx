@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning';
 import UnsavedChangesModal from '../components/UnsavedChangesModal';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
  * CodeChallengePage - Full coding challenge workflow
