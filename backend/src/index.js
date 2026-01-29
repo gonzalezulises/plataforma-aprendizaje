@@ -1,4 +1,5 @@
 // Last reload: 2026-01-26T11:15:00.000Z - Feature #32 CSRF protection
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,8 +7,6 @@ import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
-import dotenv from 'dotenv';
-dotenv.config();
 
 // Import CSRF middleware
 import { csrfTokenGenerator, csrfProtection, getCsrfTokenHandler } from './middleware/csrf.js';
