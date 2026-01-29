@@ -1256,7 +1256,7 @@ print(potencia(3, 3))   # 27 (3^3)`
               return (
                 <div key={index} className="mb-8">
                   <LessonContentRenderer
-                    content={block.content}
+                    content={typeof block.content === 'string' ? block.content : (block.content?.text || '')}
                     courseContext={{ language: lesson.courseSlug?.includes('sql') ? 'sql' : 'python' }}
                     interactive={true}
                     onExerciseComplete={handleExerciseComplete}

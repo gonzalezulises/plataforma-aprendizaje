@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-const SQL_JS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/';
+const SQL_JS_CDN = 'https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/';
 
 // Singleton: only load sql.js once
 let sqlJsPromise = null;
