@@ -241,6 +241,30 @@ function runMigrations() {
   } catch (e) {
     console.log('[Migration] structure_4c MCQ update:', e.message);
   }
+
+  // Migration: Add quality scoring columns to lesson_content table
+  try {
+    const lcCols = db.exec("PRAGMA table_info(lesson_content)");
+    const lcColumnNames = lcCols.length > 0 ? lcCols[0].values.map(row => row[1]) : [];
+    if (!lcColumnNames.includes('review_status')) {
+      db.run("ALTER TABLE lesson_content ADD COLUMN review_status TEXT DEFAULT 'draft'");
+      console.log('[Migration] Added review_status column to lesson_content');
+    }
+    if (!lcColumnNames.includes('quality_score')) {
+      db.run("ALTER TABLE lesson_content ADD COLUMN quality_score INTEGER DEFAULT NULL");
+      console.log('[Migration] Added quality_score column to lesson_content');
+    }
+    if (!lcColumnNames.includes('quality_breakdown')) {
+      db.run("ALTER TABLE lesson_content ADD COLUMN quality_breakdown TEXT DEFAULT NULL");
+      console.log('[Migration] Added quality_breakdown column to lesson_content');
+    }
+    if (!lcColumnNames.includes('reviewer_notes')) {
+      db.run("ALTER TABLE lesson_content ADD COLUMN reviewer_notes TEXT DEFAULT NULL");
+      console.log('[Migration] Added reviewer_notes column to lesson_content');
+    }
+  } catch (e) {
+    console.log('[Migration] lesson_content quality columns:', e.message);
+  }
 }
 
 /**

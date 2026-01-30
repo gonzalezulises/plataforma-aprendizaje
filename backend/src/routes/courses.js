@@ -243,6 +243,78 @@ router.get('/levels', (req, res) => {
 });
 
 /**
+ * GET /api/courses/:courseId/quality-summary
+ * Get quality scoring summary for all lessons in a course.
+ * Must be defined BEFORE /:identifier to avoid Express capturing it.
+ */
+router.get('/:courseId/quality-summary', (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // Verify course exists
+    const course = queryOne('SELECT id FROM courses WHERE id = ?', [courseId]);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Get all lessons with their quality data
+    const lessonsWithQuality = queryAll(`
+      SELECT l.id as lesson_id, l.title as lesson_title,
+             m.title as module_title, m.order_index as module_order,
+             l.order_index as lesson_order,
+             lc.review_status, lc.quality_score, lc.quality_breakdown, lc.reviewer_notes
+      FROM lessons l
+      JOIN modules m ON l.module_id = m.id
+      LEFT JOIN lesson_content lc ON lc.lesson_id = l.id
+      WHERE m.course_id = ?
+      ORDER BY m.order_index ASC, l.order_index ASC
+    `, [courseId]);
+
+    // Calculate aggregates
+    const lessonsWithContent = lessonsWithQuality.filter(l => l.quality_score !== null);
+    const totalLessonsWithContent = lessonsWithContent.length;
+    const averageScore = totalLessonsWithContent > 0
+      ? Math.round(lessonsWithContent.reduce((sum, l) => sum + l.quality_score, 0) / totalLessonsWithContent)
+      : 0;
+
+    const statusCounts = {
+      draft: 0,
+      auto_approved: 0,
+      needs_review: 0,
+      approved: 0,
+      rejected: 0
+    };
+
+    for (const lesson of lessonsWithQuality) {
+      const status = lesson.review_status || 'draft';
+      if (statusCounts[status] !== undefined) {
+        statusCounts[status]++;
+      }
+    }
+
+    res.json({
+      courseId: parseInt(courseId),
+      totalLessons: lessonsWithQuality.length,
+      totalLessonsWithContent,
+      averageScore,
+      statusCounts,
+      lessons: lessonsWithQuality.map(l => ({
+        lessonId: l.lesson_id,
+        lessonTitle: l.lesson_title,
+        moduleTitle: l.module_title,
+        reviewStatus: l.review_status || 'draft',
+        qualityScore: l.quality_score,
+        qualityBreakdown: l.quality_breakdown ? JSON.parse(l.quality_breakdown) : null,
+        reviewerNotes: l.reviewer_notes
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching quality summary:', error);
+    res.status(500).json({ error: 'Failed to fetch quality summary' });
+  }
+});
+
+/**
  * GET /api/courses/:id - Get course by ID or slug with full details
  * Feature #244: Includes instructor name and avatar
  */
@@ -286,14 +358,16 @@ router.get('/:identifier', (req, res) => {
         [module.id]
       );
 
-      // Add has_content and content_length for each lesson
+      // Add has_content, content_length, review_status and quality_score for each lesson
       for (const lesson of module.lessons) {
         const contentInfo = queryOne(
-          'SELECT COUNT(*) as count, COALESCE(SUM(LENGTH(content)), 0) as total_length FROM lesson_content WHERE lesson_id = ?',
+          'SELECT COUNT(*) as count, COALESCE(SUM(LENGTH(content)), 0) as total_length, review_status, quality_score FROM lesson_content WHERE lesson_id = ? ORDER BY order_index LIMIT 1',
           [lesson.id]
         );
         lesson.has_content = (contentInfo?.count || 0) > 0;
         lesson.content_length = contentInfo?.total_length || 0;
+        lesson.review_status = contentInfo?.review_status || null;
+        lesson.quality_score = contentInfo?.quality_score || null;
       }
     }
 
@@ -1310,6 +1384,55 @@ router.get('/:courseId/module-progress', (req, res) => {
   } catch (error) {
     console.error('Error fetching module progress:', error);
     res.status(500).json({ error: 'Failed to fetch module progress' });
+  }
+});
+
+/**
+ * PUT /api/courses/:courseId/lessons/:lessonId/review
+ * Set review status and optional notes for a lesson's content.
+ * Requires course ownership (instructor only).
+ *
+ * Body: { status: 'approved'|'rejected'|'needs_review', notes?: string }
+ */
+router.put('/:courseId/lessons/:lessonId/review', requireInstructor, (req, res) => {
+  try {
+    const { courseId, lessonId } = req.params;
+    if (!verifyCourseOwnership(req, res, courseId)) return;
+
+    const { status, notes } = req.body;
+    const validStatuses = ['approved', 'rejected', 'needs_review'];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    // Verify lesson exists and has content
+    const content = queryOne(
+      'SELECT id FROM lesson_content WHERE lesson_id = ? ORDER BY order_index LIMIT 1',
+      [lessonId]
+    );
+
+    if (!content) {
+      return res.status(404).json({ error: 'No content found for this lesson' });
+    }
+
+    const now = new Date().toISOString();
+    run(
+      'UPDATE lesson_content SET review_status = ?, reviewer_notes = ?, updated_at = ? WHERE lesson_id = ?',
+      [status, notes || null, now, lessonId]
+    );
+
+    console.log(`[Review] Lesson ${lessonId}: status=${status}${notes ? `, notes="${notes}"` : ''}`);
+
+    res.json({
+      success: true,
+      lessonId: parseInt(lessonId),
+      reviewStatus: status,
+      reviewerNotes: notes || null
+    });
+  } catch (error) {
+    console.error('Error updating review status:', error);
+    res.status(500).json({ error: 'Failed to update review status' });
   }
 });
 

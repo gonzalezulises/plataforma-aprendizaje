@@ -1,6 +1,8 @@
 import express from 'express';
 import { queryOne, queryAll, run } from '../config/database.js';
 import { generateLessonContent, isClaudeConfigured, getAIProvider, queryCerebroRAG, isCerebroRAGAvailable, isLocalLLMAvailable } from '../lib/claude.js';
+import { validateAndCleanContent } from '../utils/contentValidator.js';
+import { scoreContent } from '../utils/contentQualityScorer.js';
 import { emitGlobalBroadcast } from '../utils/websocket-events.js';
 import yts from 'yt-search';
 
@@ -144,8 +146,10 @@ router.post('/generate-lesson-content', async (req, res) => {
     }
 
     // Save to lesson_content table if lessonId provided
+    let qualityResult = null;
     if (lessonId) {
-      saveLessonContent(lessonId, lessonType, content);
+      const saveResult = saveLessonContent(lessonId, lessonType, content, structure4c);
+      qualityResult = saveResult.quality;
       console.log('[AI] Content saved to lesson_content for lesson:', lessonId);
     }
 
@@ -174,6 +178,12 @@ router.post('/generate-lesson-content', async (req, res) => {
       content,
       sources: sources || [], // Books used as reference
       suggestedVideos,
+      quality: qualityResult ? {
+        score: qualityResult.overall,
+        status: qualityResult.reviewStatus,
+        breakdown: qualityResult.breakdown,
+        issues: qualityResult.issues
+      } : null,
       metadata: {
         generatedAt: new Date().toISOString(),
         lessonTitle,
@@ -792,13 +802,13 @@ async function processBatchGeneration(batchId, courseId, course, lessons) {
           throw new Error(error);
         }
 
-        // Save content to lesson_content table
-        saveLessonContent(lesson.id, lesson.content_type, content);
+        // Save content to lesson_content table with quality scoring
+        const saveResult = saveLessonContent(lesson.id, lesson.content_type, content, structure4c);
 
         batch.completed++;
         success = true;
 
-        // Broadcast: completed
+        // Broadcast: completed (includes quality score)
         emitGlobalBroadcast({
           type: 'batch_content_progress',
           batchId,
@@ -809,7 +819,9 @@ async function processBatchGeneration(batchId, courseId, course, lessons) {
           lessonTitle: lesson.title,
           moduleTitle: lesson.module_title,
           status: 'completed',
-          contentLength: content.length
+          contentLength: content.length,
+          qualityScore: saveResult.quality.overall,
+          reviewStatus: saveResult.quality.reviewStatus
         });
 
         console.log(`[AI] Batch ${batchId}: Lesson ${i + 1}/${lessons.length} completed - ${lesson.title} (${content.length} chars)`);
@@ -869,18 +881,217 @@ async function processBatchGeneration(batchId, courseId, course, lessons) {
 
 /**
  * Helper: Save generated content to lesson_content table
+ * @param {number} lessonId
+ * @param {string} contentType
+ * @param {string} rawContent
+ * @param {object|null} structure4c - 4C structure for quality scoring
+ * @returns {{ cleanedContent: string, warnings: string[], quality: object }}
  */
-function saveLessonContent(lessonId, contentType, rawContent) {
+function saveLessonContent(lessonId, contentType, rawContent, structure4c = null) {
   const now = new Date().toISOString();
+
+  // Validate and clean content before saving
+  const { cleanedContent, warnings } = validateAndCleanContent(rawContent, contentType);
+
+  if (warnings.length > 0) {
+    console.warn(`[ContentValidator] Lesson ${lessonId}: ${warnings.length} issue(s) found:`);
+    warnings.forEach(w => console.warn(`[ContentValidator]   - ${w}`));
+  }
+
+  // Score content quality
+  const quality = scoreContent(cleanedContent, structure4c);
+  console.log(`[QualityScorer] Lesson ${lessonId}: score=${quality.overall}, status=${quality.reviewStatus}, issues=${quality.issues.length}`);
 
   // Delete existing content for this lesson
   run('DELETE FROM lesson_content WHERE lesson_id = ?', [lessonId]);
 
-  // Insert new content
-  run(`INSERT INTO lesson_content (lesson_id, type, content, order_index, created_at, updated_at)
-       VALUES (?, ?, ?, 0, ?, ?)`,
-    [lessonId, contentType || 'text', JSON.stringify({ text: rawContent }), now, now]
+  // Insert validated content with quality data
+  run(`INSERT INTO lesson_content (lesson_id, type, content, order_index, review_status, quality_score, quality_breakdown, created_at, updated_at)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+    [lessonId, contentType || 'text', JSON.stringify({ text: cleanedContent }), quality.reviewStatus, quality.overall, JSON.stringify(quality.breakdown), now, now]
   );
+
+  return { cleanedContent, warnings, quality };
 }
+
+/**
+ * POST /api/ai/regenerate-lesson-content
+ * Regenerate content for a lesson — either all sections or a specific 4C section.
+ *
+ * Body: { lessonId, instructions?, regenerateSection: 'all'|'conexiones'|'conceptos'|'practica'|'conclusion' }
+ */
+router.post('/regenerate-lesson-content', async (req, res) => {
+  try {
+    const {
+      lessonId,
+      instructions = '',
+      regenerateSection = 'all'
+    } = req.body;
+
+    if (!lessonId) {
+      return res.status(400).json({ error: 'lessonId is required' });
+    }
+
+    if (!isClaudeConfigured()) {
+      return res.status(503).json({ error: 'AI content generation not available' });
+    }
+
+    // Fetch lesson + module + course context
+    const lesson = queryOne(`
+      SELECT l.*, m.title as module_title, m.course_id, c.title as course_title, c.level
+      FROM lessons l
+      JOIN modules m ON l.module_id = m.id
+      JOIN courses c ON m.course_id = c.id
+      WHERE l.id = ?
+    `, [lessonId]);
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    // Parse structure_4c
+    let structure4c = null;
+    if (lesson.structure_4c) {
+      try {
+        structure4c = typeof lesson.structure_4c === 'string'
+          ? JSON.parse(lesson.structure_4c)
+          : lesson.structure_4c;
+      } catch (e) { /* ignore */ }
+    }
+
+    const sectionHeaderMap = {
+      conexiones: '## 🔗 Conexiones',
+      conceptos: '## 💡 Conceptos',
+      practica: '## 🛠️ Practica Concreta',
+      conclusion: '## 🎯 Conclusion'
+    };
+
+    let finalContent;
+
+    if (regenerateSection === 'all') {
+      // Full regeneration with optional additional instructions
+      const contextWithInstructions = instructions
+        ? `Instrucciones adicionales del instructor: ${instructions}`
+        : '';
+
+      const { content, error } = await generateLessonContent({
+        lessonTitle: lesson.title,
+        lessonType: lesson.content_type || 'text',
+        courseTitle: lesson.course_title,
+        moduleTitle: lesson.module_title,
+        level: lesson.level || 'Principiante',
+        context: contextWithInstructions,
+        useRAG: true,
+        enhanced: true,
+        structure_4c: structure4c
+      });
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to regenerate content', details: error });
+      }
+
+      finalContent = content;
+    } else {
+      // Partial regeneration — only one section
+      if (!sectionHeaderMap[regenerateSection]) {
+        return res.status(400).json({ error: `Invalid section: ${regenerateSection}. Use: all, conexiones, conceptos, practica, conclusion` });
+      }
+
+      // Fetch existing content
+      const existingRow = queryOne(
+        'SELECT content FROM lesson_content WHERE lesson_id = ? ORDER BY order_index LIMIT 1',
+        [lessonId]
+      );
+
+      if (!existingRow) {
+        return res.status(400).json({ error: 'No existing content to partially regenerate. Use regenerateSection=all instead.' });
+      }
+
+      let existingContent;
+      try {
+        const parsed = JSON.parse(existingRow.content);
+        existingContent = parsed.text || '';
+      } catch (e) {
+        existingContent = existingRow.content;
+      }
+
+      // Parse existing content into sections
+      const existingSections = {};
+      const orderedKeys = ['conexiones', 'conceptos', 'practica', 'conclusion'];
+
+      for (let i = 0; i < orderedKeys.length; i++) {
+        const key = orderedKeys[i];
+        const header = sectionHeaderMap[key];
+        const startIdx = existingContent.indexOf(header);
+        if (startIdx === -1) {
+          existingSections[key] = '';
+          continue;
+        }
+
+        // Find end: start of next section or end of content
+        let endIdx = existingContent.length;
+        for (let j = i + 1; j < orderedKeys.length; j++) {
+          const nextHeader = sectionHeaderMap[orderedKeys[j]];
+          const nextIdx = existingContent.indexOf(nextHeader);
+          if (nextIdx !== -1) {
+            endIdx = nextIdx;
+            break;
+          }
+        }
+
+        existingSections[key] = existingContent.substring(startIdx, endIdx);
+      }
+
+      // Generate only the target section
+      const sectionPrompt = `Regenera SOLO la seccion "${sectionHeaderMap[regenerateSection]}" para la leccion "${lesson.title}".
+${instructions ? `Instrucciones del instructor: ${instructions}` : ''}
+Genera SOLO el contenido de esa seccion (incluyendo el header ##). No incluyas otras secciones.`;
+
+      const { content: sectionContent, error } = await generateLessonContent({
+        lessonTitle: lesson.title,
+        lessonType: lesson.content_type || 'text',
+        courseTitle: lesson.course_title,
+        moduleTitle: lesson.module_title,
+        level: lesson.level || 'Principiante',
+        context: sectionPrompt,
+        useRAG: true,
+        enhanced: true,
+        structure_4c: structure4c
+      });
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to regenerate section', details: error });
+      }
+
+      // Replace the target section with new content
+      existingSections[regenerateSection] = sectionContent;
+
+      // Reassemble all 4 sections
+      finalContent = orderedKeys
+        .map(key => existingSections[key])
+        .filter(s => s.length > 0)
+        .join('\n\n');
+    }
+
+    // Validate, score, and save
+    const saveResult = saveLessonContent(lessonId, lesson.content_type, finalContent, structure4c);
+
+    res.json({
+      success: true,
+      content: saveResult.cleanedContent,
+      quality: {
+        score: saveResult.quality.overall,
+        status: saveResult.quality.reviewStatus,
+        breakdown: saveResult.quality.breakdown,
+        issues: saveResult.quality.issues
+      },
+      validatorWarnings: saveResult.warnings,
+      regeneratedSection: regenerateSection
+    });
+  } catch (error) {
+    console.error('[AI] Error in regenerate-lesson-content:', error);
+    res.status(500).json({ error: 'Failed to regenerate lesson content' });
+  }
+});
 
 export default router;

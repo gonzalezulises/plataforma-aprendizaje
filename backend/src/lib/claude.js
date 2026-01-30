@@ -390,20 +390,10 @@ Para ejercicios de codigo, incluye un bloque de codigo ejecutable con la plantil
 Explicacion de la solucion.
 </details>
 
-Incluye tambien 2-3 preguntas de opcion multiple para verificar comprension:
-
-### Ejercicio: Quiz
-
-1. (Pregunta)
-A) Opcion 1
-B) Opcion 2
-C) Opcion 3
-D) Opcion 4
-
-<details><summary>Ver solucion</summary>
-Respuesta correcta: X)
-Explicacion de por que esta es la respuesta correcta.
-</details>
+IMPORTANTE SOBRE PRACTICA:
+- Esta seccion debe contener SOLO ejercicios de codigo (python o sql) con bloques ejecutables.
+- NO incluyas preguntas de opcion multiple (quiz MCQ) en esta seccion.
+- NO uses "### Ejercicio: Quiz" aqui. Los quizzes van UNICAMENTE en Conclusion.
 
 ## 🎯 Conclusion
 Cierra el ciclo de aprendizaje. El estudiante reflexiona y consolida.
@@ -425,6 +415,12 @@ Cierra el ciclo de aprendizaje. El estudiante reflexiona y consolida.
 
   NOTA: NO uses preguntas abiertas tipo "¿Que fue lo mas dificil?" o "¿Como aplicarias esto?".
   TODA pregunta debe tener opciones con respuesta verificable.
+
+  REGLA DE NO-DUPLICACION:
+  Las preguntas del Quiz de consolidacion DEBEN ser DIFERENTES a las de Conexiones.
+  - Conexiones: conocimientos PREVIOS (antes de la leccion)
+  - Conclusion: lo APRENDIDO en esta leccion
+  - NUNCA repitas una pregunta que ya aparecio en el contenido.
 - **Conexion con lo que sigue**: Breve preview del siguiente tema y como se conecta. Genera curiosidad.` : '';
 
   const typeSpecificPrompts = {
@@ -436,11 +432,15 @@ Para lecciones de tipo TEXTO:
 - Agrega notas importantes con blockquotes (>)
 - Si es relevante, incluye bloques de codigo ejecutable con \`\`\`python o \`\`\`sql
 - Los bloques de codigo con \`\`\`python o \`\`\`sql seran EJECUTABLES en el navegador del estudiante
-- Para SQL: el navegador tiene una base de datos SQLite con estas tablas precargadas:
-  * empleados (id, nombre, departamento, salario, fecha_ingreso) — 10 registros
-  * productos (id, nombre, categoria, precio, stock) — 10 registros
-  * ventas (id, producto_id, empleado_id, cantidad, fecha, total) — 10 registros con FK a empleados y productos
-  SIEMPRE usa estas tablas reales en los ejemplos SQL, NUNCA uses nombres genericos como "tabla", "tabla1", "mi_tabla"
+- Para SQL: el navegador tiene EXACTAMENTE estas tablas y columnas:
+  * empleados (id INTEGER, nombre TEXT, departamento TEXT, salario REAL, fecha_ingreso DATE)
+  * productos (id INTEGER, nombre TEXT, categoria TEXT, precio REAL, stock INTEGER)
+  * ventas (id INTEGER, producto_id INTEGER, empleado_id INTEGER, cantidad INTEGER, fecha DATE, total REAL)
+  REGLAS SQL ESTRICTAS:
+  - USA SOLO estas 3 tablas y sus columnas listadas arriba
+  - NO inventes columnas como manager_id, telefono, email, direccion, edad, apellido
+  - NUNCA uses tablas como: usuarios, clientes, orders, posts, categorias, departamentos
+  - Para sintaxis generica/template, usa bloques \`\`\` sin lenguaje (NO \`\`\`sql)
 - Para ejercicios de codigo usa secciones ### Ejercicio con bloques de codigo editables
 - Para preguntas de opcion multiple usa formato A) B) C) D) con solucion en <details>
 - El contenido sera renderizado interactivamente: el estudiante puede ejecutar codigo y responder quizzes`,
@@ -455,11 +455,15 @@ Para lecciones de tipo CODIGO:
 - Usa formato Markdown con bloques de codigo (\`\`\`python o \`\`\`sql)
 - IMPORTANTE: Los bloques de codigo seran EJECUTABLES en el navegador (via Pyodide/sql.js)
 - El estudiante puede editar y ejecutar cada bloque de codigo directamente
-- Para SQL: el navegador tiene una base de datos SQLite con estas tablas precargadas:
-  * empleados (id, nombre, departamento, salario, fecha_ingreso) — 10 registros
-  * productos (id, nombre, categoria, precio, stock) — 10 registros
-  * ventas (id, producto_id, empleado_id, cantidad, fecha, total) — 10 registros con FK a empleados y productos
-  USA SIEMPRE estas tablas reales, NUNCA nombres genericos como "tabla", "tabla1"
+- Para SQL: el navegador tiene EXACTAMENTE estas tablas y columnas:
+  * empleados (id INTEGER, nombre TEXT, departamento TEXT, salario REAL, fecha_ingreso DATE)
+  * productos (id INTEGER, nombre TEXT, categoria TEXT, precio REAL, stock INTEGER)
+  * ventas (id INTEGER, producto_id INTEGER, empleado_id INTEGER, cantidad INTEGER, fecha DATE, total REAL)
+  REGLAS SQL ESTRICTAS:
+  - USA SOLO estas 3 tablas y sus columnas listadas arriba
+  - NO inventes columnas como manager_id, telefono, email, direccion, edad, apellido
+  - NUNCA uses tablas como: usuarios, clientes, orders, posts, categorias, departamentos
+  - Para sintaxis generica/template, usa bloques \`\`\` sin lenguaje (NO \`\`\`sql)
 - Para ejercicios, usa ### Ejercicio con codigo starter incompleto para que el estudiante complete
 - Incluye la solucion en <details><summary>Ver solucion</summary>...</details>`,
 
@@ -602,7 +606,7 @@ function buildUserPrompt({
   }
 
   if (enhanced) {
-    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion siguiendo el MODELO PEDAGOGICO 4C. DEBES incluir las 4 secciones en este orden exacto: "## 🔗 Conexiones" (activar conocimiento previo con MCQ), "## 💡 Conceptos" (teoria + ejemplos), "## 🛠️ Practica Concreta" (ejercicios de codigo ejecutable + quiz MCQ, ~40% del contenido), "## 🎯 Conclusion" (resumen + quiz de consolidacion MCQ + que sigue). Si se proporciona estructura 4C arriba, USA esos datos especificos. El contenido debe ser extenso, minimo 2000 palabras. RECORDATORIO CRITICO: TODA pregunta al estudiante debe ser de opcion multiple (A/B/C/D) con respuesta correcta verificable. CERO preguntas abiertas.`;
+    prompt += `\n\nGenera contenido educativo COMPLETO y DETALLADO para esta leccion siguiendo el MODELO PEDAGOGICO 4C. DEBES incluir las 4 secciones en este orden exacto: "## 🔗 Conexiones" (activar conocimiento previo con MCQ), "## 💡 Conceptos" (teoria + ejemplos), "## 🛠️ Practica Concreta" (SOLO ejercicios de codigo ejecutable, SIN quiz MCQ, ~40% del contenido), "## 🎯 Conclusion" (resumen + quiz de consolidacion MCQ + que sigue). Si se proporciona estructura 4C arriba, USA esos datos especificos. El contenido debe ser extenso, minimo 2000 palabras. RECORDATORIO CRITICO: TODA pregunta al estudiante debe ser de opcion multiple (A/B/C/D) con respuesta correcta verificable. CERO preguntas abiertas.`;
   } else {
     prompt += `\n\nGenera contenido educativo completo y de alta calidad para esta leccion.`;
   }

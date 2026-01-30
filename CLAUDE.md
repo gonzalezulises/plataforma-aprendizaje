@@ -226,7 +226,8 @@ When generating content for `lessonType === 'video'`, the AI route (`/api/ai/gen
 | `backend/src/lib/claude.js` | AI client - LLM + RAG integration, 4C prompts, MCQ policy |
 | `backend/src/utils/pedagogical4C.js` | 4C pedagogical model structure generator |
 | `backend/src/routes/ai-course-structure.js` | AI course structure generation |
-| `backend/src/routes/ai.js` | AI content generation + YouTube suggestions for video lessons |
+| `backend/src/routes/ai.js` | AI content generation + YouTube suggestions for video lessons + content validation |
+| `backend/src/utils/contentValidator.js` | Post-generation content validator (4 passes) |
 | `backend/src/routes/youtube-search.js` | YouTube search endpoint (yt-search, no API key) |
 | `backend/src/routes/video-upload.js` | Supabase Storage signed URL for video upload |
 | `backend/src/routes/inline-exercises.js` | Exercise progress tracking API |
@@ -324,6 +325,64 @@ Migrations run automatically on backend startup in `database.js:runMigrations()`
 - 4C sections (Conexiones, Conclusion) now generate MCQ quiz format
 - Database migration updates existing `structure_4c` data
 - Exercise parser supports `### Quiz de consolidacion` headers and multi-question blocks
+
+## Protocolo de Modificacion de Base de Datos
+
+La base de datos SQLite del frontend (sql.js) es **in-memory**. El archivo `backend/data/learning.db` se carga a memoria al iniciar PM2. Cualquier modificacion directa al archivo `.db` mientras PM2 esta corriendo sera **sobreescrita** cuando PM2 reinicie o el proceso escriba datos.
+
+**Procedimiento correcto para modificaciones directas a la DB:**
+
+```bash
+# 1. DETENER PM2 primero
+ssh dgx-spark 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && pm2 stop plataforma-api'
+
+# 2. Modificar la base de datos
+ssh dgx-spark 'sqlite3 ~/plataforma-aprendizaje/backend/data/learning.db "TU QUERY AQUI"'
+
+# 3. REINICIAR PM2 (cargara los cambios)
+ssh dgx-spark 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && pm2 start plataforma-api'
+```
+
+**Nota**: Las migraciones automaticas en `database.js:runMigrations()` se ejecutan al inicio y son seguras. Este protocolo aplica solo a cambios manuales ad-hoc.
+
+## Problemas Conocidos de Contenido AI
+
+| # | Problema | Causa | Efecto | Mitigacion |
+|---|----------|-------|--------|------------|
+| 1 | **Quizzes duplicados** | System prompt pedia quiz MCQ en Practica Y Conclusion | Preguntas casi identicas en ambas secciones | Capa 1 (prompt: quiz solo en Conclusion) + Capa 2 (validator remueve quiz de Practica) |
+| 2 | **SQL con tablas/columnas inexistentes** | LLM hallucina `usuarios`, `manager_id`, etc. | Error criptico de sql.js al ejecutar | Capa 1 (prompt: lista explicita de tablas/columnas) + Capa 2 (validator: warning) |
+| 3 | **SQL placeholder ejecutable** | `SELECT [columna] FROM [tabla]` en bloques ````sql` | sql.js intenta ejecutar y falla con error incomprensible | Capa 2 (validator: convierte a ```) + Capa 3 (frontend: mensaje amigable) |
+| 4 | **Cambios de DB sobreescritos** | sql.js in-memory borra modificaciones directas al disco | Datos perdidos tras restart de PM2 | Capa 4 (documentacion: protocolo STOP/MODIFY/START) |
+
+## Sistema de Validacion de Contenido
+
+4 capas de defensa contra defectos comunes en contenido generado por LLM:
+
+| Capa | Archivo | Funcion | Que previene |
+|------|---------|---------|-------------|
+| 1. System Prompt | `backend/src/lib/claude.js` | `buildSystemPrompt()` | Quizzes duplicados, SQL incorrecto (en origen) |
+| 2. Backend Validator | `backend/src/utils/contentValidator.js` | `validateAndCleanContent()` | Quiz en Practica, placeholder SQL, tablas invalidas, secciones faltantes |
+| 3. Frontend Guard | `frontend/src/components/ExecutableCodeBlock.jsx` | `detectSQLPlaceholders()` | Placeholders SQL que llegan al estudiante |
+| 4. Documentacion | `CLAUDE.md` | Secciones de protocolo | Errores operacionales (DB overwrite, repeticion de fixes) |
+
+### Flujo de validacion
+
+```
+LLM genera contenido
+    ↓
+buildSystemPrompt() ya instruye al LLM correctamente (Capa 1)
+    ↓
+saveLessonContent() llama validateAndCleanContent() (Capa 2)
+    ├── Remueve quiz de Practica
+    ├── Convierte placeholder SQL a bloques no-ejecutables
+    ├── Warn: tablas/columnas invalidas
+    └── Warn: secciones 4C faltantes
+    ↓
+Contenido limpio se guarda en DB
+    ↓
+ExecutableCodeBlock detecta placeholders residuales (Capa 3)
+    └── Muestra mensaje amigable en vez de error criptico
+```
 
 ## Previous Architecture (deprecated)
 

@@ -113,6 +113,25 @@ export default function CourseCreatorPage() {
   const [batchComplete, setBatchComplete] = useState(false);
   const [batchSummary, setBatchSummary] = useState(null);
 
+  // Quality summary state
+  const [qualitySummary, setQualitySummary] = useState(null);
+
+  // Regeneration dialog state
+  const [showRegenDialog, setShowRegenDialog] = useState(false);
+  const [regenSection, setRegenSection] = useState('all');
+  const [regenInstructions, setRegenInstructions] = useState('');
+  const [regenerating, setRegenerating] = useState(false);
+
+  // Quality detail visibility in content modal
+  const [showQualityDetail, setShowQualityDetail] = useState(false);
+
+  // Current lesson quality data (for content modal)
+  const [currentLessonQuality, setCurrentLessonQuality] = useState(null);
+
+  // Review notes for reject dialog
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
+
   // WebSocket for batch progress
   const ws = useWebSocket();
 
@@ -264,6 +283,15 @@ export default function CourseCreatorPage() {
       originalFormRef.current = JSON.stringify(formData);
       setHasUnsavedChanges(false);
       setModules(data.course.modules || []);
+
+      // Fetch quality summary
+      try {
+        const qRes = await fetch(`${API_BASE}/courses/${courseId}/quality-summary`, { credentials: 'include' });
+        if (qRes.ok) {
+          const qData = await qRes.json();
+          setQualitySummary(qData);
+        }
+      } catch (e) { /* ignore */ }
 
       // Restore objectives from database
       if (data.course.objectives) {
@@ -629,14 +657,22 @@ export default function CourseCreatorPage() {
       const data = await response.json();
       toast.success('Contenido generado exitosamente!', { id: 'ai-content' });
 
-      // Update lesson in local state with new content and has_content flag
+      // Update lesson in local state with new content, has_content flag, and quality
+      const qualityInfo = data.quality || null;
       setModules(modules.map(m => {
         if (m.id === module.id) {
           return {
             ...m,
             lessons: m.lessons.map(l => {
               if (l.id === lesson.id) {
-                return { ...l, content: data.content, has_content: true, content_length: (data.content || '').length };
+                return {
+                  ...l,
+                  content: data.content,
+                  has_content: true,
+                  content_length: (data.content || '').length,
+                  quality_score: qualityInfo?.score || null,
+                  review_status: qualityInfo?.status || 'draft'
+                };
               }
               return l;
             })
@@ -644,6 +680,9 @@ export default function CourseCreatorPage() {
         }
         return m;
       }));
+
+      // Set quality for content modal
+      setCurrentLessonQuality(qualityInfo);
 
       // Open content modal in viewer mode to show generated content
       setSelectedLessonId(lesson.id);
@@ -709,6 +748,8 @@ export default function CourseCreatorPage() {
     setContentViewMode(true);
     setContentForm({ type: 'text', content: { text: '' } });
     setShowContentModal(true);
+    setCurrentLessonQuality(null);
+    setShowQualityDetail(false);
 
     const module = modules.find(m => m.lessons?.some(l => l.id === lessonId));
     if (!module) {
@@ -746,6 +787,23 @@ export default function CourseCreatorPage() {
               content: { text: combinedText }
             });
           }
+
+          // Load quality data from the first content block (post-migration columns)
+          if (firstBlock.quality_score !== undefined && firstBlock.quality_score !== null) {
+            let breakdown = null;
+            try {
+              breakdown = firstBlock.quality_breakdown
+                ? (typeof firstBlock.quality_breakdown === 'string' ? JSON.parse(firstBlock.quality_breakdown) : firstBlock.quality_breakdown)
+                : null;
+            } catch (e) { /* ignore */ }
+            setCurrentLessonQuality({
+              score: firstBlock.quality_score,
+              status: firstBlock.review_status || 'draft',
+              breakdown,
+              issues: []
+            });
+          }
+
           setContentViewMode(true);
         } else {
           // No content - go straight to edit mode
@@ -870,7 +928,8 @@ export default function CourseCreatorPage() {
             contentLength: data.contentLength || 0,
             error: data.error || null,
             title: data.lessonTitle,
-            moduleTitle: data.moduleTitle
+            moduleTitle: data.moduleTitle,
+            qualityScore: data.qualityScore || null
           }
         }));
       }
@@ -964,6 +1023,100 @@ export default function CourseCreatorPage() {
     setBatchSummary(null);
     setBatchLessonStatuses({});
     setBatchProgress(null);
+  };
+
+  // Approve lesson content
+  const handleApproveLesson = async () => {
+    if (!selectedLessonId || !course?.id) return;
+    try {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/lessons/${selectedLessonId}/review`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' })
+      });
+      if (!response.ok) throw new Error('Failed to approve');
+      // Update local state
+      setModules(prev => prev.map(m => ({
+        ...m,
+        lessons: m.lessons?.map(l =>
+          l.id === selectedLessonId ? { ...l, review_status: 'approved' } : l
+        )
+      })));
+      setCurrentLessonQuality(prev => prev ? { ...prev, status: 'approved' } : prev);
+      toast.success('Leccion aprobada');
+    } catch (error) {
+      toast.error('Error al aprobar');
+    }
+  };
+
+  // Reject lesson content
+  const handleRejectLesson = async () => {
+    if (!selectedLessonId || !course?.id) return;
+    try {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/lessons/${selectedLessonId}/review`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected', notes: rejectNotes })
+      });
+      if (!response.ok) throw new Error('Failed to reject');
+      setModules(prev => prev.map(m => ({
+        ...m,
+        lessons: m.lessons?.map(l =>
+          l.id === selectedLessonId ? { ...l, review_status: 'rejected' } : l
+        )
+      })));
+      setCurrentLessonQuality(prev => prev ? { ...prev, status: 'rejected' } : prev);
+      setShowRejectDialog(false);
+      setRejectNotes('');
+      toast.success('Leccion rechazada');
+    } catch (error) {
+      toast.error('Error al rechazar');
+    }
+  };
+
+  // Regenerate lesson content
+  const handleRegenerateContent = async () => {
+    if (!selectedLessonId) return;
+    setRegenerating(true);
+    try {
+      const response = await csrfFetch(`${API_BASE}/ai/regenerate-lesson-content`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId: selectedLessonId,
+          instructions: regenInstructions,
+          regenerateSection: regenSection
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to regenerate');
+      }
+
+      const data = await response.json();
+      // Update content form with new content
+      setContentForm({ type: contentForm.type, content: { text: data.content } });
+      // Update quality
+      setCurrentLessonQuality(data.quality);
+      // Update lesson in modules state
+      setModules(prev => prev.map(m => ({
+        ...m,
+        lessons: m.lessons?.map(l =>
+          l.id === selectedLessonId
+            ? { ...l, has_content: true, quality_score: data.quality?.score, review_status: data.quality?.status }
+            : l
+        )
+      })));
+      setShowRegenDialog(false);
+      setRegenInstructions('');
+      setRegenSection('all');
+      toast.success(regenSection === 'all' ? 'Contenido regenerado' : `Seccion "${regenSection}" regenerada`);
+    } catch (error) {
+      toast.error(error.message || 'Error al regenerar contenido');
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   // Publish course
@@ -1464,6 +1617,52 @@ export default function CourseCreatorPage() {
               </div>
             </div>
 
+            {/* Quality Summary Card */}
+            {qualitySummary && qualitySummary.totalLessonsWithContent > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Calidad del Contenido</h3>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className={`text-2xl font-bold ${
+                      qualitySummary.averageScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                      qualitySummary.averageScore >= 60 ? 'text-amber-600 dark:text-amber-400' :
+                      'text-red-600 dark:text-red-400'
+                    }`}>
+                      {qualitySummary.averageScore}/100
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Promedio</div>
+                  </div>
+                  <div className="flex-1 flex flex-wrap gap-2 text-xs">
+                    {qualitySummary.statusCounts.approved > 0 && (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded">
+                        {qualitySummary.statusCounts.approved} aprobadas
+                      </span>
+                    )}
+                    {qualitySummary.statusCounts.auto_approved > 0 && (
+                      <span className="px-2 py-1 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded">
+                        {qualitySummary.statusCounts.auto_approved} auto-aprobadas
+                      </span>
+                    )}
+                    {qualitySummary.statusCounts.needs_review > 0 && (
+                      <span className="px-2 py-1 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded">
+                        {qualitySummary.statusCounts.needs_review} por revisar
+                      </span>
+                    )}
+                    {qualitySummary.statusCounts.rejected > 0 && (
+                      <span className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
+                        {qualitySummary.statusCounts.rejected} rechazadas
+                      </span>
+                    )}
+                    {qualitySummary.statusCounts.draft > 0 && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded">
+                        {qualitySummary.statusCounts.draft} sin contenido
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Batch Content Generation Progress */}
             {batchId && (
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 space-y-3">
@@ -1557,7 +1756,7 @@ export default function CourseCreatorPage() {
                             <span className="text-gray-700 dark:text-gray-300 truncate">{info.title}</span>
                           </div>
                           <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                            {info.status === 'completed' ? `${(info.contentLength / 1000).toFixed(1)}k` : 'Error'}
+                            {info.status === 'completed' ? `${(info.contentLength / 1000).toFixed(1)}k${info.qualityScore ? ` | ${info.qualityScore}pts` : ''}` : 'Error'}
                           </span>
                         </div>
                       ))}
@@ -1680,6 +1879,26 @@ export default function CourseCreatorPage() {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                           </svg>
                                           Contenido
+                                        </span>
+                                      )}
+                                      {lesson.has_content && lesson.review_status === 'auto_approved' && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded">
+                                          &#10003; {lesson.quality_score}
+                                        </span>
+                                      )}
+                                      {lesson.has_content && lesson.review_status === 'needs_review' && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded">
+                                          &#9888; {lesson.quality_score}
+                                        </span>
+                                      )}
+                                      {lesson.has_content && lesson.review_status === 'approved' && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded">
+                                          &#10003;&#10003;
+                                        </span>
+                                      )}
+                                      {lesson.has_content && lesson.review_status === 'rejected' && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
+                                          &#10007;
                                         </span>
                                       )}
                                     </div>
@@ -2125,25 +2344,84 @@ export default function CourseCreatorPage() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {contentViewMode && (contentForm.content.text || contentForm.content.video_url) ? 'Contenido de la Leccion' : 'Agregar Contenido'}
               </h3>
-              {contentViewMode && contentForm.content.video_url && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Video configurado
-                </span>
-              )}
-              {contentViewMode && contentForm.content.text && !contentForm.content.video_url && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {contentForm.content.text.length > 1000
-                    ? `${(contentForm.content.text.length / 1000).toFixed(1)}K caracteres`
-                    : `${contentForm.content.text.length} caracteres`}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {contentViewMode && currentLessonQuality && (
+                  <button
+                    onClick={() => setShowQualityDetail(!showQualityDetail)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${
+                      currentLessonQuality.score >= 80
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-200'
+                        : currentLessonQuality.score >= 60
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 hover:bg-amber-200'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-200'
+                    }`}
+                    title="Ver detalle de calidad"
+                  >
+                    {currentLessonQuality.score}/100
+                  </button>
+                )}
+                {contentViewMode && contentForm.content.video_url && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Video configurado
+                  </span>
+                )}
+                {contentViewMode && contentForm.content.text && !contentForm.content.video_url && !currentLessonQuality && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {contentForm.content.text.length > 1000
+                      ? `${(contentForm.content.text.length / 1000).toFixed(1)}K caracteres`
+                      : `${contentForm.content.text.length} caracteres`}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Quality Detail Panel (collapsible) */}
+            {contentViewMode && showQualityDetail && currentLessonQuality && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 text-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Desglose de Calidad</span>
+                  <button onClick={() => setShowQualityDetail(false)} className="text-gray-400 hover:text-gray-600">&#10005;</button>
+                </div>
+                {currentLessonQuality.breakdown && Object.entries(currentLessonQuality.breakdown).map(([key, value]) => {
+                  const labels = {
+                    sectionCompleteness: 'Secciones completas',
+                    practiceRatio: 'Ratio practica',
+                    executableCode: 'Codigo ejecutable',
+                    quizValidity: 'Quizzes validos',
+                    conceptAlignment: 'Alineacion conceptual',
+                    minimumLength: 'Extension minima'
+                  };
+                  return (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="w-36 text-gray-500 dark:text-gray-400 text-xs">{labels[key] || key}</span>
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${value >= 80 ? 'bg-green-500' : value >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                          style={{ width: `${Math.min(100, value)}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-xs text-gray-500">{value}</span>
+                    </div>
+                  );
+                })}
+                {currentLessonQuality.issues && currentLessonQuality.issues.length > 0 && (
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Problemas detectados:</p>
+                    <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                      {currentLessonQuality.issues.map((issue, i) => (
+                        <li key={i}>- {issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             {loadingContent ? (
               <div className="flex items-center justify-center py-12">
@@ -2173,22 +2451,44 @@ export default function CourseCreatorPage() {
                     />
                   )}
                 </div>
-                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => setShowContentModal(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                  >
-                    Cerrar
-                  </button>
-                  <button
-                    onClick={() => setContentViewMode(false)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Editar
-                  </button>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleApproveLesson}
+                      className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                    >
+                      Aprobar
+                    </button>
+                    <button
+                      onClick={() => { setRejectNotes(''); setShowRejectDialog(true); }}
+                      className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Rechazar
+                    </button>
+                    <button
+                      onClick={() => { setRegenSection('all'); setRegenInstructions(''); setShowRegenDialog(true); }}
+                      className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
+                    >
+                      Regenerar
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowContentModal(false)}
+                      className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      onClick={() => setContentViewMode(false)}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Editar
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -2538,6 +2838,108 @@ export default function CourseCreatorPage() {
           toast.success(`Quiz #${quizId} importado con exito`);
         }}
       />
+
+      {/* Reject Dialog (z-index higher than content modal) */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Rechazar Contenido
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              Agrega notas sobre por que se rechaza el contenido (opcional):
+            </p>
+            <textarea
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500"
+              placeholder="Ej: Falta contenido practico, revisar ejemplos de SQL..."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRejectLesson}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regeneration Dialog (z-index higher than content modal) */}
+      {showRegenDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Regenerar Contenido
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Seccion a regenerar
+                </label>
+                <select
+                  value={regenSection}
+                  onChange={(e) => setRegenSection(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="all">Todo el contenido</option>
+                  <option value="conexiones">Conexiones</option>
+                  <option value="conceptos">Conceptos</option>
+                  <option value="practica">Practica</option>
+                  <option value="conclusion">Conclusion</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Instrucciones adicionales (opcional)
+                </label>
+                <textarea
+                  value={regenInstructions}
+                  onChange={(e) => setRegenInstructions(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  placeholder="Ej: Mas ejercicios de SQL JOINs..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowRegenDialog(false)}
+                disabled={regenerating}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRegenerateContent}
+                disabled={regenerating}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {regenerating ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span>Regenerando...</span>
+                  </>
+                ) : (
+                  <span>Regenerar</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

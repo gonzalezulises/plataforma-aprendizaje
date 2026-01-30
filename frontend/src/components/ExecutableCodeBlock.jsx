@@ -3,6 +3,35 @@ import { usePyodide } from '../hooks/usePyodide';
 import { useSQLite } from '../hooks/useSQLite';
 
 /**
+ * Detect placeholder patterns in SQL code that would cause cryptic runtime errors.
+ * Returns a user-friendly message if placeholders are found, or null if code is safe to execute.
+ */
+function detectSQLPlaceholders(code) {
+  const patterns = [
+    { regex: /\[columna[s]?\]/i, label: '[columna]' },
+    { regex: /\[tabla[s]?\]/i, label: '[tabla]' },
+    { regex: /\[condicion[es]?\]/i, label: '[condicion]' },
+    { regex: /\[valor[es]?\]/i, label: '[valor]' },
+    { regex: /\[nombre[_\s]?\w*\]/i, label: '[nombre...]' },
+    { regex: /\[expresion\]/i, label: '[expresion]' },
+    { regex: /\[campo[s]?\]/i, label: '[campo]' },
+    { regex: /\[criterio[s]?\]/i, label: '[criterio]' },
+  ];
+
+  const found = patterns.filter(p => p.regex.test(code));
+
+  // Also check for ellipsis patterns like "col1, col2, ..."
+  if (/\.\.\.\s*(?:FROM|WHERE|$)/i.test(code) || /,\s*\.\.\./.test(code)) {
+    found.push({ label: '...' });
+  }
+
+  if (found.length === 0) return null;
+
+  const placeholderList = found.map(f => f.label).join(', ');
+  return `Este bloque SQL contiene plantillas/placeholders (${placeholderList}) que debes reemplazar con valores reales antes de ejecutar.\n\nTablas disponibles: empleados, productos, ventas\nEjemplo: SELECT nombre, salario FROM empleados WHERE departamento = 'Ventas';`;
+}
+
+/**
  * ExecutableCodeBlock - Editable code block with in-browser execution.
  *
  * Supports Python (via Pyodide WASM) and SQL (via sql.js WASM).
@@ -69,6 +98,12 @@ function ExecutableCodeBlock({ code, language, courseContext = {} }) {
         setOutput('(Sin salida)');
       }
     } else if (isSQL) {
+      // Check for placeholder patterns before executing
+      const placeholderMsg = detectSQLPlaceholders(currentCode);
+      if (placeholderMsg) {
+        setError(placeholderMsg);
+        return;
+      }
       const result = await sqlite.runQuery(currentCode);
       if (result.error) {
         setError(result.error);
