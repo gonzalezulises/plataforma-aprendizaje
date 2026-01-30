@@ -10,7 +10,7 @@
  *   executableCode       15%  — >= 3 code blocks (```python or ```sql)
  *   quizValidity         15%  — >= 3 valid quizzes (A/B/C/D + <details>)
  *   conceptAlignment     15%  — Key concepts from structure_4c appear in content
- *   minimumLength        10%  — >= 1500 words
+ *   minimumLength        10%  — >= 1500 words OR >= 7000 chars (hybrid)
  */
 
 const SECTION_HEADERS = [
@@ -239,19 +239,23 @@ function scoreConceptAlignment(content, structure4c, issues) {
 
 /**
  * Metric 6: Minimum Length (10%)
- * Score 100 if >= 1500 words. Proportional below that.
+ * Hybrid: score 100 if >= 1500 words OR >= 7000 chars. Takes the higher score.
+ * Code-heavy content (SQL, Python) has few words but many chars — hybrid avoids penalizing it.
  */
 function scoreMinimumLength(content, issues) {
   const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+  const charCount = content.length;
   const targetWords = 1500;
+  const targetChars = 7000;
 
-  if (wordCount >= targetWords) {
-    return 100;
+  const wordScore = Math.min(100, Math.round((wordCount / targetWords) * 100));
+  const charScore = Math.min(100, Math.round((charCount / targetChars) * 100));
+  const score = Math.max(wordScore, charScore);
+
+  if (score < 100) {
+    issues.push(`Contenido tiene ${wordCount} palabras / ${charCount} caracteres (objetivo: ${targetWords} palabras o ${targetChars} caracteres)`);
   }
-
-  const score = Math.round((wordCount / targetWords) * 100);
-  issues.push(`Contenido tiene ${wordCount} palabras (objetivo: ${targetWords})`);
-  return Math.min(100, score);
+  return score;
 }
 
 /**

@@ -115,6 +115,7 @@ export default function CourseCreatorPage() {
 
   // Quality summary state
   const [qualitySummary, setQualitySummary] = useState(null);
+  const [isRetroscoring, setIsRetroscoring] = useState(false);
 
   // Regeneration dialog state
   const [showRegenDialog, setShowRegenDialog] = useState(false);
@@ -1119,6 +1120,38 @@ export default function CourseCreatorPage() {
     }
   };
 
+  // Retroscore: re-evaluate all lesson scores with current algorithm
+  const handleRetroscore = async () => {
+    if (!course || isRetroscoring) return;
+    setIsRetroscoring(true);
+    try {
+      const response = await csrfFetch(`${API_BASE}/courses/${course.id}/retroscore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Error al recalcular scores');
+      }
+      const data = await response.json();
+      toast.success(`Scores recalculados: promedio ${data.averageOldScore} → ${data.averageNewScore} (${data.upgradedToApproved} lecciones mejoradas)`);
+
+      // Refresh quality summary
+      try {
+        const qRes = await fetch(`${API_BASE}/courses/${course.id}/quality-summary`, { credentials: 'include' });
+        if (qRes.ok) {
+          const qData = await qRes.json();
+          setQualitySummary(qData);
+        }
+      } catch (e) { /* ignore */ }
+    } catch (error) {
+      toast.error(error.message || 'Error al recalcular scores');
+    } finally {
+      setIsRetroscoring(false);
+    }
+  };
+
   // Publish course
   const handlePublish = async () => {
     if (!course) return;
@@ -1659,6 +1692,18 @@ export default function CourseCreatorPage() {
                       </span>
                     )}
                   </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+                  <button
+                    onClick={handleRetroscore}
+                    disabled={isRetroscoring}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded transition-colors disabled:opacity-50"
+                  >
+                    <svg className={`w-3.5 h-3.5 ${isRetroscoring ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {isRetroscoring ? 'Recalculando...' : 'Recalcular Scores'}
+                  </button>
                 </div>
               </div>
             )}

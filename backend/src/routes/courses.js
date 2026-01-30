@@ -2,6 +2,8 @@ import express from 'express';
 import { queryAll, queryOne, run, saveDatabase } from '../config/database.js';
 import { parseSearchQuery } from '../utils/searchUtils.js';
 import { logAuditEvent, AUDIT_EVENTS } from '../utils/auditLogger.js';
+import { validateAndCleanContent } from '../utils/contentValidator.js';
+import { scoreContent } from '../utils/contentQualityScorer.js';
 
 // Feature #40: Sensitive operations log audit trail
 console.log('Courses routes loading... (Feature #191 - UNIQUE_VALIDATION - 2026-01-25T21:42:00.000Z)');
@@ -311,6 +313,131 @@ router.get('/:courseId/quality-summary', (req, res) => {
   } catch (error) {
     console.error('Error fetching quality summary:', error);
     res.status(500).json({ error: 'Failed to fetch quality summary' });
+  }
+});
+
+/**
+ * POST /api/courses/:courseId/retroscore
+ * Re-validate and re-score all lesson content for a course using current algorithms.
+ * Useful after scoring algorithm changes to update stale scores without regenerating content.
+ * Must be defined BEFORE /:identifier to avoid Express capturing it.
+ */
+router.post('/:courseId/retroscore', requireInstructor, (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // Verify course ownership
+    const course = verifyCourseOwnership(req, res, courseId);
+    if (!course) return;
+
+    // Get all lesson content for this course
+    const lessonContents = queryAll(`
+      SELECT lc.id, lc.lesson_id, lc.content, lc.type,
+             l.title as lesson_title, l.structure_4c,
+             lc.quality_score as old_score, lc.review_status as old_status
+      FROM lesson_content lc
+      JOIN lessons l ON lc.lesson_id = l.id
+      JOIN modules m ON l.module_id = m.id
+      WHERE m.course_id = ?
+      ORDER BY m.order_index ASC, l.order_index ASC
+    `, [courseId]);
+
+    if (lessonContents.length === 0) {
+      return res.json({
+        courseId: parseInt(courseId),
+        totalProcessed: 0,
+        message: 'No lesson content found to retroscore',
+        lessons: []
+      });
+    }
+
+    const results = [];
+    const now = new Date().toISOString();
+
+    for (const lc of lessonContents) {
+      try {
+        // Parse stored content JSON to get raw text
+        const contentObj = JSON.parse(lc.content || '{}');
+        const rawText = contentObj.text || '';
+
+        if (!rawText) {
+          results.push({
+            lessonId: lc.lesson_id,
+            lessonTitle: lc.lesson_title,
+            skipped: true,
+            reason: 'No text content'
+          });
+          continue;
+        }
+
+        // Parse structure_4c for concept alignment scoring
+        let structure4c = null;
+        try {
+          structure4c = JSON.parse(lc.structure_4c || 'null');
+        } catch (e) { /* ignore parse errors */ }
+
+        // Re-validate content (apply current validator passes)
+        const { cleanedContent } = validateAndCleanContent(rawText, lc.type);
+
+        // Re-score with current algorithm
+        const quality = scoreContent(cleanedContent, structure4c);
+
+        // Update DB with new scores (do NOT overwrite content — scores only)
+        run(`UPDATE lesson_content
+             SET quality_score = ?, quality_breakdown = ?, review_status = ?, updated_at = ?
+             WHERE id = ?`,
+          [quality.overall, JSON.stringify(quality.breakdown), quality.reviewStatus, now, lc.id]
+        );
+
+        results.push({
+          lessonId: lc.lesson_id,
+          lessonTitle: lc.lesson_title,
+          oldScore: lc.old_score,
+          newScore: quality.overall,
+          oldStatus: lc.old_status,
+          newStatus: quality.reviewStatus,
+          delta: quality.overall - (lc.old_score || 0),
+          breakdown: quality.breakdown,
+          issues: quality.issues
+        });
+      } catch (lessonError) {
+        console.error(`[Retroscore] Error processing lesson ${lc.lesson_id}:`, lessonError);
+        results.push({
+          lessonId: lc.lesson_id,
+          lessonTitle: lc.lesson_title,
+          skipped: true,
+          reason: lessonError.message
+        });
+      }
+    }
+
+    // Save DB after batch update
+    saveDatabase();
+
+    // Calculate summary
+    const scored = results.filter(r => !r.skipped);
+    const avgOld = scored.length > 0
+      ? Math.round(scored.reduce((s, r) => s + (r.oldScore || 0), 0) / scored.length)
+      : 0;
+    const avgNew = scored.length > 0
+      ? Math.round(scored.reduce((s, r) => s + r.newScore, 0) / scored.length)
+      : 0;
+    const upgraded = scored.filter(r => r.oldStatus === 'needs_review' && r.newStatus === 'auto_approved').length;
+
+    console.log(`[Retroscore] Course ${courseId}: ${scored.length} lessons rescored, avg ${avgOld} → ${avgNew}, ${upgraded} upgraded to auto_approved`);
+
+    res.json({
+      courseId: parseInt(courseId),
+      totalProcessed: scored.length,
+      totalSkipped: results.filter(r => r.skipped).length,
+      averageOldScore: avgOld,
+      averageNewScore: avgNew,
+      upgradedToApproved: upgraded,
+      lessons: results
+    });
+  } catch (error) {
+    console.error('Error in retroscore:', error);
+    res.status(500).json({ error: 'Failed to retroscore course' });
   }
 });
 

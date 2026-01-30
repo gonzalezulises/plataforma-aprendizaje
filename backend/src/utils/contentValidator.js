@@ -1,11 +1,14 @@
 /**
  * Content Validator for AI-generated lesson content.
- * Runs 4 validation passes to catch common LLM defects before saving.
+ * Runs 5 validation passes to catch common LLM defects before saving.
  *
  * Pass 1: Remove quiz MCQ from Practica section (should only be in Conclusion)
+ * Pass 5: Auto-tag untagged code blocks containing SQL or Python keywords
  * Pass 2: Convert placeholder SQL blocks (with [columna], [tabla], etc.) from ```sql to ```
  * Pass 3: Warn about invalid SQL tables/columns (hallucinated by LLM)
  * Pass 4: Verify 4C section headers exist
+ *
+ * Note: Pass 5 runs before Pass 2 so newly tagged blocks can be checked for placeholders.
  */
 
 // Valid schema for the in-browser sql.js database
@@ -64,6 +67,9 @@ export function validateAndCleanContent(rawContent, lessonType) {
   // Pass 1: Remove quiz MCQ from Practica section
   content = removeQuizFromPractica(content, warnings);
 
+  // Pass 5: Auto-tag untagged code blocks (must run BEFORE Pass 2)
+  content = autoTagCodeBlocks(content, warnings);
+
   // Pass 2: Convert placeholder SQL blocks
   content = convertPlaceholderSQL(content, warnings);
 
@@ -107,6 +113,40 @@ function removeQuizFromPractica(content, warnings) {
   }
 
   return content;
+}
+
+/**
+ * Pass 5: Auto-tag untagged code blocks containing SQL or Python keywords.
+ * LLMs sometimes generate ``` without a language tag even when instructed to use ```sql.
+ * This pass detects SQL/Python keywords and adds the appropriate tag so the scorer
+ * counts them as executable code blocks.
+ */
+function autoTagCodeBlocks(content, warnings) {
+  const untaggedBlockRegex = /```\n([\s\S]*?)```/g;
+  let tagCount = 0;
+
+  const result = content.replace(untaggedBlockRegex, (match, code) => {
+    // Skip placeholders (Pass 2 handles those)
+    if (PLACEHOLDER_PATTERNS.some(p => p.test(code))) return match;
+
+    const sqlKeywords = /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|FROM|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY|HAVING|UNION|INTO|VALUES|SET|TABLE|INDEX|VIEW|WITH)\b/i;
+    if (sqlKeywords.test(code)) {
+      tagCount++;
+      return '```sql\n' + code + '```';
+    }
+
+    const pyKeywords = /\b(def |class |import |from |print\(|if __name__|elif |lambda )/;
+    if (pyKeywords.test(code)) {
+      tagCount++;
+      return '```python\n' + code + '```';
+    }
+    return match;
+  });
+
+  if (tagCount > 0) {
+    warnings.push(`Auto-tagged ${tagCount} untagged code block(s) with language specifier`);
+  }
+  return result;
 }
 
 /**

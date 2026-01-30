@@ -24,7 +24,7 @@ export function generate4CStructure(lessonTitle, contentType, topic) {
       guiding_questions: generateGuidingQuestions(lowerTitle, keyTerm)
     },
     concepts: {
-      key_concepts: generateKeyConcepts(lowerTitle),
+      key_concepts: generateKeyConcepts(lowerTitle, lowerTopic),
       learning_outcomes: `Al finalizar esta leccion, podras ${getLearningOutcome(contentType)}.`,
       difficulty_level: getDifficultyLevel(lowerTitle)
     },
@@ -57,6 +57,60 @@ export function addStructure4CToTemplate(template, topic) {
   });
   return template;
 }
+
+/**
+ * Topic-aware concept dictionary.
+ * Lookup order: match topic key first, then scan title for keyword match, then _default.
+ */
+const TOPIC_CONCEPT_MAP = {
+  sql: {
+    _default: ['Sintaxis SQL', 'Consultas basicas', 'Manipulacion de datos'],
+    'base de datos': ['Modelo relacional', 'Tablas y relaciones', 'Claves primarias y foraneas'],
+    'relacional': ['Modelo relacional', 'Tablas y relaciones', 'Claves primarias y foraneas'],
+    'select': ['Sintaxis SELECT', 'Clausula FROM', 'Seleccion de columnas'],
+    'where': ['Operadores de comparacion', 'Operadores logicos AND/OR', 'Filtrado con WHERE'],
+    'order': ['ORDER BY ASC/DESC', 'LIMIT y OFFSET', 'Ordenamiento multiple'],
+    'limit': ['ORDER BY ASC/DESC', 'LIMIT y OFFSET', 'Paginacion de resultados'],
+    'join': ['INNER JOIN', 'LEFT/RIGHT JOIN', 'Condiciones de union ON'],
+    'group': ['GROUP BY', 'Funciones de agregacion (COUNT, SUM, AVG)', 'HAVING'],
+    'agregacion': ['COUNT, SUM, AVG, MIN, MAX', 'GROUP BY', 'HAVING vs WHERE'],
+    'subconsulta': ['Subconsultas escalares', 'Subconsultas en WHERE', 'EXISTS y NOT EXISTS'],
+    'vista': ['CREATE VIEW', 'CTEs con WITH', 'Consultas reutilizables'],
+    'cte': ['WITH (Common Table Expressions)', 'CTEs recursivos', 'Legibilidad de consultas'],
+    'create': ['CREATE TABLE', 'Tipos de datos SQL', 'Restricciones (constraints)'],
+    'alter': ['ALTER TABLE', 'Modificacion de esquema', 'ADD/DROP columnas'],
+    'drop': ['DROP TABLE', 'CASCADE y RESTRICT', 'Eliminacion segura'],
+    'insert': ['INSERT INTO', 'INSERT multiples filas', 'INSERT desde SELECT'],
+    'update': ['UPDATE SET', 'UPDATE con WHERE', 'Actualizacion condicional'],
+    'delete': ['DELETE FROM', 'DELETE con WHERE', 'Diferencia DELETE vs TRUNCATE'],
+    'indice': ['CREATE INDEX', 'Indices B-tree', 'Impacto en rendimiento'],
+    'optimizacion': ['EXPLAIN/query plan', 'Indices', 'Normalizacion'],
+    'proyecto': ['Diseno de esquema', 'Normalizacion', 'Relaciones entre tablas'],
+    'diseno': ['Modelo entidad-relacion', 'Normalizacion (1NF, 2NF, 3NF)', 'Integridad referencial']
+  },
+  python: {
+    _default: ['Sintaxis Python', 'Variables y tipos', 'Estructuras de control'],
+    'variable': ['Declaracion de variables', 'Asignacion de valores', 'Tipos de datos basicos'],
+    'funcion': ['Definicion de funciones', 'Parametros y argumentos', 'Valores de retorno'],
+    'bucle': ['Iteracion', 'Condicion de terminacion', 'Acumuladores'],
+    'for': ['Iteracion con for', 'range()', 'Iteracion sobre colecciones'],
+    'while': ['Bucle while', 'Condicion de terminacion', 'Break y continue'],
+    'condicional': ['Expresiones booleanas', 'Flujo de control', 'Ramas de ejecucion'],
+    'if': ['Expresiones booleanas', 'Flujo de control', 'Ramas if/elif/else'],
+    'lista': ['Listas y metodos', 'Indexacion y slicing', 'List comprehensions'],
+    'diccionario': ['Pares clave-valor', 'Metodos de diccionario', 'Iteracion sobre diccionarios'],
+    'clase': ['Clases y objetos', 'Constructor __init__', 'Atributos y metodos'],
+    'archivo': ['Lectura de archivos', 'Escritura de archivos', 'Context managers (with)'],
+    'modulo': ['Importacion de modulos', 'Paquetes', 'pip y dependencias']
+  },
+  pandas: {
+    _default: ['DataFrame', 'Series', 'Manipulacion de datos'],
+    'dataframe': ['Creacion de DataFrames', 'Indexacion', 'Seleccion de datos'],
+    'limpieza': ['Valores nulos (NaN)', 'fillna/dropna', 'Tipos de datos'],
+    'visualizacion': ['plot()', 'Tipos de graficos', 'Personalizacion'],
+    'merge': ['merge()', 'concat()', 'Tipos de join']
+  }
+};
 
 // Helper functions
 function extractKeyTerm(title, topic) {
@@ -104,19 +158,28 @@ function generateGuidingQuestions(title, keyTerm) {
   return questions;
 }
 
-function generateKeyConcepts(title) {
-  if (title.includes('variable')) {
-    return ['Declaracion de variables', 'Asignacion de valores', 'Tipos de datos basicos'];
-  } else if (title.includes('funcion')) {
-    return ['Definicion de funciones', 'Parametros y argumentos', 'Valores de retorno'];
-  } else if (title.includes('bucle') || title.includes('for')) {
-    return ['Iteracion', 'Condicion de terminacion', 'Acumuladores'];
-  } else if (title.includes('condicional') || title.includes('if')) {
-    return ['Expresiones booleanas', 'Flujo de control', 'Ramas de ejecucion'];
-  } else if (title.includes('sql') || title.includes('select')) {
-    return ['Sintaxis de consultas', 'Filtrado de datos', 'Ordenamiento'];
+function generateKeyConcepts(title, topic) {
+  const lowerTopic = (topic || '').toLowerCase();
+
+  // Find matching topic in map
+  const topicKey = Object.keys(TOPIC_CONCEPT_MAP).find(k => lowerTopic.includes(k));
+
+  if (topicKey) {
+    const topicMap = TOPIC_CONCEPT_MAP[topicKey];
+    for (const [keyword, concepts] of Object.entries(topicMap)) {
+      if (keyword === '_default') continue;
+      if (title.includes(keyword)) return concepts;
+    }
+    return topicMap._default;
   }
-  return ['Concepto principal', 'Aplicacion practica', 'Mejores practicas'];
+
+  // Legacy fallback for unknown topics (backward-compatible)
+  if (title.includes('variable')) return ['Declaracion de variables', 'Asignacion de valores', 'Tipos de datos basicos'];
+  if (title.includes('funcion')) return ['Definicion de funciones', 'Parametros y argumentos', 'Valores de retorno'];
+  if (title.includes('bucle') || title.includes('for')) return ['Iteracion', 'Condicion de terminacion', 'Acumuladores'];
+  if (title.includes('condicional') || title.includes('if')) return ['Expresiones booleanas', 'Flujo de control', 'Ramas de ejecucion'];
+
+  return ['Concepto principal del tema', 'Aplicacion practica', 'Mejores practicas'];
 }
 
 function getLearningOutcome(contentType) {
