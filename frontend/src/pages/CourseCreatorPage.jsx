@@ -116,6 +116,7 @@ export default function CourseCreatorPage() {
   // Quality summary state
   const [qualitySummary, setQualitySummary] = useState(null);
   const [isRetroscoring, setIsRetroscoring] = useState(false);
+  const [qualityFilter, setQualityFilter] = useState(null);
 
   // Regeneration dialog state
   const [showRegenDialog, setShowRegenDialog] = useState(false);
@@ -1667,32 +1668,133 @@ export default function CourseCreatorPage() {
                   </div>
                   <div className="flex-1 flex flex-wrap gap-2 text-xs">
                     {qualitySummary.statusCounts.approved > 0 && (
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded">
+                      <button
+                        onClick={() => setQualityFilter(qualityFilter === 'approved' ? null : 'approved')}
+                        className={`px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded cursor-pointer transition-all ${qualityFilter === 'approved' ? 'ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-gray-800' : 'hover:ring-1 hover:ring-emerald-300'}`}
+                      >
                         {qualitySummary.statusCounts.approved} aprobadas
-                      </span>
+                      </button>
                     )}
                     {qualitySummary.statusCounts.auto_approved > 0 && (
-                      <span className="px-2 py-1 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded">
+                      <button
+                        onClick={() => setQualityFilter(qualityFilter === 'auto_approved' ? null : 'auto_approved')}
+                        className={`px-2 py-1 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded cursor-pointer transition-all ${qualityFilter === 'auto_approved' ? 'ring-2 ring-green-500 ring-offset-1 dark:ring-offset-gray-800' : 'hover:ring-1 hover:ring-green-300'}`}
+                      >
                         {qualitySummary.statusCounts.auto_approved} auto-aprobadas
-                      </span>
+                      </button>
                     )}
                     {qualitySummary.statusCounts.needs_review > 0 && (
-                      <span className="px-2 py-1 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded">
+                      <button
+                        onClick={() => setQualityFilter(qualityFilter === 'needs_review' ? null : 'needs_review')}
+                        className={`px-2 py-1 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded cursor-pointer transition-all ${qualityFilter === 'needs_review' ? 'ring-2 ring-amber-500 ring-offset-1 dark:ring-offset-gray-800' : 'hover:ring-1 hover:ring-amber-300'}`}
+                      >
                         {qualitySummary.statusCounts.needs_review} por revisar
-                      </span>
+                      </button>
                     )}
                     {qualitySummary.statusCounts.rejected > 0 && (
-                      <span className="px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">
+                      <button
+                        onClick={() => setQualityFilter(qualityFilter === 'rejected' ? null : 'rejected')}
+                        className={`px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded cursor-pointer transition-all ${qualityFilter === 'rejected' ? 'ring-2 ring-red-500 ring-offset-1 dark:ring-offset-gray-800' : 'hover:ring-1 hover:ring-red-300'}`}
+                      >
                         {qualitySummary.statusCounts.rejected} rechazadas
-                      </span>
+                      </button>
                     )}
                     {qualitySummary.statusCounts.draft > 0 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded">
+                      <button
+                        onClick={() => setQualityFilter(qualityFilter === 'draft' ? null : 'draft')}
+                        className={`px-2 py-1 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded cursor-pointer transition-all ${qualityFilter === 'draft' ? 'ring-2 ring-gray-500 ring-offset-1 dark:ring-offset-gray-800' : 'hover:ring-1 hover:ring-gray-300'}`}
+                      >
                         {qualitySummary.statusCounts.draft} sin contenido
-                      </span>
+                      </button>
                     )}
                   </div>
                 </div>
+
+                {/* Expandable filtered lesson list */}
+                {qualityFilter && (() => {
+                  const filteredLessons = qualitySummary.lessons.filter(l => l.reviewStatus === qualityFilter);
+                  if (filteredLessons.length === 0) return null;
+
+                  const statusLabels = {
+                    approved: 'Lecciones aprobadas',
+                    auto_approved: 'Lecciones auto-aprobadas',
+                    needs_review: 'Lecciones por revisar',
+                    rejected: 'Lecciones rechazadas',
+                    draft: 'Lecciones sin contenido'
+                  };
+                  const statusIcons = {
+                    approved: '\u2713',
+                    auto_approved: '\u2713',
+                    needs_review: '\u26A0',
+                    rejected: '\u2717',
+                    draft: '\u2014'
+                  };
+
+                  // Group by module
+                  const byModule = {};
+                  for (const lesson of filteredLessons) {
+                    const key = lesson.moduleTitle;
+                    if (!byModule[key]) byModule[key] = { moduleId: lesson.moduleId, lessons: [] };
+                    byModule[key].lessons.push(lesson);
+                  }
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
+                        {statusIcons[qualityFilter]} {statusLabels[qualityFilter]}:
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(byModule).map(([moduleTitle, { moduleId, lessons }]) => (
+                          <div key={moduleTitle}>
+                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 pl-1">
+                              {moduleTitle}
+                            </div>
+                            {lessons.map(lesson => (
+                              <div
+                                key={lesson.lessonId}
+                                className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
+                              >
+                                <div className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 min-w-0">
+                                  <span className={`flex-shrink-0 ${
+                                    qualityFilter === 'needs_review' ? 'text-amber-500' :
+                                    qualityFilter === 'rejected' ? 'text-red-500' :
+                                    qualityFilter === 'approved' || qualityFilter === 'auto_approved' ? 'text-green-500' :
+                                    'text-gray-400'
+                                  }`}>
+                                    {statusIcons[qualityFilter]}
+                                  </span>
+                                  {lesson.qualityScore !== null && (
+                                    <span className={`flex-shrink-0 font-mono font-medium ${
+                                      lesson.qualityScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                                      lesson.qualityScore >= 60 ? 'text-amber-600 dark:text-amber-400' :
+                                      'text-red-600 dark:text-red-400'
+                                    }`}>
+                                      {lesson.qualityScore}
+                                    </span>
+                                  )}
+                                  <span className="truncate">{lesson.lessonTitle}</span>
+                                </div>
+                                {qualityFilter !== 'draft' && (
+                                  <button
+                                    onClick={() => {
+                                      setQualityFilter(null);
+                                      setExpandedModule(lesson.moduleId);
+                                      handleOpenContentModal(lesson.lessonId);
+                                    }}
+                                    className="flex-shrink-0 ml-2 px-2 py-0.5 text-xs text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    Ir →
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
                   <button
                     onClick={handleRetroscore}

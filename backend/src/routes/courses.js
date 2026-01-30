@@ -262,7 +262,7 @@ router.get('/:courseId/quality-summary', (req, res) => {
     // Get all lessons with their quality data
     const lessonsWithQuality = queryAll(`
       SELECT l.id as lesson_id, l.title as lesson_title,
-             m.title as module_title, m.order_index as module_order,
+             m.id as module_id, m.title as module_title, m.order_index as module_order,
              l.order_index as lesson_order,
              lc.review_status, lc.quality_score, lc.quality_breakdown, lc.reviewer_notes
       FROM lessons l
@@ -303,6 +303,7 @@ router.get('/:courseId/quality-summary', (req, res) => {
       lessons: lessonsWithQuality.map(l => ({
         lessonId: l.lesson_id,
         lessonTitle: l.lesson_title,
+        moduleId: l.module_id,
         moduleTitle: l.module_title,
         reviewStatus: l.review_status || 'draft',
         qualityScore: l.quality_score,
