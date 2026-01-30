@@ -166,19 +166,20 @@ function parseNaturalPatterns(markdown) {
       continue;
     }
 
-    // Regular line — check if it's a blank between consecutive quiz questions
-    if (quizQuestions.length > 0 && lines[i].trim() === '') {
-      // Look ahead: is there another MCQ question coming within 3 lines?
+    // Regular line — check if it's a blank or horizontal rule between consecutive quiz questions.
+    // LLMs often separate quiz questions with "---" which was breaking multi-question grouping.
+    if (quizQuestions.length > 0 && (lines[i].trim() === '' || lines[i].trim() === '---')) {
+      // Look ahead past blanks/separators: is there another MCQ question coming?
       let nextMCQNear = false;
-      for (let k = i + 1; k < Math.min(i + 4, lines.length); k++) {
-        if (tryParseMCQAt(lines, k)) {
-          nextMCQNear = true;
-          break;
-        }
+      for (let k = i + 1; k < Math.min(i + 6, lines.length); k++) {
+        const trimmed = lines[k].trim();
+        if (trimmed === '' || trimmed === '---') continue; // skip more blanks/separators
+        nextMCQNear = !!tryParseMCQAt(lines, k);
+        break; // only check first non-blank/non-separator line
       }
       if (nextMCQNear) {
         i++;
-        continue; // Skip blank line between quiz questions
+        continue; // Skip blank/separator line between quiz questions
       }
     }
 

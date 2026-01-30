@@ -195,7 +195,7 @@ function InlineQuiz({ questions = [], onComplete, exerciseIndex, initialProgress
                   {isCorrect ? 'Correcto!' : 'Incorrecto'}
                   {!isCorrect && q.correctAnswer && (
                     <span className="font-normal ml-1">
-                      - La respuesta correcta es {q.correctAnswer})
+                      - La respuesta correcta es ({q.correctAnswer})
                     </span>
                   )}
                 </p>
