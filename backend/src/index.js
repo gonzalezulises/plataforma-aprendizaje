@@ -82,6 +82,10 @@ initDatabase().then(db => {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy (Cloudflare Named Tunnel terminates TLS, forwards HTTP to localhost)
+// Without this, Express sees HTTP and refuses to set Secure cookies
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   // HSTS: 1 year, include subdomains, preload-ready
@@ -172,7 +176,8 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: SESSION_TIMEOUT, // 24 hours of inactivity
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    domain: process.env.NODE_ENV === 'production' ? '.rizo.ma' : undefined
   }
 }));
 
