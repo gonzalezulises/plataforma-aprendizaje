@@ -204,6 +204,11 @@ function LessonPage() {
     };
   }, [currentLessonId, slug]);
 
+  // Scroll to top whenever the lesson changes (sidebar clicks, Next/Previous, any navigation)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentLessonId]);
+
   // Fetch lesson progress and set up navigation when lesson is loaded
   useEffect(() => {
     if (isLoading || notFound || loadError) return;
@@ -411,7 +416,6 @@ function LessonPage() {
   const goToNextLesson = () => {
     if (navigation.next) {
       navigate(`/course/${slug}/lesson/${navigation.next.id}`);
-      window.scrollTo(0, 0);
     }
   };
 
@@ -419,7 +423,6 @@ function LessonPage() {
   const goToPreviousLesson = () => {
     if (navigation.previous) {
       navigate(`/course/${slug}/lesson/${navigation.previous.id}`);
-      window.scrollTo(0, 0);
     }
   };
 

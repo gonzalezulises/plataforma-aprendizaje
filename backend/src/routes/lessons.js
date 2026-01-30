@@ -94,6 +94,8 @@ router.get('/:id', (req, res) => {
       ? getNavigationInfo(id, lesson.module_id)
       : { previous: null, next: null };
 
+    console.log(`[Lessons] GET /lessons/${id} navigation:`, JSON.stringify(navigation));
+
     res.json({
       lesson: {
         ...lesson,
