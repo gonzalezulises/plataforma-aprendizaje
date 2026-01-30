@@ -582,6 +582,9 @@ function CourseCatalog() {
 // Dashboard is now imported from DashboardPage.jsx
 
 function App() {
+  const location = useLocation();
+  const isCourseView = /^\/course\//.test(location.pathname);
+
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -663,7 +666,7 @@ function App() {
           </Routes>
           </HashFragmentHandler>
         </main>
-        <Footer />
+        {!isCourseView && <Footer />}
         </div>
       </AuthProvider>
     </ThemeProvider>
