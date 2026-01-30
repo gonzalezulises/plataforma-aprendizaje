@@ -534,19 +534,43 @@ function CourseDetailPage() {
                     {/* Lessons */}
                     <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                       {module.lessons?.map((lesson) => (
-                        <li key={lesson.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg flex-shrink-0">{getContentTypeIcon(lesson.type)}</span>
-                            <div className="flex-grow min-w-0">
-                              <span
-                                className="text-gray-900 dark:text-white block truncate"
-                                title={lesson.title}
-                              >
-                                {lesson.title}
-                              </span>
+                        <li key={lesson.id}>
+                          {isEnrolled ? (
+                            <Link
+                              to={`/course/${slug}/lesson/${lesson.id}`}
+                              className="p-4 flex items-center gap-3 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors group"
+                            >
+                              <span className="text-lg flex-shrink-0">{getContentTypeIcon(lesson.content_type || lesson.type)}</span>
+                              <div className="flex-grow min-w-0">
+                                <span
+                                  className="text-gray-900 dark:text-white block truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors"
+                                  title={lesson.title}
+                                >
+                                  {lesson.title}
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{lesson.duration_minutes ? `${lesson.duration_minutes} min` : lesson.duration}</span>
+                              <svg className="w-4 h-4 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </Link>
+                          ) : (
+                            <div className="p-4 flex items-center gap-3">
+                              <span className="text-lg flex-shrink-0">{getContentTypeIcon(lesson.content_type || lesson.type)}</span>
+                              <div className="flex-grow min-w-0">
+                                <span
+                                  className="text-gray-900 dark:text-white block truncate"
+                                  title={lesson.title}
+                                >
+                                  {lesson.title}
+                                </span>
+                              </div>
+                              <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{lesson.duration_minutes ? `${lesson.duration_minutes} min` : lesson.duration}</span>
+                              <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
                             </div>
-                            <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{lesson.duration}</span>
-                          </div>
+                          )}
                         </li>
                       ))}
                     </ul>

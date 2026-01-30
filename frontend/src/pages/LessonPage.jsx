@@ -405,6 +405,7 @@ function LessonPage() {
   const goToNextLesson = () => {
     if (navigation.next) {
       navigate(`/course/${slug}/lesson/${navigation.next.id}`);
+      window.scrollTo(0, 0);
     }
   };
 
@@ -412,6 +413,7 @@ function LessonPage() {
   const goToPreviousLesson = () => {
     if (navigation.previous) {
       navigate(`/course/${slug}/lesson/${navigation.previous.id}`);
+      window.scrollTo(0, 0);
     }
   };
 
