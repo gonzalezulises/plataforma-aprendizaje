@@ -148,7 +148,7 @@ function LessonPage() {
               bloomLevel: data.lesson.bloom_level || 'Comprender',
               duration: data.lesson.duration_minutes || 15,
               description: data.lesson.description || '',
-              content: data.lesson.content?.map(c => {
+              content: data.lesson.content?.flatMap(c => {
                 // Transform API content structure to match component expectations
                 const transformed = {
                   type: c.type,
@@ -158,6 +158,13 @@ function LessonPage() {
                 if (c.type === 'video' && c.content?.video_url) {
                   transformed.src = c.content.video_url;
                   transformed.title = c.content.title || transformed.title || 'Video';
+                  // If video block also has lesson text, split into video + text blocks
+                  if (c.content.text) {
+                    return [
+                      transformed,
+                      { type: 'text', content: c.content.text }
+                    ];
+                  }
                 }
                 // If a 'code' block only has text (AI-generated markdown), treat as text
                 if (c.type === 'code' && c.content?.text && !c.content?.code) {
