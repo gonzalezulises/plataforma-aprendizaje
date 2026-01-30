@@ -33,6 +33,27 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - **Auth**: Supabase
 - **Database**: SQLite (backend/data/learning.db)
 
+## PROTOCOLO DE DEPLOY AUTOMATICO
+
+**OBLIGATORIO**: Despues de CADA cambio de codigo (commit), ejecutar automaticamente:
+
+```bash
+# 1. Commit + push a GitHub (frontend se auto-deploya en Vercel desde master)
+git add <archivos> && git commit -m "mensaje" && git push origin master
+
+# 2. Actualizar backend en DGX Spark (pull + restart PM2)
+ssh dgx-spark 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && cd ~/plataforma-aprendizaje && git pull origin master && pm2 restart plataforma-api'
+
+# 3. Verificar que el backend responde
+curl -s https://api.rizo.ma/api/ai/status | python3 -c "import sys,json; d=json.load(sys.stdin); print('Backend OK' if d.get('configured') else 'ERROR')"
+```
+
+**Reglas:**
+- NO esperar a que el usuario pida "deploy" — hacerlo automaticamente tras cada commit
+- Si el cambio es solo frontend, el paso 2 (DGX) se puede omitir
+- Si el cambio es solo backend, el push a GitHub igual es necesario para mantener el repo sincronizado
+- Si el cambio es solo en base de datos (SQL directo en DGX), no se necesita commit ni deploy
+
 ## DGX Spark Access
 
 - **SSH**: `ssh dgx-spark` (configured in ~/.ssh/config)
