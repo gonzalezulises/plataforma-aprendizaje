@@ -4,7 +4,7 @@ import { useAuth } from '../store/AuthContext';
 import toast from 'react-hot-toast';
 import { csrfFetch } from '../utils/csrf';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\s*$/, '');
 
 export default function UpgradePage() {
   const navigate = useNavigate();

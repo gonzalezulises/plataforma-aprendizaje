@@ -13,7 +13,7 @@ import {
 const AuthContext = createContext(null);
 
 // Use env variable for API URL - remove /api suffix since we add it below
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/api\s*$/, '');
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

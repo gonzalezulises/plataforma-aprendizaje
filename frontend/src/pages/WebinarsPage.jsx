@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { csrfFetch } from '../utils/csrf';
 
 // Strip trailing /api from VITE_API_URL to avoid double /api/api paths
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api\s*$/, '');
 
 // Helper to check if user has premium access (Feature #16)
 function isPremiumUser(user) {

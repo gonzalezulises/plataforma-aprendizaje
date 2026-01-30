@@ -18,7 +18,7 @@ export function useWebSocket() {
   const getWsUrl = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
-    const host = apiUrl.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+    const host = apiUrl.replace(/^https?:\/\//, '').replace(/\/api\s*$/, '');
     return `${wsProtocol}://${host}/ws`;
   };
 

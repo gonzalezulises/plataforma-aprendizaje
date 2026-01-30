@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
 import { useTheme } from '../store/ThemeContext';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api$/, '');
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim();
 
 function Navbar() {
   const location = useLocation();
@@ -29,7 +29,7 @@ function Navbar() {
   const fetchUnreadCount = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
-      const response = await fetch(`${API_URL}/api/notifications/unread/count`, {
+      const response = await fetch(`${API_BASE}/notifications/unread/count`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -46,7 +46,7 @@ function Navbar() {
     if (!isAuthenticated) return;
     setLoadingNotifications(true);
     try {
-      const response = await fetch(`${API_URL}/api/notifications`, {
+      const response = await fetch(`${API_BASE}/notifications`, {
         credentials: 'include',
       });
       if (response.ok) {
@@ -63,7 +63,7 @@ function Navbar() {
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const response = await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`${API_BASE}/notifications/${notificationId}/read`, {
         method: 'PUT',
         credentials: 'include',
       });
@@ -81,7 +81,7 @@ function Navbar() {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/notifications/read-all`, {
+      const response = await fetch(`${API_BASE}/notifications/read-all`, {
         method: 'PUT',
         credentials: 'include',
       });
@@ -192,7 +192,7 @@ function Navbar() {
     if (!isAuthenticated || !user) return;
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsHost = API_URL.replace(/^https?:\/\//, '').replace(/\/api$/, '');
+    const wsHost = API_BASE.replace(/^https?:\/\//, '').replace(/\/api\s*$/, '');
     const wsUrl = `${wsProtocol}://${wsHost}/ws`;
 
     let ws = null;
