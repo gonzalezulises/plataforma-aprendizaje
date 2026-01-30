@@ -234,13 +234,19 @@ function flushAccumulated(segments, markdownLines, quizQuestions) {
 function tryParseMCQAt(lines, startLine) {
   const line = lines[startLine].trim();
 
-  // Must start with a numbered question (1. / 2.) that is NOT itself an option
-  if (!/^\d+[\.\)]\s+\S/.test(line)) return null;
-  if (/^[A-Da-d]\)\s/.test(line)) return null;
+  // Detect two MCQ patterns:
+  // Pattern 1: Numbered question (1. / 2.) that is NOT itself an option
+  // Pattern 2: Heading-as-question (### Question?) followed directly by A/B/C/D options
+  //            Must end with '?' or have a numbered prefix (### 1. / ### 2.)
+  const isNumberedQuestion = /^\d+[\.\)]\s+\S/.test(line) && !/^[A-Da-d]\)\s/.test(line);
+  const isHeadingQuestion = /^#{2,3}\s+/.test(line) && (/\?\s*$/.test(line) || /^#{2,3}\s+\d+[\.\)]\s/.test(line));
 
-  // Look ahead for A/B/C/D options within 5 lines
+  if (!isNumberedQuestion && !isHeadingQuestion) return null;
+
+  // Look ahead for A/B/C/D options (tighter window for headings to avoid false positives)
+  const maxLookahead = isHeadingQuestion ? 3 : 6;
   let optionStart = -1;
-  for (let j = startLine + 1; j < Math.min(startLine + 6, lines.length); j++) {
+  for (let j = startLine + 1; j < Math.min(startLine + maxLookahead, lines.length); j++) {
     if (/^\s*[A-Da-d]\)\s+/.test(lines[j])) {
       optionStart = j;
       break;
@@ -253,7 +259,8 @@ function tryParseMCQAt(lines, startLine) {
   for (let j = startLine; j < optionStart; j++) {
     const l = lines[j].trim();
     if (questionText) questionText += ' ';
-    questionText += l.replace(/^\d+[\.\)]\s*/, '').trim();
+    // Strip heading markers (###), numbering (1. / 2.), and leading/trailing formatting
+    questionText += l.replace(/^#{1,3}\s+/, '').replace(/^\d+[\.\)]\s*/, '').trim();
   }
 
   // Collect options
