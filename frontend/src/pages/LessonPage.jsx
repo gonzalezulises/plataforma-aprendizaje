@@ -173,6 +173,12 @@ function LessonPage() {
                 if (transformed.type === 'text' && c.content?.text && !transformed.content) {
                   transformed.content = c.content.text;
                 }
+                // Fallback: treat any unhandled content type with text as a text block
+                // (covers 'challenge', 'notebook', 'quiz', and future AI-generated types)
+                if (transformed.type !== 'text' && transformed.type !== 'code' && transformed.type !== 'video' && c.content?.text) {
+                  transformed.type = 'text';
+                  transformed.content = c.content.text;
+                }
                 return transformed;
               }) || []
             };
