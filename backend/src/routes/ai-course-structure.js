@@ -8,12 +8,12 @@ const router = express.Router();
 
 // LLM Configuration - match defaults from claude.js
 const LOCAL_LLM_URL = process.env.LOCAL_LLM_URL || 'http://localhost:8000/v1';
-const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4';
+const LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'nvidia/nemotron-3-nano';
 const LOCAL_LLM_API_KEY = process.env.LOCAL_LLM_API_KEY || 'not-needed';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 /**
- * Clean thinking blocks from Qwen3 model responses
+ * Clean thinking blocks from LLM responses
  */
 function cleanThinkingBlocks(content) {
   if (!content) return '';

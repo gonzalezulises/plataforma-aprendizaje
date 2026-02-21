@@ -13,7 +13,7 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
                                                         |
                                               [DGX Spark - localhost]
                                               ├── :3001 Node.js Backend (PM2)
-                                              ├── :8000 vLLM Qwen3-14B
+                                              ├── :8000 NGC vLLM Nemotron-3-Nano
                                               ├── :8001 Cerebro-RAG API
                                               └── :8002 RAG Proxy
 ```
@@ -27,7 +27,7 @@ www.rizo.ma/academia  --Vercel rewrite-->  frontend-one-sigma-58.vercel.app/acad
 - **plataforma-aprendizaje/frontend**: Vercel project `frontend` (`frontend-one-sigma-58.vercel.app`). Auto-deploys from `master`.
 - **plataforma-aprendizaje/backend**: Runs on DGX Spark via PM2, exposed via Cloudflare Tunnel.
 - **Backend**: Node.js + Express, runs on DGX Spark via PM2 (port 3001)
-- **LLM**: Qwen3-14B-NVFP4 via vLLM on DGX Spark (port 8000)
+- **LLM**: Nemotron-3-Nano-30B-FP8 via NGC vLLM on DGX Spark (port 8000)
 - **RAG**: Cerebro-RAG with Milvus GPU, 145+ books, 562K chunks (port 8001)
 - **Tunnel**: Cloudflare Named Tunnel → `api.rizo.ma` → `localhost:3001`
 - **Auth**: Supabase
@@ -172,8 +172,8 @@ CourseCreatorPage → POST /api/ai/generate-lesson-content
                        |   ├── 4C pedagogical data (connections, concepts, practice, conclusion)
                        |   └── RAG context
                        |
-                       ├── callLocalLLM() → Qwen3-14B on DGX (:8000)
-                       |   └── stripThinkingTokens() — removes <think>...</think> from Qwen3
+                       ├── callLocalLLM() → Nemotron-3-Nano on DGX (:8000)
+                       |   └── stripThinkingTokens() — removes <think>...</think> from LLM output
                        |
                        └── Save to lesson_content table as JSON { text: "markdown..." }
 ```
@@ -315,7 +315,7 @@ Migrations run automatically on backend startup in `database.js:runMigrations()`
 - Backend POST/PUT now accept and store objectives
 - Frontend `saveCourse()` includes objectives in request body
 
-### Qwen3 Thinking Token Cleanup
+### LLM Thinking Token Cleanup
 - `stripThinkingTokens()` removes `<think>...</think>` blocks from LLM output
 - Applied in both backend (`callLocalLLM`) and frontend (`LessonContentRenderer`)
 

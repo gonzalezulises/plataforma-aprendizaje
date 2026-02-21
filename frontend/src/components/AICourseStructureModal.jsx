@@ -613,7 +613,7 @@ export default function AICourseStructureModal({
                   </p>
                   {generationMetadata?.provider && (
                     <p className="text-xs text-purple-500 dark:text-purple-500 mt-1">
-                      Modelo: {generationMetadata.provider === 'local' ? 'DGX Spark (Qwen3-14B)' : 'Claude'}
+                      Modelo: {generationMetadata.provider === 'local' ? 'DGX Spark (Nemotron-3-Nano)' : 'Claude'}
                     </p>
                   )}
                 </div>

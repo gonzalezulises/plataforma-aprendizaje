@@ -50,7 +50,7 @@ function LessonContentRenderer({
   exerciseProgress = {},
   className = ''
 }) {
-  // Strip thinking tokens from LLM output (Qwen3 <think>...</think>)
+  // Strip thinking tokens from LLM output (<think>...</think>)
   const cleanContent = useMemo(() => {
     if (!content) return '';
     return content

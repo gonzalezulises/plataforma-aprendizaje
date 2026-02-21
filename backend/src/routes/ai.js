@@ -26,7 +26,7 @@ router.get('/status', async (req, res) => {
     configured: isClaudeConfigured(),
     provider: provider, // 'local', 'anthropic', or null
     providerDetails: provider === 'local' ? {
-      model: process.env.LOCAL_LLM_MODEL || 'nvidia/Qwen3-14B-NVFP4',
+      model: process.env.LOCAL_LLM_MODEL || 'nvidia/nemotron-3-nano',
       url: process.env.LOCAL_LLM_URL || 'http://100.116.242.33:8000/v1',
       available: llmAvailable
     } : null,
