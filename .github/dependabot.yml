@@ -1,0 +1,27 @@
+version: 2
+
+# Este repo no tenia .github/dependabot.yml, asi que solo recibia actualizaciones de
+# seguridad: una por vulnerabilidad, sin agrupar y sin nada que las cerrara.
+#
+# Dos manifiestos npm, ninguno en la raiz: /backend y /frontend. La clave `directories`
+# (plural) los cubre en una sola entrada, asi que una tanda de seguridad sale como un PR
+# y no como dos.
+#
+# `applies-to: security-updates` las colapsa. El `cooldown` no aplica a las de seguridad.
+# `open-pull-requests-limit: 0` apaga las de version.
+#
+# No hay entrada `github-actions`: el repo no tiene .github/workflows.
+updates:
+  - package-ecosystem: npm
+    directories:
+      - "/backend"
+      - "/frontend"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
