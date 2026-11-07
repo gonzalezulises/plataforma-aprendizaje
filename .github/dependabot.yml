@@ -13,6 +13,9 @@ version: 2
 # No hay entrada `github-actions`: el repo no tiene .github/workflows.
 updates:
   - package-ecosystem: npm
+    # Siete días de madurez antes de proponer una versión.
+    cooldown:
+      default-days: 7
     directories:
       - "/backend"
       - "/frontend"
